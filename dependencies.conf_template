@@ -1,0 +1,36 @@
+# possible values : production, development
+app_mode = development
+
+
+# Information related to database source
+
+[database]
+# Protocol (http or https)
+protocol = TCP
+
+# Host url or IP where dependency database is stored
+host = YOUR_DB_HOST_GOES_HERE
+
+# The http port database server uses
+port = 5432
+
+# Redirect to correct domain if host header does not match domain
+# Prevents DNS rebinding attacks
+enforce_domain = true
+
+# database username
+user = YOUR_DB_USER_GOES_HERE
+
+#database name
+dbname = components
+
+sslmode = disable
+
+password = YOUR_DB_PSWD_GOES_HERE
+
+# Configuration on grpc server api
+[grpcserver]
+
+port = 9000
+
+

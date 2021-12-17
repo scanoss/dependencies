@@ -1,3 +1,22 @@
+/*
+ SPDX-License-Identifier: MIT
+   Copyright (c) 2021, SCANOSS
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   THE SOFTWARE.
+*/
 package main
 
 import (
@@ -14,7 +33,6 @@ import (
 
 /**server Address:port*/
 const (
-	//address = "localhost:9000"
 	address = "localhost:9000"
 )
 
@@ -28,7 +46,6 @@ func main() {
 
 	client := pb.NewDependenciesClient(conn)
 
-	//var name string
 	req := &pb.DependencyRequest{}
 
 	jsonFile := fmt.Sprintf("%s", os.Args[1])
@@ -44,34 +61,4 @@ func main() {
 		log.Fatalf("could not Send request: %v", err)
 	}
 	fmt.Println(r.Dependencies)
-	/*
-		startOfScanning := time.Now()
-		var wg sync.WaitGroup
-		for _, f := range files {
-			wg.Add(1)
-			log.Println(f.Name())
-
-			go func(filename string) {
-				defer wg.Done()
-				if !strings.Contains(filename, "spdx") {
-					thisFile := time.Now()
-					log.Printf("envio %s", filename)
-					scan := &pb.ScanRequest{}
-					//scanresp := &pb.ScanResponse{}
-					scan.File = filename
-					scan.ClientContext = r.ClientContext
-					currentFile := fmt.Sprintf("%s/%s", os.Args[2], filename)
-					dat, err := ioutil.ReadFile(currentFile)
-					scan.FileContent = string(dat)
-					if err != nil {
-						log.Print("sonamos")
-					}
-					scanresp, err := client.ScanWFP(ctx, scan)
-					log.Printf("Got response for: %s:(%d bytes) and took %f", scan.File, len(scanresp.Results), float32(time.Since(thisFile).Milliseconds())/1000.0)
-				}
-			}(f.Name())
-		}
-		wg.Wait()
-		log.Printf("Scanning the folder took %f", float32(time.Since(startOfScanning).Milliseconds())/1000.0)
-	},*/
 }

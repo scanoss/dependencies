@@ -1,3 +1,22 @@
+/*
+ SPDX-License-Identifier: MIT
+   Copyright (c) 2021, SCANOSS
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   THE SOFTWARE.
+*/
 package dbdependencies
 
 import (
@@ -82,9 +101,7 @@ func cacheMinesTable() {
 	for i := 0; i < len(queryResult); i++ {
 		tmpMine := queryResult[i]
 		cacheMines[queryResult[i].Name] = tmpMine
-		//fmt.Printf("%d %s %s\n", queryResult[i].Id, queryResult[i].Name, queryResult[i].PurlType)
 	}
-	//	fmt.Println(cacheMines)
 
 }
 
@@ -98,7 +115,6 @@ func getMineId(purlType string) int16 {
 
 }
 func OpenDB() {
-	//router := mux.NewRouter()
 	handlers[0] = HandleMavenDep
 
 	handlers[1] = HandleRubyDep
@@ -106,22 +122,14 @@ func OpenDB() {
 
 	var connectStr string
 	connectStr = fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s", dbHost, dbPort, dbUsr, dbName, dbPsw)
-	//	db, err = gorm.Open("postgres", "host=ns3163276.ip-51-91-82.eu port=5432 user=metaquery dbname=components sslmode=disable password=dKA5tLM5y6eb")
-	//fmt.Println(connectStr)
 	db, err = gorm.Open("postgres", connectStr)
 	if err != nil {
 		panic("Failed to connect database")
 	}
 
-	//defer db.Close()
-
 	db.AutoMigrate(&Dependency{})
 	cacheMinesTable()
-	//router.HandleFunc("/dependency", GetDependency).Methods("GET")
 
-	//	handler := cors.Default().Handler(router)
-
-	//log.Fatal(http.ListenAndServe("0.0.0.0:8080", handler))
 }
 
 func CloseDB() {
@@ -141,23 +149,6 @@ func GetDependency(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleMavenDep(purl string) []DependencyItem {
-	///var di []ShortDependencyItem
-
-	/*purl_hash := md5.Sum([]byte(purl))
-	str_purl_hash := fmt.Sprintf("%x", purl_hash)
-	str_purl_hash = strings.ToUpper(str_purl_hash)
-	//	log.Printf("query %s %s", str_purl_hash)
-	//	var depsVendor []string
-	//	db.Raw("select purl_hash, dep_vendor, dep_component, dep_version from maven_dependencies md where upper(md.purl_hash) = ?", str_purl_hash).Scan(&di)
-
-	//	db.Raw("select distinct * from maven_dependencies md where upper(md.purl_hash) = ?", str_purl_hash).Scan(&di)
-	//log.Print(di)
-	/*for i := 0; i < len(di); i++ {
-		fmt.Printf("\n{\n component: %s \n version: %s\n},", di[i].Dep_component, di[i].Dep_version)
-
-	}
-	//	fmt.Printf("[%s] has %d dependencies", purl, len(di))
-	return di*/
 	fmt.Println("handle MAVEN")
 	return nil
 
@@ -199,18 +190,12 @@ func GetProjectInfo(purl string, depth int) []Project {
 	}
 	purltype = instance.Type
 
-	/*db.Raw("select p.Mine_id,	p.Vendor,	p.Component,	p.License, p.Versions, p.purl_name "+
-	"from projects p, Mines m "+
-	"where m.purl_type = ? and m.id = p.mine_id and p.purl_name = ?", purltype, purlname).Scan(&prj)
-	*/
-
 	db.Raw("select a.Mine_id,	a.Vendor,	a.Component,	a.License, a.Version, a.purl_name "+
 		"from all_urls a "+
 		"where a.mine_id = ? and a.purl_name = ?", getMineId(purltype), purlname).Scan(&prj)
 
 	for k := 0; k < len(prj); k++ {
 		var prjExtra []Project
-		//prj[k].License = ""
 		if prj[k].License == "" {
 			log.Println("Searching on Projects table")
 			db.Raw("select p.Mine_id,	p.Vendor,	p.Component,	p.License, p.Versions, p.purl_name "+

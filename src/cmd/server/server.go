@@ -1,7 +1,26 @@
+/*
+ SPDX-License-Identifier: MIT
+   Copyright (c) 2021, SCANOSS
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   THE SOFTWARE.
+*/
+
 package main
 
 import (
-	//db "scanoss.com/dependencies/src/database"
 	"context"
 	"flag"
 	"fmt"
@@ -36,7 +55,7 @@ func ServerInit(listenPort int) {
 
 	// Register services
 	pb.RegisterDependenciesServer(grpcServer, &Server{})
-	log.Printf("GRPC server listening on %v", lis.Addr())
+	log.Printf("Dependencies GRPC server listening on %v", lis.Addr())
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
@@ -44,7 +63,7 @@ func ServerInit(listenPort int) {
 }
 
 func (s *Server) GetDependencies(ctx context.Context, in *pb.DependencyRequest) (*pb.DependencyResponse, error) {
-	//log.Printf("Received: %v", in.)
+
 	resp := jp.DepsProcess(in.Dependencies)
 	println(resp)
 	return &pb.DependencyResponse{Dependencies: resp}, nil
@@ -59,8 +78,6 @@ func main() {
 	var dbname *string
 	var grpcPort int
 
-	//var file *string
-
 	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
 		os.Exit(1)
@@ -71,8 +88,6 @@ func main() {
 	password = flag.String("password", "-", "User password")
 	dbname = flag.String("dbname", "-", "Database name")
 
-	//file = flag.String("file", "-", "Path to a JSON dependency file")
-	//	purl := flag.String("purl", "-", "Purl project including version")
 	flag.Parse()
 	if (*host != "-") || (*port != 0) || (*user != "-") || (*password != "-") || (*dbname != "-") {
 		var err int
@@ -107,43 +122,9 @@ func main() {
 		*user = cfg.Section("database").Key("user").String()
 		*password = cfg.Section("database").Key("password").String()
 	}
-	//	portg := 9000
-	//	grpcPort := &portg
 	db.InitDB(*host, *port, *dbname, *user, *password)
 	db.OpenDB()
 
-	grpcPort = cfg.Section("grpcserver").Key("port").MustInt(9000)
+	grpcPort = cfg.Section("grpcserver").Key("port").MustInt(defaultGrpcPort)
 	ServerInit(grpcPort)
-
-	//
-
-	//ServerInit(*grpcPort)
-	/*
-		if *purl != "-" {
-			db.InitDB(*host, *port, *dbname, *user, *password)
-			db.OpenDB()
-
-			//	req := &dependenciesv2.DependencyRequest{}
-			//prj := db.GetProjectInfo(*purl, 1)
-			prj := db.GetProjectInfo(*purl, 1)
-			fmt.Println(prj)
-			//	fmt.Println(req)
-			db.CloseDB()
-		}
-
-		if *file != "-" {
-
-			db.InitDB(*host, *port, *dbname, *user, *password)
-			db.OpenDB()
-			dat, _ := os.ReadFile(*file)
-			//	check(err)
-
-			fmt.Println(jp.DepsProcess(string(dat)))
-			//	req := &dependenciesv2.DependencyRequest{}
-			//prj := db.GetProjectInfo(*purl, 1)
-			//	prj := db.GetProjectInfo(*purl, 1)
-			//fmt.Println(prj)
-			//	fmt.Println(req)
-			db.CloseDB()
-		}*/
 }

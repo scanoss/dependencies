@@ -119,13 +119,11 @@ func query(purl string) interface{} {
 	return dbdependencies.GetProjectInfo(purl, 0)
 }
 
-func DepsProcess(input string) string {
+func DepsProcess(input string) (string, int) {
 	data := []byte(input)
-	//dbdependencies.OpenDB()
-
 	parsed, err := parseJson(data)
 	if err != nil {
-		panic(err) // malformed input
+		return "", 1
 	}
 
 	jsonResponse = make(map[string]JsonKey)
@@ -142,12 +140,12 @@ func DepsProcess(input string) string {
 
 	if err != nil {
 
-		fmt.Println("error:", err)
+		return "", 2
 
 	}
 
 	//	os.Stdout.Write(b)
 	//dbdependencies.CloseDB()
 
-	return string(b)
+	return string(b), 0
 }

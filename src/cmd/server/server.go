@@ -28,6 +28,7 @@ import (
 	"net"
 	"os"
 
+	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"google.golang.org/grpc"
 	"gopkg.in/ini.v1"
@@ -62,11 +63,24 @@ func ServerInit(listenPort int) {
 	}
 }
 
-func (s *Server) GetDependencies(ctx context.Context, in *pb.DependencyRequest) (*pb.DependencyResponse, error) {
+// Echo Implement the Echo gRPC
+func (s *Server) Echo(ctx context.Context, in *common.EchoRequest) (*common.EchoResponse, error) {
+	log.Printf("Received: %v", in.GetMessage())
+	return &common.EchoResponse{Message: in.GetMessage()}, nil
+}
 
-	resp := jp.DepsProcess(in.Dependencies)
-	println(resp)
-	return &pb.DependencyResponse{Dependencies: resp}, nil
+func (s *Server) GetDependencies(ctx context.Context, in *pb.DependencyRequest) (*pb.DependencyResponse, error) {
+	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Dependencies Scan Succeded"}
+	resp, err := jp.DepsProcess(in.Dependencies)
+	if err == 1 {
+		statusResp.Status = common.StatusCode_FAILED
+		statusResp.Message = "Failed decoding input JSON"
+	} else if err == 2 {
+		statusResp.Status = common.StatusCode_FAILED
+		statusResp.Message = "Failed Encoding output JSON"
+	}
+	return &pb.DependencyResponse{Dependencies: resp, Status: &statusResp}, nil
+
 }
 
 func main() {

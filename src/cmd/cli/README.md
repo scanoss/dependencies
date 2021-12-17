@@ -10,4 +10,3 @@ You can do a dependecy scan using a dependecy JSON file:
 You can also do the same scan but accross a gRPC server (that must be active)
 
 >go run src/cmd/cli/dep-scan.go -file= *<path/to/JSON/File>* -grpc -grpchost= *<address:port>*
->

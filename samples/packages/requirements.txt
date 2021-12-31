@@ -1,0 +1,6 @@
+requests
+crc32c>=2.2
+binaryornot
+progress
+grpcio
+protobuf

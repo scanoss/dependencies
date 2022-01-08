@@ -17,22 +17,29 @@
 package models
 
 import (
+	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"testing"
 )
 
 func TestAllUrlsSearch(t *testing.T) {
+	ctx := context.Background()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	err = LoadTestSqlData(db)
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer conn.Close()
+	err = LoadTestSqlData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(db, NewMineModel(db), NewProjectModel(db))
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewMineModel(ctx, conn), NewProjectModel(ctx, conn))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlName("tablestyle", 1)
 	if err != nil {
@@ -87,12 +94,18 @@ func TestAllUrlsSearch(t *testing.T) {
 }
 
 func TestAllUrlsSearchBadSql(t *testing.T) {
+	ctx := context.Background()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	allUrlsModel := NewAllUrlModel(db, NewMineModel(db), NewProjectModel(db))
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer conn.Close()
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewMineModel(ctx, conn), NewProjectModel(ctx, conn))
 	allUrlsModel.mine.ResetMineCache()
 	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/taballa.hp-PD/tablestyle")
 	if err == nil {
@@ -101,8 +114,10 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
 	// Load some tables (leaving out projects)
-	loadTestSqlDataFiles(db, []string{"./tests/mines.sql", "./tests/all_urls.sql"})
-
+	err = loadTestSqlDataFiles(db, ctx, conn, []string{"./tests/mines.sql", "./tests/all_urls.sql"})
+	if err != nil {
+		t.Fatalf("failed to load SQL test data: %v", err)
+	}
 	allUrls, err := allUrlsModel.GetUrlsByPurlName("tablestyle", 1)
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)

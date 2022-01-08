@@ -17,20 +17,69 @@
 package usecase
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"github.com/jmoiron/sqlx"
+	"log"
 	"scanoss.com/dependencies/pkg/dtos"
+	"scanoss.com/dependencies/pkg/models"
 )
 
 type DependencyUseCase struct {
-	db *sqlx.DB
+	ctx     context.Context
+	conn    *sqlx.Conn
+	allUrls *models.AllUrlsModel
 }
 
-func NewDependencies(db *sqlx.DB) *DependencyUseCase {
-	return &DependencyUseCase{db: db}
+func NewDependencies(ctx context.Context, conn *sqlx.Conn) *DependencyUseCase {
+	return &DependencyUseCase{ctx: ctx, conn: conn,
+		allUrls: models.NewAllUrlModel(ctx, conn, models.NewMineModel(ctx, conn), models.NewProjectModel(ctx, conn)),
+	}
 }
 
-func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) {
+func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, error) {
 
-	fmt.Println("TODO. Need to implement this!")
+	var depFileOutputs []dtos.DependencyFileOutput
+	var problems bool = false
+	for _, file := range request.Files {
+		var fileOutput dtos.DependencyFileOutput
+		fileOutput.File = file.File
+		fileOutput.Id = "dependency"
+		fileOutput.Status = "pending"
+		var depOutputs []dtos.DependenciesOutput
+		for _, purl := range file.Purls {
+			if len(purl.Purl) == 0 {
+				log.Printf("Empty Purl string supplied for: %v. Skipping", purl)
+				continue
+			}
+			var depOutput dtos.DependenciesOutput
+			depOutput.Purl = purl.Purl
+			urls, err := d.allUrls.GetUrlsByPurlString(purl.Purl)
+			if err != nil {
+				log.Printf("Problem encountered extracting URLs for: %v - %v.", purl, err)
+				problems = true
+				continue
+			}
+			for _, url := range urls {
+				depOutput.Component = url.Component
+				depOutput.Version = url.Version
+				var licenses []dtos.DependencyLicense
+				var license dtos.DependencyLicense
+				license.Name = url.License
+				licenses = append(licenses, license)
+				depOutput.Licenses = licenses
+				break
+			}
+			depOutputs = append(depOutputs, depOutput)
+		}
+		fileOutput.Dependencies = depOutputs
+		depFileOutputs = append(depFileOutputs, fileOutput)
+	}
+	if problems {
+		log.Printf("Encountered issues while processing dependencies: %v", request)
+		return dtos.DependencyOutput{}, errors.New("encountered issues while processing dependencies")
+	}
+	log.Printf("Output dependencies: %v", depFileOutputs)
+
+	return dtos.DependencyOutput{Files: depFileOutputs}, nil
 }

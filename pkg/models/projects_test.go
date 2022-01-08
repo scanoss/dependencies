@@ -17,22 +17,29 @@
 package models
 
 import (
+	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"testing"
 )
 
 func TestProjectsSearch(t *testing.T) {
+	ctx := context.Background()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	err = loadSqlData(db, "./tests/projects.sql")
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer conn.Close()
+	err = loadSqlData(db, ctx, conn, "./tests/projects.sql")
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	projectsModel := NewProjectModel(db)
+	projectsModel := NewProjectModel(ctx, conn)
 
 	projects, err := projectsModel.GetProjectsByPurlName("tablestyle", 1)
 	if err != nil {

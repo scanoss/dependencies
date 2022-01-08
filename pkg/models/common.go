@@ -19,17 +19,24 @@
 package models
 
 import (
+	"context"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"io/ioutil"
 )
 
 // loadSqlData Load the specified SQL files into the supplied DB
-func loadSqlData(db *sqlx.DB, filename string) error {
+func loadSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename string) error {
+	fmt.Printf("Loading test data file: %v\n", filename)
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(string(file))
+	if conn != nil {
+		_, err = conn.ExecContext(ctx, string(file))
+	} else {
+		_, err = db.Exec(string(file))
+	}
 	if err != nil {
 		return err
 	}
@@ -37,15 +44,15 @@ func loadSqlData(db *sqlx.DB, filename string) error {
 }
 
 // LoadTestSqlData loads all the required test SQL files
-func LoadTestSqlData(db *sqlx.DB) error {
+func LoadTestSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn) error {
 	files := []string{"../models/tests/mines.sql", "../models/tests/all_urls.sql", "../models/tests/projects.sql"}
-	return loadTestSqlDataFiles(db, files)
+	return loadTestSqlDataFiles(db, ctx, conn, files)
 }
 
 // loadTestSqlDataFiles loads a list of test SQL files
-func loadTestSqlDataFiles(db *sqlx.DB, files []string) error {
+func loadTestSqlDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, files []string) error {
 	for _, file := range files {
-		err := loadSqlData(db, file)
+		err := loadSqlData(db, ctx, conn, file)
 		if err != nil {
 			return err
 		}

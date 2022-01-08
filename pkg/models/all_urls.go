@@ -17,15 +17,18 @@
 package models
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"github.com/hashicorp/go-version"
 	"github.com/jmoiron/sqlx"
 	"log"
 	"scanoss.com/dependencies/pkg/utils"
 )
 
-type allUrlsModel struct {
-	db      *sqlx.DB
+type AllUrlsModel struct {
+	ctx     context.Context
+	conn    *sqlx.Conn
 	mine    *mineModel
 	project *projectModel
 }
@@ -35,14 +38,14 @@ type AllUrl struct {
 	Version   string           `db:"version"`
 	License   string           `db:"license"`
 	PurlName  string           `db:"purl_name"`
-	SemVer    *version.Version `db:-`
+	SemVer    *version.Version `db:"-"`
 }
 
-func NewAllUrlModel(db *sqlx.DB, mine *mineModel, project *projectModel) *allUrlsModel {
-	return &allUrlsModel{db: db, mine: mine, project: project}
+func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, mine *mineModel, project *projectModel) *AllUrlsModel {
+	return &AllUrlsModel{ctx: ctx, conn: conn, mine: mine, project: project}
 }
 
-func (m *allUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) {
+func (m *AllUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) {
 	if len(purlString) == 0 {
 		log.Printf("Please specify a valid Purl String to query: %v", purlString)
 		return nil, errors.New("please specify a valid Purl String to query")
@@ -58,7 +61,7 @@ func (m *allUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) 
 	return m.GetUrlsByPurlName(purl.Name, mineId)
 }
 
-func (m *allUrlsModel) GetUrlsByPurlName(purlName string, mineId int) ([]AllUrl, error) {
+func (m *AllUrlsModel) GetUrlsByPurlName(purlName string, mineId int) ([]AllUrl, error) {
 	if mineId < 0 {
 		log.Printf("Please specify a valid Mine ID to query: %v", mineId)
 		return nil, errors.New("please specify a valid Mine ID to query")
@@ -68,12 +71,15 @@ func (m *allUrlsModel) GetUrlsByPurlName(purlName string, mineId int) ([]AllUrl,
 		return nil, errors.New("please specify a valid Purl Name to query")
 	}
 	var allUrls []AllUrl
-	err := m.db.Select(&allUrls,
+	err := m.conn.SelectContext(m.ctx, &allUrls,
 		"SELECT component, version, license, purl_name FROM all_urls WHERE mine_id = ? AND purl_name = ?",
 		mineId, purlName)
+	//err := m.db.Select(&allUrls,
+	//	"SELECT component, version, license, purl_name FROM all_urls WHERE mine_id = ? AND purl_name = ?",
+	//	mineId, purlName)
 	if err != nil {
 		log.Printf("Error: Failed to query all urls table for %v, %v: %v", purlName, mineId, err)
-		return nil, errors.New("failed to query the all urls table")
+		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
 	if m.project != nil {

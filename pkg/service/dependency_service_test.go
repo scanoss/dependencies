@@ -18,6 +18,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	common "github.com/scanoss/papi/api/commonv2"
@@ -78,12 +79,45 @@ func TestDependencyServer_GetDependencies(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	err = models.LoadTestSqlData(db)
+	//conn, err := db.Connx(ctx) // Get a connection from the pool
+	//if err != nil {
+	//	t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	//}
+	//defer conn.Close()
+	err = models.LoadTestSqlData(db, nil, nil)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)
 	}
 	s := NewDependencyServer(db)
 
+	var depRequestData = `{
+  "depth": 1,
+  "files": [
+    {
+      "file": "vue-dev/packages/weex-template-compiler/package.json",
+      "purls": [
+        {
+          "purl": "pkg:npm/electron-debug",
+          "requirement": "^3.1.0"
+        },
+        {
+          "purl": "pkg:npm/isbinaryfile",
+          "requirement": "^4.0.8"
+        },
+        {
+          "purl": "pkg:npm/sort-paths",
+          "requirement": "^1.1.1"
+        }
+      ]
+    }
+  ]
+}
+`
+	var depReq = pb.DependencyRequest{}
+	err = json.Unmarshal([]byte(depRequestData), &depReq)
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when unmarshalling requestd", err)
+	}
 	type args struct {
 		ctx context.Context
 		req *pb.DependencyRequest
@@ -100,9 +134,9 @@ func TestDependencyServer_GetDependencies(t *testing.T) {
 			s:    s,
 			args: args{
 				ctx: ctx,
-				req: &pb.DependencyRequest{Dependencies: "some rubbish", Depth: 1},
+				req: &depReq,
 			},
-			want: &pb.DependencyResponse{Dependencies: "", Status: &common.StatusResponse{Status: common.StatusCode_FAILED, Message: "No dependency request data supplied"}},
+			want: &pb.DependencyResponse{Status: &common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}},
 		},
 	}
 	for _, tt := range tests {
@@ -112,7 +146,7 @@ func TestDependencyServer_GetDependencies(t *testing.T) {
 				t.Errorf("service.GetDependencies() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if err == nil && !reflect.DeepEqual(got, tt.want) {
+			if err == nil && !reflect.DeepEqual(got.Status, tt.want.Status) {
 				t.Errorf("service.GetDependencies() = %v, want %v", got, tt.want)
 			}
 		})

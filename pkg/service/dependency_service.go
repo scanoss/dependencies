@@ -24,42 +24,18 @@ import (
 	"github.com/jmoiron/sqlx"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"log"
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/usecase"
 )
 
-const (
-	// apiVersion is version of API is provided by server
-	apiVersion = "v2" // TODO keep or remove?
-)
-
 type dependencyServer struct {
 	pb.DependenciesServer
-	db    *sqlx.DB
-	depUc *usecase.DependencyUseCase
+	db *sqlx.DB
 }
-
-var (
-	depResp = "{\n  \"audit-workbench-master/package.json\": {\n    \"id\": \"dependency\",\n    \"status\": \"pending\",\n    \"dependencies\": [\n      {\n        \"purl\": \"abort-controller\",\n        \"component\": \"abort-controller\",\n        \"vendor\": \"Toru Nagashima\",\n        \"version\": \"\",\n        \"license\": [\n          {\n            \"name\": \"MIT\"\n          }\n        ]\n      },\n      {\n        \"purl\": \"chart.js\",\n        \"component\": \"chart.js\",\n        \"vendor\": \"npmjs\",\n        \"version\": \"\",\n        \"license\": [\n          {\n            \"name\": \"MIT\"\n          }\n        ]\n      }\n    ]\n  }\n}"
-)
 
 func NewDependencyServer(db *sqlx.DB) pb.DependenciesServer {
-	return &dependencyServer{db: db, depUc: usecase.NewDependencies(db)}
-}
-
-// checkAPI checks if the API version requested by client is supported by server
-func (d *dependencyServer) checkAPI(api string) error { // TODO is this even required?
-	// API version is "" means use current version of the service
-	if len(api) > 0 {
-		if apiVersion != api {
-			return status.Errorf(codes.Unimplemented,
-				"unsupported API version: service implements API version '%s', but asked for '%s'", apiVersion, api)
-		}
-	}
-	return nil
+	return &dependencyServer{db: db}
 }
 
 func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest) (*common.EchoResponse, error) {
@@ -69,21 +45,36 @@ func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest)
 
 func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.DependencyRequest) (*pb.DependencyResponse, error) {
 	log.Printf("Processing dependency request: %v", request)
-	dependencies := request.GetDependencies()
-	if len(dependencies) == 0 {
+	depRequest := request.GetFiles()
+	if depRequest == nil || len(depRequest) == 0 {
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "No dependency request data supplied"}
-		return &pb.DependencyResponse{Dependencies: "", Status: &statusResp}, errors.New("no request data supplied")
+		return &pb.DependencyResponse{Status: &statusResp}, errors.New("no request data supplied")
 	}
 	dtoRequest, err := convertDependencyInput(request)
 	if err != nil {
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problem parsing dependency input data"}
-		return &pb.DependencyResponse{Dependencies: "", Status: &statusResp}, errors.New("problem parsing dependency input data")
+		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem parsing dependency input data")
 	}
-	d.depUc.GetDependencies(dtoRequest)
-
-	// TODO add the actual dependency lookup here
-	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "it worked"}
-	return &pb.DependencyResponse{Dependencies: depResp, Status: &statusResp}, nil
+	conn, err := d.db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
+		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
+	}
+	defer conn.Close()
+	depUc := usecase.NewDependencies(ctx, conn)
+	dtoDependencies, err := depUc.GetDependencies(dtoRequest)
+	if err != nil {
+		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
+		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problems encountered extracting dependency data")
+	}
+	log.Printf("Parsed Dependencies: %+v", dtoDependencies)
+	depResponse, err := convertDependencyOutput(dtoDependencies)
+	if err != nil {
+		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
+		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problems encountered extracting dependency data")
+	}
+	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}
+	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }
 
 func convertDependencyInput(request *pb.DependencyRequest) (dtos.DependencyInput, error) {
@@ -100,6 +91,18 @@ func convertDependencyInput(request *pb.DependencyRequest) (dtos.DependencyInput
 	return dtoRequest, nil
 }
 
-func convertDependencyOutput() {
-
+func convertDependencyOutput(output dtos.DependencyOutput) (pb.DependencyResponse, error) {
+	data, err := json.Marshal(output)
+	if err != nil {
+		log.Printf("Error: Problem marshalling dependency request output: %v", err)
+		return pb.DependencyResponse{}, errors.New("problem marshalling dependency output")
+	}
+	log.Printf("Parsed data: %v", string(data))
+	var depResp pb.DependencyResponse
+	err = json.Unmarshal(data, &depResp)
+	if err != nil {
+		log.Printf("Error: Problem unmarshalling dependency request output: %v", err)
+		return pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
+	}
+	return depResp, nil
 }

@@ -19,13 +19,17 @@
 package models
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"log"
 )
 
 type projectModel struct {
-	db *sqlx.DB
+	//db *sqlx.DB
+	ctx  context.Context
+	conn *sqlx.Conn
 }
 
 type Project struct {
@@ -35,8 +39,8 @@ type Project struct {
 	PurlName  string `db:"purl_name"`
 }
 
-func NewProjectModel(db *sqlx.DB) *projectModel {
-	return &projectModel{db: db}
+func NewProjectModel(ctx context.Context, conn *sqlx.Conn) *projectModel {
+	return &projectModel{ctx: ctx, conn: conn}
 }
 
 func (m *projectModel) GetProjectsByPurlName(purlName string, mineId int) ([]Project, error) {
@@ -49,12 +53,15 @@ func (m *projectModel) GetProjectsByPurlName(purlName string, mineId int) ([]Pro
 		return nil, errors.New("please specify a valid Purl Name to query")
 	}
 	var allProjects []Project
-	err := m.db.Select(&allProjects,
+	err := m.conn.SelectContext(m.ctx, &allProjects,
 		"SELECT component, versions, license, purl_name FROM projects WHERE mine_id = ? AND purl_name = ?",
 		mineId, purlName)
+	//err := m.db.Select(&allProjects,
+	//	"SELECT component, versions, license, purl_name FROM projects WHERE mine_id = ? AND purl_name = ?",
+	//	mineId, purlName)
 	if err != nil {
 		log.Printf("Error: Failed to query projects table for %v, %v: %v", purlName, mineId, err)
-		return nil, errors.New("failed to query the projects table")
+		return nil, fmt.Errorf("failed to query the projects table: %v", err)
 	}
 	return allProjects, nil
 }

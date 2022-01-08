@@ -17,6 +17,7 @@
 package models
 
 import (
+	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -24,16 +25,23 @@ import (
 )
 
 func TestMines(t *testing.T) {
+	ctx := context.Background()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	err = loadSqlData(db, "./tests/mines.sql")
+	conn, err := db.Connx(ctx) // Get a connection from the pool (with context)
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer conn.Close()
+	err = loadSqlData(db, ctx, conn, "./tests/mines.sql")
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	mine := NewMineModel(db)
+	mine := NewMineModel(ctx, conn)
+	mine.ResetMineCache()
 	var purlType = "maven"
 	mineId, err := mine.GetMineIdByPurlType(purlType)
 	if err != nil {
@@ -65,13 +73,20 @@ func TestMines(t *testing.T) {
 	}
 }
 
+// TestMinesBadSql test bad queries without creating/loading the mines table
 func TestMinesBadSql(t *testing.T) {
+	ctx := context.Background()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	mine := NewMineModel(db)
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer conn.Close()
+	mine := NewMineModel(ctx, conn)
 	mine.ResetMineCache()
 	purlType := "NONEXISTENT"
 	mineId, err := mine.GetMineIdByPurlType(purlType)

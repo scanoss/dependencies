@@ -13,7 +13,7 @@ CREATE TABLE all_urls
     purl_name    text,
     primary key (package_hash, url, url_hash)
 );
-INSERT INTO all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name) VALUES ('33523708f7fbef1c554d340a5cfd42aa', 'taballa.hp-PD', 'tablestyle', '0.0.8', '2013-08-26', 'https://rubygems.org/downloads/tablestyle-0.0.8.gem', '5e2c89ddef74a0873169f2e13f5efba6', 1, 'MIT', 'tablestyle');
+INSERT INTO all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name) VALUES ('33523708f7fbef1c554d340a5cfd42aa', 'taballa.hp-PD', 'tablestyle', '0.0.8', '2013-08-26', 'https://rubygems.org/downloads/tablestyle-0.0.8.gem', '5e2c89ddef74a0873169f2e13f5efba6', 1, '', 'tablestyle');
 INSERT INTO all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name) VALUES ('4986c6fed8d0b30daa9caaa0e94101ff', 'taballa.hp-PD', 'tablestyle', '0.0.9', '2013-08-26', 'https://rubygems.org/downloads/tablestyle-0.0.9.gem', 'bd2af9a9445fdd5bfe1ab28dd26f9c42', 1, 'MIT', 'tablestyle');
 INSERT INTO all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name) VALUES ('4d66775f503b1e76582e7e5b2ea54d92', 'taballa.hp-PD', 'tablestyle', '0.0.10', '2013-08-26', 'https://rubygems.org/downloads/tablestyle-0.0.10.gem', '5a088240b44efa142be4b3c40f8ae9c1', 1, 'MIT', 'tablestyle');
 INSERT INTO all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name) VALUES ('85ace696e6aec401c611eac8da439d75', 'taballa.hp-PD', 'tablestyle', '0.0.5', '2013-07-08', 'https://rubygems.org/downloads/tablestyle-0.0.5.gem', '2e60ef936150975ca2071cc8782c062a', 1, 'MIT', 'tablestyle');

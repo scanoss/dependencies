@@ -41,36 +41,41 @@ func TestMines(t *testing.T) {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
 	mine := NewMineModel(ctx, conn)
-	mine.ResetMineCache()
 	var purlType = "maven"
-	mineId, err := mine.GetMineIdByPurlType(purlType)
+	mineIds, err := mine.GetMineIdsByPurlType(purlType)
 	if err != nil {
 		t.Errorf("mines.GetMineIdByPurlType() error = %v", err)
 	}
-	fmt.Printf("Mine ID for %v: %v\n", purlType, mineId)
+	fmt.Printf("Mine ID for %v: %v\n", purlType, mineIds)
 
 	purlType = "gem"
-	mineId, err = mine.GetMineIdByPurlType(purlType)
+	mineIds, err = mine.GetMineIdsByPurlType(purlType)
 	if err != nil {
 		t.Errorf("mines.GetMineIdByPurlType() error = %v", err)
 	}
-	fmt.Printf("Mine ID for %v: %v\n", purlType, mineId)
+	fmt.Printf("Mine ID for %v: %v\n", purlType, mineIds)
 
 	purlType = ""
-	mineId, err = mine.GetMineIdByPurlType(purlType)
+	mineIds, err = mine.GetMineIdsByPurlType(purlType)
 	if err != nil {
 		fmt.Printf("Mine ID not found: %v\n", err)
 	} else {
-		t.Errorf("mines.GetMineIdByPurlType() found for %v = %v", purlType, mineId)
+		t.Errorf("mines.GetMineIdByPurlType() found for %v = %v", purlType, mineIds)
 	}
 
 	purlType = "NONEXISTENT"
-	mineId, err = mine.GetMineIdByPurlType(purlType)
+	mineIds, err = mine.GetMineIdsByPurlType(purlType)
 	if err != nil {
 		fmt.Printf("Mine ID not found: %v\n", err)
 	} else {
-		t.Errorf("mines.GetMineIdByPurlType() found for %v = %v", purlType, mineId)
+		t.Errorf("mines.GetMineIdByPurlType() found for %v = %v", purlType, mineIds)
 	}
+	purlType = "npm"
+	mineIds, err = mine.GetMineIdsByPurlType(purlType)
+	if err != nil {
+		t.Errorf("mines.GetMineIdsByPurlType() error = %v", err)
+	}
+	fmt.Printf("Mine IDs for %v: %v\n", purlType, mineIds)
 }
 
 // TestMinesBadSql test bad queries without creating/loading the mines table
@@ -87,12 +92,11 @@ func TestMinesBadSql(t *testing.T) {
 	}
 	defer conn.Close()
 	mine := NewMineModel(ctx, conn)
-	mine.ResetMineCache()
 	purlType := "NONEXISTENT"
-	mineId, err := mine.GetMineIdByPurlType(purlType)
+	mineIds, err := mine.GetMineIdsByPurlType(purlType)
 	if err != nil {
 		fmt.Printf("Mine ID not found: %v\n", err)
 	} else {
-		t.Errorf("mines.GetMineIdByPurlType() found for %v = %v", purlType, mineId)
+		t.Errorf("mines.GetMineIdByPurlType() found for %v = %v", purlType, mineIds)
 	}
 }

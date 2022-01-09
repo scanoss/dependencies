@@ -35,13 +35,13 @@ func TestProjectsSearch(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer conn.Close()
-	err = loadSqlData(db, ctx, conn, "./tests/projects.sql")
+	err = loadTestSqlDataFiles(db, ctx, conn, []string{"../models/tests/projects.sql", "../models/tests/mines.sql"})
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
 	projectsModel := NewProjectModel(ctx, conn)
 
-	projects, err := projectsModel.GetProjectsByPurlName("tablestyle", 1)
+	projects, err := projectsModel.GetProjectsByPurlName("tablestyle", "gem")
 	if err != nil {
 		t.Errorf("projects.GetProjectsByPurlName() error = %v", err)
 	}
@@ -50,19 +50,34 @@ func TestProjectsSearch(t *testing.T) {
 	}
 	fmt.Printf("Projects: %v\n", projects)
 
-	_, err = projectsModel.GetProjectsByPurlName("", 0)
+	_, err = projectsModel.GetProjectsByPurlName("", "npm")
 	if err == nil {
 		t.Errorf("projects.GetProjectsByPurlName() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = projectsModel.GetProjectsByPurlName("", -1)
+	_, err = projectsModel.GetProjectsByPurlName("tablestyle", "")
 	if err == nil {
 		t.Errorf("projects.GetProjectsByPurlName() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = projectsModel.GetProjectsByPurlName("rubbish", -99)
+}
+
+func TestProjectsSearchBadSql(t *testing.T) {
+	ctx := context.Background()
+	db, err := sqlx.Connect("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer conn.Close()
+	projectsModel := NewProjectModel(ctx, conn)
+	_, err = projectsModel.GetProjectsByPurlName("rubbish", "rubbish")
 	if err == nil {
 		t.Errorf("projects.GetProjectsByPurlName() error = did not get an error")
 	} else {

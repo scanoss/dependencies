@@ -27,7 +27,6 @@ import (
 )
 
 type projectModel struct {
-	//db *sqlx.DB
 	ctx  context.Context
 	conn *sqlx.Conn
 }
@@ -43,24 +42,22 @@ func NewProjectModel(ctx context.Context, conn *sqlx.Conn) *projectModel {
 	return &projectModel{ctx: ctx, conn: conn}
 }
 
-func (m *projectModel) GetProjectsByPurlName(purlName string, mineId int) ([]Project, error) {
-	if mineId < 0 {
-		log.Printf("Please specify a valid Mine ID to query: %v", mineId)
-		return nil, errors.New("please specify a valid Mine ID to query")
-	}
+func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) ([]Project, error) {
 	if len(purlName) == 0 {
-		log.Printf("Please specify a valid Purl Name to query: %v", mineId)
+		log.Printf("Please specify a valid Purl Name to query")
 		return nil, errors.New("please specify a valid Purl Name to query")
+	}
+	if len(purlType) == 0 {
+		log.Printf("Please specify a valid Purl Type to query")
+		return nil, errors.New("please specify a valid Purl Type to query")
 	}
 	var allProjects []Project
 	err := m.conn.SelectContext(m.ctx, &allProjects,
-		"SELECT component, versions, license, purl_name FROM projects WHERE mine_id = ? AND purl_name = ?",
-		mineId, purlName)
-	//err := m.db.Select(&allProjects,
-	//	"SELECT component, versions, license, purl_name FROM projects WHERE mine_id = ? AND purl_name = ?",
-	//	mineId, purlName)
+		"SELECT component, versions, license, purl_name FROM projects p LEFT JOIN mines m ON p.mine_id = m.id"+
+			" WHERE m.purl_type = ? AND p.purl_name = ?",
+		purlType, purlName)
 	if err != nil {
-		log.Printf("Error: Failed to query projects table for %v, %v: %v", purlName, mineId, err)
+		log.Printf("Error: Failed to query projects table for %v, %v: %v", purlName, purlType, err)
 		return nil, fmt.Errorf("failed to query the projects table: %v", err)
 	}
 	return allProjects, nil

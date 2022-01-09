@@ -29,7 +29,6 @@ import (
 type AllUrlsModel struct {
 	ctx     context.Context
 	conn    *sqlx.Conn
-	mine    *mineModel
 	project *projectModel
 }
 
@@ -38,11 +37,11 @@ type AllUrl struct {
 	Version   string           `db:"version"`
 	License   string           `db:"license"`
 	PurlName  string           `db:"purl_name"`
-	SemVer    *version.Version `db:"-"`
+	SemVer    *version.Version `db:"-"` // TODO what semver should we use?
 }
 
-func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, mine *mineModel, project *projectModel) *AllUrlsModel {
-	return &AllUrlsModel{ctx: ctx, conn: conn, mine: mine, project: project}
+func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, project *projectModel) *AllUrlsModel {
+	return &AllUrlsModel{ctx: ctx, conn: conn, project: project}
 }
 
 func (m *AllUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) {
@@ -54,35 +53,29 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) 
 	if err != nil {
 		return nil, err
 	}
-	mineId, err := m.mine.GetMineIdByPurlType(purl.Type)
-	if err != nil {
-		return nil, err
-	}
-	return m.GetUrlsByPurlName(purl.Name, mineId)
+	return m.GetUrlsByPurlNameType(purl.Name, purl.Type)
 }
 
-func (m *AllUrlsModel) GetUrlsByPurlName(purlName string, mineId int) ([]AllUrl, error) {
-	if mineId < 0 {
-		log.Printf("Please specify a valid Mine ID to query: %v", mineId)
-		return nil, errors.New("please specify a valid Mine ID to query")
-	}
+func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) ([]AllUrl, error) {
 	if len(purlName) == 0 {
-		log.Printf("Please specify a valid Purl Name to query: %v", mineId)
+		log.Printf("Please specify a valid Purl Name to query")
 		return nil, errors.New("please specify a valid Purl Name to query")
+	}
+	if len(purlType) == 0 {
+		log.Printf("Please specify a valid Purl Type to query")
+		return nil, errors.New("please specify a valid Purl Type to query")
 	}
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, version, license, purl_name FROM all_urls WHERE mine_id = ? AND purl_name = ?",
-		mineId, purlName)
-	//err := m.db.Select(&allUrls,
-	//	"SELECT component, version, license, purl_name FROM all_urls WHERE mine_id = ? AND purl_name = ?",
-	//	mineId, purlName)
+		"SELECT component, version, license, purl_name FROM all_urls u LEFT JOIN mines m ON u.mine_id = m.id"+
+			" WHERE m.purl_type = ? AND u.purl_name = ?",
+		purlType, purlName)
 	if err != nil {
-		log.Printf("Error: Failed to query all urls table for %v, %v: %v", purlName, mineId, err)
+		log.Printf("Error: Failed to query all urls table for %v, %v: %v", purlName, purlType, err)
 		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
-	if m.project != nil {
+	if m.project != nil { // TODO should this not be done when loading the URLs table (mining)?
 		var projects []Project
 		for i, url := range allUrls {
 			allUrls[i].SemVer, err = version.NewVersion(url.Version)
@@ -91,9 +84,9 @@ func (m *AllUrlsModel) GetUrlsByPurlName(purlName string, mineId int) ([]AllUrl,
 			}
 			if len(url.License) == 0 {
 				if len(projects) == 0 { // Only search for the project data once
-					projects, err = m.project.GetProjectsByPurlName(purlName, mineId)
+					projects, err = m.project.GetProjectsByPurlName(purlName, purlType)
 					if err != nil {
-						log.Printf("Warning: Problem searching projects table for %v, %v", purlName, mineId)
+						log.Printf("Warning: Problem searching projects table for %v, %v", purlName, purlType)
 						break // Stop search the rest of the URL entries
 					}
 				}

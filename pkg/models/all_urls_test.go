@@ -39,9 +39,9 @@ func TestAllUrlsSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewMineModel(ctx, conn), NewProjectModel(ctx, conn))
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
 
-	allUrls, err := allUrlsModel.GetUrlsByPurlName("tablestyle", 1)
+	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
@@ -50,7 +50,7 @@ func TestAllUrlsSearch(t *testing.T) {
 	}
 	fmt.Printf("All Urls: %v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetUrlsByPurlName("NONEXISTENT", 0)
+	allUrls, err = allUrlsModel.GetUrlsByPurlNameType("NONEXISTENT", "none")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
@@ -59,13 +59,13 @@ func TestAllUrlsSearch(t *testing.T) {
 	}
 	fmt.Printf("No Urls: %v\n", allUrls)
 
-	_, err = allUrlsModel.GetUrlsByPurlName("", -1)
+	_, err = allUrlsModel.GetUrlsByPurlNameType("NONEXISTENT", "")
 	if err == nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetUrlsByPurlName("", 0)
+	_, err = allUrlsModel.GetUrlsByPurlNameType("", "")
 	if err == nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
 	} else {
@@ -105,8 +105,7 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer conn.Close()
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewMineModel(ctx, conn), NewProjectModel(ctx, conn))
-	allUrlsModel.mine.ResetMineCache()
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
 	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/taballa.hp-PD/tablestyle")
 	if err == nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
@@ -118,7 +117,7 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrls, err := allUrlsModel.GetUrlsByPurlName("tablestyle", 1)
+	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}

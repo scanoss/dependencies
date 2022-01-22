@@ -72,18 +72,13 @@ func TestDependencyServer_Echo(t *testing.T) {
 	}
 }
 
-func TestDependencyServer_GetDependencies(t *testing.T) {
+func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 	ctx := context.Background()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
-	//conn, err := db.Connx(ctx) // Get a connection from the pool
-	//if err != nil {
-	//	t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	//}
-	//defer conn.Close()
 	err = models.LoadTestSqlData(db, nil, nil)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)
@@ -118,6 +113,18 @@ func TestDependencyServer_GetDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when unmarshalling requestd", err)
 	}
+	var depRequestDataBad = `{
+  "depth": 1,
+  "files": [
+  ]
+}
+`
+	var depReqBad = pb.DependencyRequest{}
+	err = json.Unmarshal([]byte(depRequestDataBad), &depReqBad)
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when unmarshalling requestd", err)
+	}
+
 	type args struct {
 		ctx context.Context
 		req *pb.DependencyRequest
@@ -137,6 +144,16 @@ func TestDependencyServer_GetDependencies(t *testing.T) {
 				req: &depReq,
 			},
 			want: &pb.DependencyResponse{Status: &common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}},
+		},
+		{
+			name: "Get Deps Simple False",
+			s:    s,
+			args: args{
+				ctx: ctx,
+				req: &depReqBad,
+			},
+			want:    &pb.DependencyResponse{Status: &common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed"}},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

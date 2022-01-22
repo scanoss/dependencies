@@ -42,7 +42,6 @@ func TestDependencyUseCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)
 	}
-
 	var depRequestData = `{
   "depth": 1,
   "files": [
@@ -66,9 +65,7 @@ func TestDependencyUseCase(t *testing.T) {
   ]
 }
 `
-
 	depUc := NewDependencies(ctx, conn)
-
 	requestDto, err := dtos.ParseDependencyInput([]byte(depRequestData))
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when parsing input json", err)
@@ -78,4 +75,37 @@ func TestDependencyUseCase(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when getting dependencies", err)
 	}
 	fmt.Printf("Dependency response: %+v\n", dependencies)
+
+	var depBadRequestData = `{
+  "depth": 1,
+  "files": [
+    {
+      "file": "vue-dev/packages/weex-template-compiler/package.json",
+      "purls": [
+        {
+          "purl": "pkg:npm/",
+          "requirement": "^3.1.0"
+        },
+        {
+          "purl": "pkg:npm/isbinaryfile",
+          "requirement": "^4.0.8"
+        },
+        {
+          "purl": "",
+          "requirement": "^1.1.1"
+        }
+      ]
+    }
+  ]
+}
+`
+	requestDto, err = dtos.ParseDependencyInput([]byte(depBadRequestData))
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when parsing input json", err)
+	}
+	dependencies, err = depUc.GetDependencies(requestDto)
+	if err == nil {
+		t.Fatalf("did not get an expected error: %v", dependencies)
+	}
+	fmt.Printf("Got expected error: %+v\n", err)
 }

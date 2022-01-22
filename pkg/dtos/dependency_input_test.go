@@ -72,10 +72,33 @@ func TestDependencyInput(t *testing.T) {
   "depth": 2
 }
 `
-	jsonText := []byte(inputJson2)
-	data2, err := ParseDependencyInput(jsonText)
+	data, err := ParseDependencyInput([]byte(inputJson2))
 	if err != nil {
 		t.Errorf("dtos.ParseDependencyInput() error = %v", err)
 	}
-	fmt.Println("Parsed input data2: ", data2)
+	fmt.Println("Parsed input data2: ", data)
+
+	_, err = ParseDependencyInput(nil)
+	if err == nil {
+		t.Errorf("dtos.ParseDependencyInput() did not fail")
+	}
+	fmt.Println("get expected error: ", err)
+
+	var brokenJson = `{
+  "files": [
+    {
+      "file": "vue-dev/packages/weex-template-compiler/package.json"
+      "purls": [
+        {
+          "purl": "pkg:npm/acorn",
+        },
+    }
+}
+`
+
+	_, err = ParseDependencyInput([]byte(brokenJson))
+	if err == nil {
+		t.Errorf("dtos.ParseDependencyInput() did not fail")
+	}
+	fmt.Println("get expected error: ", err)
 }

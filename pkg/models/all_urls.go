@@ -37,6 +37,7 @@ type AllUrl struct {
 	Version   string           `db:"version"`
 	License   string           `db:"license"`
 	PurlName  string           `db:"purl_name"`
+	MineId    int32            `db:"mine_id"`
 	SemVer    *version.Version `db:"-"` // TODO what semver should we use?
 }
 
@@ -67,7 +68,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) (
 	}
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, version, license, purl_name FROM all_urls u LEFT JOIN mines m ON u.mine_id = m.id"+
+		"SELECT component, version, license, purl_name, mine_id FROM all_urls u LEFT JOIN mines m ON u.mine_id = m.id"+
 			" WHERE m.purl_type = ? AND u.purl_name = ?",
 		purlType, purlName)
 	if err != nil {
@@ -75,24 +76,30 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) (
 		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
-	if m.project != nil { // TODO should this not be done when loading the URLs table (mining)?
-		var projects []Project
+	if m.project != nil { // TODO should this not be done when loading the URLs table (mining) - i.e. maybe store the project id?
+		var projects = make(map[int32]Project)
 		for i, url := range allUrls {
 			allUrls[i].SemVer, err = version.NewVersion(url.Version)
 			if err != nil {
 				log.Printf("Warning: Problem parsing version from string: %v", url)
 			}
 			if len(url.License) == 0 {
-				if len(projects) == 0 { // Only search for the project data once
-					projects, err = m.project.GetProjectsByPurlName(purlName, purlType)
+				project, ok := projects[url.MineId]    // Check if it's already cached
+				if !ok || len(project.PurlName) == 0 { // Only search for the project data once
+					log.Printf("Caching project data for %v - %v\n", purlName, url.MineId)
+					project, err = m.project.GetProjectByPurlName(purlName, url.MineId)
 					if err != nil {
 						log.Printf("Warning: Problem searching projects table for %v, %v", purlName, purlType)
-						break // Stop search the rest of the URL entries
+					} else {
+						projects[url.MineId] = project
 					}
+				} else {
+					log.Printf("Project data already cached for %v - %v\n", purlName, url.MineId)
 				}
-				if len(projects) > 0 { // TODO which version of the project entry should be used?
-					log.Printf("Adding license data to %v from %v", url, projects[0])
-					allUrls[i].License = projects[0].License // Assign the first license found
+				project, ok = projects[url.MineId] // Do we have a match?
+				if ok && len(project.License) > 0 {
+					log.Printf("Adding license data to %v from %v", url, project)
+					allUrls[i].License = project.License
 				}
 			}
 		}

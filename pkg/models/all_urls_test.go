@@ -48,7 +48,7 @@ func TestAllUrlsSearch(t *testing.T) {
 	if len(allUrls) < 1 {
 		t.Errorf("all_urls.GetUrlsByPurlName() No URLs returned from query")
 	}
-	fmt.Printf("All Urls: %v\n", allUrls)
+	fmt.Printf("All Urls: %#v\n", allUrls)
 
 	allUrls, err = allUrlsModel.GetUrlsByPurlNameType("NONEXISTENT", "none")
 	if err != nil {

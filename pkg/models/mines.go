@@ -48,7 +48,7 @@ func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int, error) {
 	}
 	var mines []Mine
 	err := m.conn.SelectContext(m.ctx, &mines,
-		"SELECT id,name,purl_type FROM mines WHERE purl_type = ?", purlType,
+		"SELECT id,name,purl_type FROM mines WHERE purl_type = $1", purlType,
 	)
 	if err != nil {
 		log.Printf("Error: Failed to query mines table for %v: %v", purlType, err)

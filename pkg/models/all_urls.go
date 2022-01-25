@@ -66,13 +66,14 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) (
 		log.Printf("Please specify a valid Purl Type to query")
 		return nil, errors.New("please specify a valid Purl Type to query")
 	}
+	//log.Printf("AllURL Query: SELECT component, version, license, purl_name, mine_id FROM all_urls u LEFT JOIN mines m ON u.mine_id = m.id WHERE m.purl_type = '%v' AND u.purl_name = '%v'", purlType, purlName)
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
 		"SELECT component, version, license, purl_name, mine_id FROM all_urls u LEFT JOIN mines m ON u.mine_id = m.id"+
-			" WHERE m.purl_type = ? AND u.purl_name = ?",
+			" WHERE m.purl_type = $1 AND u.purl_name = $2",
 		purlType, purlName)
 	if err != nil {
-		log.Printf("Error: Failed to query all urls table for %v, %v: %v", purlName, purlType, err)
+		log.Printf("Error: Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
 		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table

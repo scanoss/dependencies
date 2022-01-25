@@ -52,7 +52,7 @@ func RunServer() error {
 	var cfg Config
 	flag.StringVar(&cfg.GRPCPort, "grpc-port", defaultGrpcPort, "gRPC port to bind")
 	flag.StringVar(&cfg.DatastoreDBHost, "db-host", "localhost", "Database host")
-	flag.StringVar(&cfg.DatastoreDBUser, "db-user", "", "Database user")
+	flag.StringVar(&cfg.DatastoreDBUser, "db-user", "scanoss", "Database user")
 	flag.StringVar(&cfg.DatastoreDBPassword, "db-password", "", "Database password")
 	flag.StringVar(&cfg.DatastoreDBSchema, "db-schema", "scanoss", "Database schema")
 	flag.Parse()

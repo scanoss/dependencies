@@ -38,19 +38,22 @@ func NewDependencyServer(db *sqlx.DB) pb.DependenciesServer {
 	return &dependencyServer{db: db}
 }
 
+// Echo sends back the same message received
 func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest) (*common.EchoResponse, error) {
 	log.Printf("Received: %v", request.GetMessage())
 	return &common.EchoResponse{Message: request.GetMessage()}, nil
 }
 
+// GetDependencies searches for information about the supplied dependencies
 func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.DependencyRequest) (*pb.DependencyResponse, error) {
 	log.Printf("Processing dependency request: %v", request)
+	// Make sure we have dependency data to query
 	depRequest := request.GetFiles()
 	if depRequest == nil || len(depRequest) == 0 {
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "No dependency request data supplied"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("no request data supplied")
 	}
-	dtoRequest, err := convertDependencyInput(request)
+	dtoRequest, err := convertDependencyInput(request) // Convert to internal DTO for processing
 	if err != nil {
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problem parsing dependency input data"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem parsing dependency input data")
@@ -61,18 +64,20 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
 	}
 	defer conn.Close()
+	// Search the KB for information about each dependency
 	depUc := usecase.NewDependencies(ctx, conn)
 	dtoDependencies, err := depUc.GetDependencies(dtoRequest)
 	if err != nil {
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
-		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problems encountered extracting dependency data")
+		return &pb.DependencyResponse{Status: &statusResp}, nil
 	}
 	log.Printf("Parsed Dependencies: %+v", dtoDependencies)
-	depResponse, err := convertDependencyOutput(dtoDependencies)
+	depResponse, err := convertDependencyOutput(dtoDependencies) // Convert the internal data into a response object
 	if err != nil {
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
-		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problems encountered extracting dependency data")
+		return &pb.DependencyResponse{Status: &statusResp}, nil
 	}
+	// Set the status and respond with the data
 	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }

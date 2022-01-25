@@ -55,7 +55,7 @@ func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) (
 	var allProjects []Project
 	err := m.conn.SelectContext(m.ctx, &allProjects,
 		"SELECT component, versions, license, purl_name FROM projects p LEFT JOIN mines m ON p.mine_id = m.id"+
-			" WHERE m.purl_type = ? AND p.purl_name = ?",
+			" WHERE m.purl_type = $1 AND p.purl_name = $2",
 		purlType, purlName)
 	if err != nil {
 		log.Printf("Error: Failed to query projects table for %v, %v: %v", purlName, purlType, err)
@@ -75,7 +75,7 @@ func (m *projectModel) GetProjectByPurlName(purlName string, mineId int32) (Proj
 		return Project{}, errors.New("please specify a valid Mine ID to query")
 	}
 	rows, err := m.conn.QueryxContext(m.ctx,
-		"SELECT component, versions, license, purl_name FROM projects WHERE purl_name = ? AND mine_id = ?",
+		"SELECT component, versions, license, purl_name FROM projects WHERE purl_name = $1 AND mine_id = $2",
 		purlName, mineId)
 	if err != nil {
 		log.Printf("Error: Failed to query projects table for %v, %v: %v", purlName, mineId, err)

@@ -40,7 +40,7 @@ func NewDependencyServer(db *sqlx.DB) pb.DependenciesServer {
 
 // Echo sends back the same message received
 func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest) (*common.EchoResponse, error) {
-	log.Printf("Received: %v", request.GetMessage())
+	log.Printf("Received (%v): %v", ctx, request.GetMessage())
 	return &common.EchoResponse{Message: request.GetMessage()}, nil
 }
 
@@ -63,7 +63,12 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
 	}
-	defer conn.Close()
+	defer func(conn *sqlx.Conn) {
+		err := conn.Close()
+		if err != nil {
+			log.Printf("Warning: Problem closing database connection: %v", err)
+		}
+	}(conn)
 	// Search the KB for information about each dependency
 	depUc := usecase.NewDependencies(ctx, conn)
 	dtoDependencies, err := depUc.GetDependencies(dtoRequest)
@@ -96,18 +101,18 @@ func convertDependencyInput(request *pb.DependencyRequest) (dtos.DependencyInput
 	return dtoRequest, nil
 }
 
-func convertDependencyOutput(output dtos.DependencyOutput) (pb.DependencyResponse, error) {
+func convertDependencyOutput(output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
 	data, err := json.Marshal(output)
 	if err != nil {
 		log.Printf("Error: Problem marshalling dependency request output: %v", err)
-		return pb.DependencyResponse{}, errors.New("problem marshalling dependency output")
+		return &pb.DependencyResponse{}, errors.New("problem marshalling dependency output")
 	}
 	log.Printf("Parsed data: %v", string(data))
 	var depResp pb.DependencyResponse
 	err = json.Unmarshal(data, &depResp)
 	if err != nil {
 		log.Printf("Error: Problem unmarshalling dependency request output: %v", err)
-		return pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
+		return &pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
 	}
-	return depResp, nil
+	return &depResp, nil
 }

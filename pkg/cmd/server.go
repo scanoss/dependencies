@@ -20,58 +20,53 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/golobby/config/v3"
+	"github.com/golobby/config/v3/pkg/feeder"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/protocol/grpc"
 	"scanoss.com/dependencies/pkg/service"
 	"time"
 )
 
-const (
-	defaultGrpcPort = "9000"
-)
-
-// Config is configuration for Server
-type Config struct {
-	// GRPCPort is TCP port to listen by gRPC server
-	GRPCPort string
-	// DatastoreDBHost is host of database
-	DatastoreDBHost string
-	// DatastoreDBUser is username to connect to database
-	DatastoreDBUser string
-	// DatastoreDBPassword password to connect to database
-	DatastoreDBPassword string
-	// DatastoreDBSchema is schema of database
-	DatastoreDBSchema string
+// getConfig checks command line args for option to feed into the config parser
+func getConfig() (*myconfig.ServerConfig, error) {
+	var jsonConfig, envConfig string
+	flag.StringVar(&jsonConfig, "json-config", "", "Application JSON config")
+	flag.StringVar(&envConfig, "env-config", "", "Application dot-ENV config")
+	flag.Parse()
+	var feeders []config.Feeder
+	if len(jsonConfig) > 0 {
+		feeders = append(feeders, feeder.Json{Path: jsonConfig})
+	}
+	if len(envConfig) > 0 {
+		feeders = append(feeders, feeder.DotEnv{Path: envConfig})
+	}
+	myConfig, err := myconfig.NewServerConfig(feeders)
+	return myConfig, err
 }
 
 // RunServer runs the gRPC Dependency Server
 func RunServer() error {
-	ctx := context.Background()
-	// get configuration
-	var cfg Config
-	flag.StringVar(&cfg.GRPCPort, "grpc-port", defaultGrpcPort, "gRPC port to bind")
-	flag.StringVar(&cfg.DatastoreDBHost, "db-host", "localhost", "Database host")
-	flag.StringVar(&cfg.DatastoreDBUser, "db-user", "scanoss", "Database user")
-	flag.StringVar(&cfg.DatastoreDBPassword, "db-password", "", "Database password")
-	flag.StringVar(&cfg.DatastoreDBSchema, "db-schema", "scanoss", "Database schema")
-	flag.Parse()
-
-	if len(cfg.GRPCPort) == 0 {
-		return fmt.Errorf("no TCP port (-grpc-port) for gRPC server")
+	cfg, err := getConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %v", err)
 	}
-	if len(cfg.DatastoreDBUser) == 0 {
-		return fmt.Errorf("no DB user (-db-user) supplied")
+	fmt.Printf("Config: %+v\n", cfg)
+	var dsn string
+	if len(cfg.Database.Dsn) > 0 {
+		dsn = cfg.Database.Dsn
+	} else {
+		dsn = fmt.Sprintf("%s://%s:%s@%s/%s?sslmode=%s",
+			cfg.Database.Driver,
+			cfg.Database.User,
+			cfg.Database.Passwd,
+			cfg.Database.Host,
+			cfg.Database.Schema,
+			cfg.Database.SslMode)
 	}
-	if len(cfg.DatastoreDBPassword) == 0 {
-		return fmt.Errorf("no DB password (-db-password) supplied")
-	}
-	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
-		cfg.DatastoreDBUser,
-		cfg.DatastoreDBPassword,
-		cfg.DatastoreDBHost,
-		cfg.DatastoreDBSchema)
-	db, err := sqlx.Open("postgres", dsn)
+	db, err := sqlx.Open(cfg.Database.Driver, dsn)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %v", err)
 	}
@@ -90,6 +85,6 @@ func RunServer() error {
 		}
 	}(db)
 	v2API := service.NewDependencyServer(db)
-
-	return grpc.RunServer(ctx, v2API, cfg.GRPCPort)
+	ctx := context.Background()
+	return grpc.RunServer(ctx, v2API, cfg.App.Port)
 }

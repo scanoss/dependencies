@@ -36,12 +36,12 @@ func TestMines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+	defer CloseDB(db)
 	conn, err := db.Connx(ctx) // Get a connection from the pool (with context)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer conn.Close()
+	defer CloseConn(conn)
 	err = loadSqlData(db, ctx, conn, "./tests/mines.sql")
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
@@ -96,12 +96,12 @@ func TestMinesBadSql(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+	defer CloseDB(db)
 	conn, err := db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer conn.Close()
+	defer CloseConn(conn)
 	mine := NewMineModel(ctx, conn)
 	purlType := "NONEXISTENT"
 	mineIds, err := mine.GetMineIdsByPurlType(purlType)

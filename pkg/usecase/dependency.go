@@ -40,7 +40,7 @@ func NewDependencies(ctx context.Context, conn *sqlx.Conn) *DependencyUseCase {
 func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, error) {
 
 	var depFileOutputs []dtos.DependencyFileOutput
-	var problems bool = false
+	var problems = false
 	for _, file := range request.Files {
 		var fileOutput dtos.DependencyFileOutput
 		fileOutput.File = file.File

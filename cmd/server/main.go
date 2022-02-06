@@ -27,7 +27,8 @@ import (
 func main() {
 	// Launch the Dependency Server Service
 	if err := cmd.RunServer(); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "ERROR: Server launch error: %v\n", err)
 		os.Exit(1)
 	}
+	os.Exit(0)
 }

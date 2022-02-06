@@ -24,9 +24,13 @@ import (
 	"github.com/golobby/config/v3/pkg/feeder"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"go.uber.org/zap/zapcore"
+	"os"
 	myconfig "scanoss.com/dependencies/pkg/config"
+	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/protocol/grpc"
 	"scanoss.com/dependencies/pkg/service"
+	"strings"
 	"time"
 )
 
@@ -35,6 +39,7 @@ func getConfig() (*myconfig.ServerConfig, error) {
 	var jsonConfig, envConfig string
 	flag.StringVar(&jsonConfig, "json-config", "", "Application JSON config")
 	flag.StringVar(&envConfig, "env-config", "", "Application dot-ENV config")
+	debug := flag.Bool("debug", false, "Enable debug")
 	flag.Parse()
 	var feeders []config.Feeder
 	if len(jsonConfig) > 0 {
@@ -43,17 +48,52 @@ func getConfig() (*myconfig.ServerConfig, error) {
 	if len(envConfig) > 0 {
 		feeders = append(feeders, feeder.DotEnv{Path: envConfig})
 	}
+	if *debug {
+		err := os.Setenv("APP_DEBUG", "1")
+		if err != nil {
+			fmt.Printf("Warning: Failed to set env APP_DEBUG to 1: %v", err)
+			return nil, err
+		}
+	}
 	myConfig, err := myconfig.NewServerConfig(feeders)
 	return myConfig, err
 }
 
+// closeDbConnection closes the specified DB connection
+func closeDbConnection(db *sqlx.DB) {
+	err := db.Close()
+	if err != nil {
+		zlog.S.Warnf("Problem closing DB: %v", err)
+	}
+}
+
 // RunServer runs the gRPC Dependency Server
 func RunServer() error {
+	// Load command line options and config
 	cfg, err := getConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %v", err)
 	}
-	fmt.Printf("Config: %+v\n", cfg)
+	// Check mode to determine which logger to load
+	switch strings.ToLower(cfg.App.Mode) {
+	case "prod":
+		var err error
+		if cfg.App.Debug {
+			err = zlog.NewSugaredProdLoggerLevel(zapcore.DebugLevel)
+		} else {
+			err = zlog.NewSugaredProdLogger()
+		}
+		if err != nil {
+			return fmt.Errorf("failed to load logger: %v", err)
+		}
+		zlog.L.Debug("Running with debug enabled")
+	default:
+		if err := zlog.NewSugaredDevLogger(); err != nil {
+			return fmt.Errorf("failed to load logger: %v", err)
+		}
+	}
+	defer zlog.SyncZap()
+	// Setup database connection pool
 	var dsn string
 	if len(cfg.Database.Dsn) > 0 {
 		dsn = cfg.Database.Dsn
@@ -66,24 +106,22 @@ func RunServer() error {
 			cfg.Database.Schema,
 			cfg.Database.SslMode)
 	}
+	zlog.S.Debug("Connecting to Database...")
 	db, err := sqlx.Open(cfg.Database.Driver, dsn)
 	if err != nil {
+		zlog.S.Errorf("Failed to open database: %v", err)
 		return fmt.Errorf("failed to open database: %v", err)
 	}
-	db.SetConnMaxIdleTime(30 * time.Minute)
+	db.SetConnMaxIdleTime(30 * time.Minute) // TODO add to app config
 	db.SetConnMaxLifetime(time.Hour)
 	db.SetMaxIdleConns(20)
 	db.SetMaxOpenConns(100)
 	err = db.Ping()
 	if err != nil {
+		zlog.S.Errorf("Failed to ping database: %v", err)
 		return fmt.Errorf("failed to ping database: %v", err)
 	}
-	defer func(db *sqlx.DB) {
-		err := db.Close()
-		if err != nil {
-			fmt.Printf("Error closing DB: %v", err)
-		}
-	}(db)
+	defer closeDbConnection(db)
 	v2API := service.NewDependencyServer(db)
 	ctx := context.Background()
 	return grpc.RunServer(ctx, v2API, cfg.App.Port)

@@ -20,8 +20,8 @@ import (
 	"context"
 	"errors"
 	"github.com/jmoiron/sqlx"
-	"log"
 	"scanoss.com/dependencies/pkg/dtos"
+	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/models"
 )
 
@@ -49,14 +49,14 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 		var depOutputs []dtos.DependenciesOutput
 		for _, purl := range file.Purls {
 			if len(purl.Purl) == 0 {
-				log.Printf("Empty Purl string supplied for: %v. Skipping", purl)
+				zlog.S.Debugf("Empty Purl string supplied for: %v. Skipping", purl)
 				continue
 			}
 			var depOutput dtos.DependenciesOutput
 			depOutput.Purl = purl.Purl
 			urls, err := d.allUrls.GetUrlsByPurlString(purl.Purl)
 			if err != nil {
-				log.Printf("Problem encountered extracting URLs for: %v - %v.", purl, err)
+				zlog.S.Errorf("Problem encountered extracting URLs for: %v - %v.", purl, err)
 				problems = true
 				continue
 			}
@@ -76,10 +76,10 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 		depFileOutputs = append(depFileOutputs, fileOutput)
 	}
 	if problems {
-		log.Printf("Encountered issues while processing dependencies: %v", request)
+		zlog.S.Errorf("Encountered issues while processing dependencies: %v", request)
 		return dtos.DependencyOutput{}, errors.New("encountered issues while processing dependencies")
 	}
-	log.Printf("Output dependencies: %v", depFileOutputs)
+	zlog.S.Debugf("Output dependencies: %v", depFileOutputs)
 
 	return dtos.DependencyOutput{Files: depFileOutputs}, nil
 }

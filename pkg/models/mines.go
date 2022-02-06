@@ -23,7 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"log"
+	zlog "scanoss.com/dependencies/pkg/logger"
 )
 
 type mineModel struct {
@@ -43,7 +43,7 @@ func NewMineModel(ctx context.Context, conn *sqlx.Conn) *mineModel {
 
 func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int, error) {
 	if len(purlType) == 0 {
-		log.Printf("Please specify a Purl Type to query")
+		zlog.S.Error("Please specify a Purl Type to query")
 		return nil, errors.New("please specify a Purl Type to query")
 	}
 	var mines []Mine
@@ -51,7 +51,7 @@ func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int, error) {
 		"SELECT id,name,purl_type FROM mines WHERE purl_type = $1", purlType,
 	)
 	if err != nil {
-		log.Printf("Error: Failed to query mines table for %v: %v", purlType, err)
+		zlog.S.Errorf("Error: Failed to query mines table for %v: %v", purlType, err)
 		return nil, fmt.Errorf("failed to query the mines table: %v", err)
 	}
 	if len(mines) > 0 {
@@ -61,5 +61,6 @@ func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int, error) {
 		}
 		return mineIds, nil
 	}
-	return nil, errors.New("no entry in mines cache")
+	zlog.S.Error("No entries found in the mines table.")
+	return nil, errors.New("no entry in mines table")
 }

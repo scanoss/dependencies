@@ -20,11 +20,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	zlog "scanoss.com/dependencies/pkg/logger"
 	"testing"
 )
 
 func TestAllUrlsSearch(t *testing.T) {
 	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -93,8 +99,46 @@ func TestAllUrlsSearch(t *testing.T) {
 	fmt.Printf("All Urls: %v\n", allUrls)
 }
 
+func TestAllUrlsSearchNoProject(t *testing.T) {
+	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
+	db, err := sqlx.Connect("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer conn.Close()
+	err = LoadTestSqlData(db, ctx, conn)
+	if err != nil {
+		t.Fatalf("failed to load SQL test data: %v", err)
+	}
+	allUrlsModel := NewAllUrlModel(ctx, conn, nil)
+
+	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem")
+	if err != nil {
+		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
+	}
+	if len(allUrls) < 1 {
+		t.Errorf("all_urls.GetUrlsByPurlName() No URLs returned from query")
+	}
+	fmt.Printf("All Urls: %#v\n", allUrls)
+}
+
 func TestAllUrlsSearchBadSql(t *testing.T) {
 	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)

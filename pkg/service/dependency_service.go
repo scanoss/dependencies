@@ -19,13 +19,11 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"github.com/jmoiron/sqlx"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
-	"log"
-	"scanoss.com/dependencies/pkg/dtos"
+	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/usecase"
 )
 
@@ -40,13 +38,13 @@ func NewDependencyServer(db *sqlx.DB) pb.DependenciesServer {
 
 // Echo sends back the same message received
 func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest) (*common.EchoResponse, error) {
-	log.Printf("Received (%v): %v", ctx, request.GetMessage())
+	zlog.S.Infof("Received (%v): %v", ctx, request.GetMessage())
 	return &common.EchoResponse{Message: request.GetMessage()}, nil
 }
 
 // GetDependencies searches for information about the supplied dependencies
 func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.DependencyRequest) (*pb.DependencyResponse, error) {
-	log.Printf("Processing dependency request: %v", request)
+	zlog.S.Infof("Processing dependency request: %v", request)
 	// Make sure we have dependency data to query
 	depRequest := request.GetFiles()
 	if depRequest == nil || len(depRequest) == 0 {
@@ -60,25 +58,23 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	}
 	conn, err := d.db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
+		zlog.S.Errorf("Failed to get a database connection from the pool: %v", err)
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
 	}
-	defer func(conn *sqlx.Conn) {
-		err := conn.Close()
-		if err != nil {
-			log.Printf("Warning: Problem closing database connection: %v", err)
-		}
-	}(conn)
+	defer closeDbConnection(conn)
 	// Search the KB for information about each dependency
 	depUc := usecase.NewDependencies(ctx, conn)
 	dtoDependencies, err := depUc.GetDependencies(dtoRequest)
 	if err != nil {
+		zlog.S.Errorf("Failed to get dependencies: %v", err)
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
 		return &pb.DependencyResponse{Status: &statusResp}, nil
 	}
-	log.Printf("Parsed Dependencies: %+v", dtoDependencies)
+	zlog.S.Debugf("Parsed Dependencies: %+v", dtoDependencies)
 	depResponse, err := convertDependencyOutput(dtoDependencies) // Convert the internal data into a response object
 	if err != nil {
+		zlog.S.Errorf("Failed to covnert parsed dependencies: %v", err)
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
 		return &pb.DependencyResponse{Status: &statusResp}, nil
 	}
@@ -87,32 +83,10 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }
 
-func convertDependencyInput(request *pb.DependencyRequest) (dtos.DependencyInput, error) {
-	data, err := json.Marshal(request)
+// closeDbConnection closes the specified database connection
+func closeDbConnection(conn *sqlx.Conn) {
+	err := conn.Close()
 	if err != nil {
-		log.Printf("Error: Problem marshalling dependency request input: %v", err)
-		return dtos.DependencyInput{}, errors.New("problem marshalling dependency input")
+		zlog.S.Warnf("Warning: Problem closing database connection: %v", err)
 	}
-	dtoRequest, err := dtos.ParseDependencyInput(data)
-	if err != nil {
-		log.Printf("Error: Problem parsing dependency request input: %v", err)
-		return dtos.DependencyInput{}, errors.New("problem parsing dependency input")
-	}
-	return dtoRequest, nil
-}
-
-func convertDependencyOutput(output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
-	data, err := json.Marshal(output)
-	if err != nil {
-		log.Printf("Error: Problem marshalling dependency request output: %v", err)
-		return &pb.DependencyResponse{}, errors.New("problem marshalling dependency output")
-	}
-	log.Printf("Parsed data: %v", string(data))
-	var depResp pb.DependencyResponse
-	err = json.Unmarshal(data, &depResp)
-	if err != nil {
-		log.Printf("Error: Problem unmarshalling dependency request output: %v", err)
-		return &pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
-	}
-	return &depResp, nil
 }

@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-version"
 	"github.com/jmoiron/sqlx"
-	"log"
+	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/utils"
 )
 
@@ -47,7 +47,7 @@ func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, project *projectModel)
 
 func (m *AllUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) {
 	if len(purlString) == 0 {
-		log.Printf("Please specify a valid Purl String to query: %v", purlString)
+		zlog.S.Errorf("Please specify a valid Purl String to query: %v", purlString)
 		return nil, errors.New("please specify a valid Purl String to query")
 	}
 	purl, err := utils.PurlFromString(purlString)
@@ -59,11 +59,11 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) 
 
 func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) ([]AllUrl, error) {
 	if len(purlName) == 0 {
-		log.Printf("Please specify a valid Purl Name to query")
+		zlog.S.Errorf("Please specify a valid Purl Name to query")
 		return nil, errors.New("please specify a valid Purl Name to query")
 	}
 	if len(purlType) == 0 {
-		log.Printf("Please specify a valid Purl Type to query")
+		zlog.S.Errorf("Please specify a valid Purl Type to query")
 		return nil, errors.New("please specify a valid Purl Type to query")
 	}
 	//log.Printf("AllURL Query: SELECT component, version, license, purl_name, mine_id FROM all_urls u LEFT JOIN mines m ON u.mine_id = m.id WHERE m.purl_type = '%v' AND u.purl_name = '%v'", purlType, purlName)
@@ -73,33 +73,34 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) (
 			" WHERE m.purl_type = $1 AND u.purl_name = $2",
 		purlType, purlName)
 	if err != nil {
-		log.Printf("Error: Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
+		zlog.S.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
 		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
 	if m.project != nil { // TODO should this not be done when loading the URLs table (mining) - i.e. maybe store the project id?
 		var projects = make(map[int32]Project)
 		for i, url := range allUrls {
-			allUrls[i].SemVer, err = version.NewVersion(url.Version)
-			if err != nil {
-				log.Printf("Warning: Problem parsing version from string: %v", url)
-			}
+			// TODO Add semver here?
+			//allUrls[i].SemVer, err = version.NewVersion(url.Version)
+			//if err != nil {
+			//	zlog.S.Warnf("Problem parsing version from string: %v", url)
+			//}
 			if len(url.License) == 0 {
 				project, ok := projects[url.MineId]    // Check if it's already cached
 				if !ok || len(project.PurlName) == 0 { // Only search for the project data once
-					log.Printf("Caching project data for %v - %v\n", purlName, url.MineId)
+					zlog.S.Debugf("Caching project data for %v - %v", purlName, url.MineId)
 					project, err = m.project.GetProjectByPurlName(purlName, url.MineId)
 					if err != nil {
-						log.Printf("Warning: Problem searching projects table for %v, %v", purlName, purlType)
+						zlog.S.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
 					} else {
 						projects[url.MineId] = project
 					}
 				} else {
-					log.Printf("Project data already cached for %v - %v\n", purlName, url.MineId)
+					zlog.S.Debugf("Project data already cached for %v - %v", purlName, url.MineId)
 				}
 				project, ok = projects[url.MineId] // Do we have a match?
 				if ok && len(project.License) > 0 {
-					log.Printf("Adding license data to %v from %v", url, project)
+					zlog.S.Debugf("Adding license data to %v from %v", url, project)
 					allUrls[i].License = project.License
 				}
 			}

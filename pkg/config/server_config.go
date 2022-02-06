@@ -31,6 +31,7 @@ type ServerConfig struct {
 		Name  string `env:"APP_NAME"`
 		Port  string `env:"APP_PORT"`
 		Debug bool   `env:"APP_DEBUG"`
+		Mode  string `env:"APP_MODE"`
 	}
 	Database struct {
 		Driver  string `env:"DB_DRIVER"`
@@ -62,25 +63,13 @@ func NewServerConfig(feeders []config.Feeder) (*ServerConfig, error) {
 
 // setServerConfigDefaults attempts to set reasonable defaults for the server config
 func setServerConfigDefaults(cfg *ServerConfig) {
-	if len(cfg.App.Port) == 0 {
-		cfg.App.Port = defaultGrpcPort
-	}
-	if len(cfg.App.Name) == 0 {
-		cfg.App.Name = "SCANOSS Dependency Server"
-	}
-	if len(cfg.Database.Driver) == 0 {
-		cfg.Database.Driver = "postgres"
-	}
-	if len(cfg.Database.Host) == 0 {
-		cfg.Database.Host = "localhost"
-	}
-	if len(cfg.Database.User) == 0 {
-		cfg.Database.User = "scanoss"
-	}
-	if len(cfg.Database.Schema) == 0 {
-		cfg.Database.Schema = "scanoss"
-	}
-	if len(cfg.Database.SslMode) == 0 {
-		cfg.Database.SslMode = "disable"
-	}
+	cfg.App.Name = "SCANOSS Dependency Server"
+	cfg.App.Port = defaultGrpcPort
+	cfg.App.Mode = "dev"
+	cfg.App.Debug = false
+	cfg.Database.Driver = "postgres"
+	cfg.Database.Host = "localhost"
+	cfg.Database.User = "scanoss"
+	cfg.Database.Schema = "scanoss"
+	cfg.Database.SslMode = "disable"
 }

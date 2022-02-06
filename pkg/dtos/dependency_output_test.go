@@ -18,6 +18,7 @@ package dtos
 
 import (
 	"fmt"
+	zlog "scanoss.com/dependencies/pkg/logger"
 	"testing"
 )
 
@@ -55,6 +56,11 @@ func TestDependencyOutput(t *testing.T) {
   ]
 }
 `
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
 	output, err := ParseDependencyOutput([]byte(outputJson))
 	if err != nil {
 		t.Errorf("dtos.ParseDependencyInput() error = %v", err)
@@ -73,7 +79,7 @@ func TestDependencyOutput(t *testing.T) {
 	}
 	fmt.Println("get expected error: ", err)
 
-	var badJson = `{ "files": [ }`
+	var badJson = `{ "files": [ `
 	_, err = ParseDependencyOutput([]byte(badJson))
 	if err == nil {
 		t.Errorf("dtos.ParseDependencyOutput() did not fail")

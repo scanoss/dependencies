@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"io/ioutil"
+	zlog "scanoss.com/dependencies/pkg/logger"
 )
 
 // loadSqlData Load the specified SQL files into the supplied DB
@@ -58,4 +59,18 @@ func loadTestSqlDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, fil
 		}
 	}
 	return nil
+}
+
+func CloseDB(db *sqlx.DB) {
+	err := db.Close()
+	if err != nil {
+		zlog.S.Warnf("Problem closing DB connection: %v", err)
+	}
+}
+
+func CloseConn(conn *sqlx.Conn) {
+	err := conn.Close()
+	if err != nil {
+		zlog.S.Warnf("Problem closing DB connection: %v", err)
+	}
 }

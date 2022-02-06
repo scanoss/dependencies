@@ -27,7 +27,7 @@ func TestDbLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+	defer CloseDB(db)
 	err = loadSqlData(db, nil, nil, "./tests/mines.sql")
 	if err != nil {
 		t.Errorf("failed to load SQL test data: %v", err)

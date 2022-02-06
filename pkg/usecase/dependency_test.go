@@ -38,12 +38,12 @@ func TestDependencyUseCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+	defer models.CloseDB(db)
 	conn, err := db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer conn.Close()
+	defer models.CloseConn(conn)
 	err = models.LoadTestSqlData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)

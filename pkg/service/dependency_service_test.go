@@ -40,7 +40,7 @@ func TestDependencyServer_Echo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+	defer models.CloseDB(db)
 	s := NewDependencyServer(db)
 
 	type args struct {
@@ -89,7 +89,7 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+	defer models.CloseDB(db)
 	err = models.LoadTestSqlData(db, nil, nil)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)

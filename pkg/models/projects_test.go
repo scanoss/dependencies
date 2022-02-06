@@ -35,12 +35,12 @@ func TestProjectsSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+	defer CloseDB(db)
 	conn, err := db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer conn.Close()
+	defer CloseConn(conn)
 	err = loadTestSqlDataFiles(db, ctx, conn, []string{"../models/tests/projects.sql", "../models/tests/mines.sql"})
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
@@ -119,12 +119,12 @@ func TestProjectsSearchBadSql(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+	defer CloseDB(db)
 	conn, err := db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer conn.Close()
+	defer CloseConn(conn)
 	projectsModel := NewProjectModel(ctx, conn)
 	_, err = projectsModel.GetProjectsByPurlName("rubbish", "rubbish")
 	if err == nil {

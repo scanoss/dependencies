@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	zlog "scanoss.com/dependencies/pkg/logger"
 )
 
 type DependencyOutput struct {
@@ -48,7 +48,7 @@ type DependencyLicense struct {
 func ExportDependencyOutput(output DependencyOutput) ([]byte, error) {
 	data, err := json.Marshal(output)
 	if err != nil {
-		log.Printf("Parse failure: %v", err)
+		zlog.S.Errorf("Parse failure: %v", err)
 		return nil, errors.New("failed to produce JSON from dependency output data")
 	}
 	return data, nil
@@ -61,9 +61,9 @@ func ParseDependencyOutput(input []byte) (DependencyOutput, error) {
 	var data DependencyOutput
 	err := json.Unmarshal(input, &data)
 	if err != nil {
-		log.Printf("Parse failure: %v", err)
+		zlog.S.Errorf("Parse failure: %v", err)
 		return DependencyOutput{}, errors.New(fmt.Sprintf("failed to parse dependency output data: %v", err))
 	}
-	log.Printf("Parsed data2: %v", data)
+	zlog.S.Debugf("Parsed data2: %v", data)
 	return data, nil
 }

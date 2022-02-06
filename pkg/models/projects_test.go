@@ -20,11 +20,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	zlog "scanoss.com/dependencies/pkg/logger"
 	"testing"
 )
 
 func TestProjectsSearch(t *testing.T) {
 	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -104,6 +110,11 @@ func TestProjectsSearch(t *testing.T) {
 
 func TestProjectsSearchBadSql(t *testing.T) {
 	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)

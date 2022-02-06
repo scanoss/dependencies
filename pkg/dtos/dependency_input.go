@@ -20,12 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	zlog "scanoss.com/dependencies/pkg/logger"
 )
 
 type DependencyInput struct {
 	Files []DependencyFileInput `json:"files"`
-	Depth int                   `json:"depth""`
+	Depth int                   `json:"depth"`
 }
 
 type DependencyFileInput struct {
@@ -45,9 +45,9 @@ func ParseDependencyInput(input []byte) (DependencyInput, error) {
 	var data DependencyInput
 	err := json.Unmarshal(input, &data)
 	if err != nil {
-		log.Printf("Parse failure: %v", err)
+		zlog.S.Errorf("Parse failure: %v", err)
 		return DependencyInput{}, errors.New(fmt.Sprintf("failed to parse dependency input data: %v", err))
 	}
-	log.Printf("Parsed data2: %v", data)
+	zlog.S.Debugf("Parsed data2: %v", data)
 	return data, nil
 }

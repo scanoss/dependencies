@@ -24,12 +24,18 @@ import (
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"reflect"
+	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/models"
 	"testing"
 )
 
 func TestDependencyServer_Echo(t *testing.T) {
 	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -74,6 +80,11 @@ func TestDependencyServer_Echo(t *testing.T) {
 
 func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)

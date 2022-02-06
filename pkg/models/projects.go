@@ -23,7 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"log"
+	zlog "scanoss.com/dependencies/pkg/logger"
 )
 
 type projectModel struct {
@@ -45,11 +45,11 @@ func NewProjectModel(ctx context.Context, conn *sqlx.Conn) *projectModel {
 // GetProjectsByPurlName searches the projects' table for details about Purl Name and Type
 func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) ([]Project, error) {
 	if len(purlName) == 0 {
-		log.Printf("Please specify a valid Purl Name to query")
+		zlog.S.Error("Please specify a valid Purl Name to query")
 		return nil, errors.New("please specify a valid Purl Name to query")
 	}
 	if len(purlType) == 0 {
-		log.Printf("Please specify a valid Purl Type to query")
+		zlog.S.Error("Please specify a valid Purl Type to query")
 		return nil, errors.New("please specify a valid Purl Type to query")
 	}
 	var allProjects []Project
@@ -58,7 +58,7 @@ func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) (
 			" WHERE m.purl_type = $1 AND p.purl_name = $2",
 		purlType, purlName)
 	if err != nil {
-		log.Printf("Error: Failed to query projects table for %v, %v: %v", purlName, purlType, err)
+		zlog.S.Errorf("Error: Failed to query projects table for %v, %v: %v", purlName, purlType, err)
 		return nil, fmt.Errorf("failed to query the projects table: %v", err)
 	}
 	return allProjects, nil
@@ -67,25 +67,25 @@ func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) (
 // GetProjectByPurlName searches the projects' table for details about a Purl Name and Mine ID
 func (m *projectModel) GetProjectByPurlName(purlName string, mineId int32) (Project, error) {
 	if len(purlName) == 0 {
-		log.Printf("Please specify a valid Purl Name to query")
+		zlog.S.Error("Please specify a valid Purl Name to query")
 		return Project{}, errors.New("please specify a valid Purl Name to query")
 	}
 	if mineId < 0 {
-		log.Printf("Please specify a valid Mine ID to query")
+		zlog.S.Error("Please specify a valid Mine ID to query")
 		return Project{}, errors.New("please specify a valid Mine ID to query")
 	}
 	rows, err := m.conn.QueryxContext(m.ctx,
 		"SELECT component, versions, license, purl_name FROM projects WHERE purl_name = $1 AND mine_id = $2",
 		purlName, mineId)
 	if err != nil {
-		log.Printf("Error: Failed to query projects table for %v, %v: %v", purlName, mineId, err)
+		zlog.S.Errorf("Error: Failed to query projects table for %v, %v: %v", purlName, mineId, err)
 		return Project{}, fmt.Errorf("failed to query the projects table: %v", err)
 	}
 	var project Project
 	for rows.Next() {
 		err = rows.StructScan(&project)
 		if err != nil {
-			log.Printf("Error: Failed to parse projects table results for %v: %v", rows, err)
+			zlog.S.Errorf("Error: Failed to parse projects table results for %v: %v", rows, err)
 			return Project{}, fmt.Errorf("failed to query the projects table: %v", err)
 		}
 	}

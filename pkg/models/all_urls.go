@@ -33,12 +33,15 @@ type AllUrlsModel struct {
 }
 
 type AllUrl struct {
-	Component string           `db:"component"`
-	Version   string           `db:"version"`
+	Component string `db:"component"`
+	Version   string `db:"version"`
+	//SemVer    string           `db:"semver"` // TODO update database to always have a semver value?
 	License   string           `db:"license"`
+	LicenseId string           `db:"license_id"`
+	IsSpdx    bool             `db:"is_spdx"`
 	PurlName  string           `db:"purl_name"`
 	MineId    int32            `db:"mine_id"`
-	SemVer    *version.Version `db:"-"` // TODO what semver should we use?
+	semVer    *version.Version `db:"-"` // TODO what semver should we use?
 }
 
 func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, project *projectModel) *AllUrlsModel {
@@ -66,10 +69,14 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) (
 		zlog.S.Errorf("Please specify a valid Purl Type to query")
 		return nil, errors.New("please specify a valid Purl Type to query")
 	}
-	//log.Printf("AllURL Query: SELECT component, version, license, purl_name, mine_id FROM all_urls u LEFT JOIN mines m ON u.mine_id = m.id WHERE m.purl_type = '%v' AND u.purl_name = '%v'", purlType, purlName)
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, version, license, purl_name, mine_id FROM all_urls u LEFT JOIN mines m ON u.mine_id = m.id"+
+		"SELECT component, v.version_name AS version,"+ // TODO add v.semver AS semver,
+			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
+			" purl_name, mine_id FROM all_urls u"+
+			" LEFT JOIN mines m ON u.mine_id = m.id"+
+			" LEFT JOIN licenses l ON u.license_id = l.id"+
+			" LEFT JOIN versions v ON u.version_id = v.id"+
 			" WHERE m.purl_type = $1 AND u.purl_name = $2",
 		purlType, purlName)
 	if err != nil {
@@ -81,7 +88,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) (
 		var projects = make(map[int32]Project)
 		for i, url := range allUrls {
 			// TODO Add semver here?
-			//allUrls[i].SemVer, err = version.NewVersion(url.Version)
+			//allUrls[i].semVer, err = version.NewVersion(url.Version)
 			//if err != nil {
 			//	zlog.S.Warnf("Problem parsing version from string: %v", url)
 			//}

@@ -42,7 +42,9 @@ type DependenciesOutput struct {
 }
 
 type DependencyLicense struct {
-	Name string `json:"name"`
+	Name   string `json:"name"`
+	SpdxId string `json:"spdx_id"`
+	IsSpdx bool   `json:"is_spdx_approved"`
 }
 
 func ExportDependencyOutput(output DependencyOutput) ([]byte, error) {

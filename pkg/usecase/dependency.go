@@ -66,6 +66,8 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				var licenses []dtos.DependencyLicense
 				var license dtos.DependencyLicense
 				license.Name = url.License
+				license.SpdxId = url.LicenseId
+				license.IsSpdx = url.IsSpdx
 				licenses = append(licenses, license)
 				depOutput.Licenses = licenses
 				break

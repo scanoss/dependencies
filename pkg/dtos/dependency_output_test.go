@@ -37,7 +37,9 @@ func TestDependencyOutput(t *testing.T) {
           "version": "",
           "licenses": [
             {
-              "name": "MIT"
+              "name": "MIT",
+              "spdx_id": "MIT",
+              "is_spdx_approved": true
             }
           ]
         },
@@ -47,7 +49,9 @@ func TestDependencyOutput(t *testing.T) {
           "version": "",
           "licenses": [
             {
-              "name": "MIT"
+              "name": "MIT",
+              "spdx_id": "MIT",
+              "is_spdx_approved": true
             }
           ]
         }

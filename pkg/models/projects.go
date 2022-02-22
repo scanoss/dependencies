@@ -35,6 +35,8 @@ type Project struct {
 	Component string `db:"component"`
 	Versions  int    `db:"versions"`
 	License   string `db:"license"`
+	LicenseId string `db:"license_id"`
+	IsSpdx    bool   `db:"is_spdx"`
 	PurlName  string `db:"purl_name"`
 }
 
@@ -54,7 +56,10 @@ func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) (
 	}
 	var allProjects []Project
 	err := m.conn.SelectContext(m.ctx, &allProjects,
-		"SELECT component, versions, license, purl_name FROM projects p LEFT JOIN mines m ON p.mine_id = m.id"+
+		"SELECT purl_name, component, versions,"+
+			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx FROM projects p"+
+			" LEFT JOIN mines m ON p.mine_id = m.id"+
+			" LEFT JOIN licenses l ON p.license_id = l.id"+
 			" WHERE m.purl_type = $1 AND p.purl_name = $2",
 		purlType, purlName)
 	if err != nil {
@@ -75,7 +80,9 @@ func (m *projectModel) GetProjectByPurlName(purlName string, mineId int32) (Proj
 		return Project{}, errors.New("please specify a valid Mine ID to query")
 	}
 	rows, err := m.conn.QueryxContext(m.ctx,
-		"SELECT component, versions, license, purl_name FROM projects WHERE purl_name = $1 AND mine_id = $2",
+		"SELECT purl_name, component, versions, l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx FROM projects p"+
+			" LEFT JOIN licenses l ON p.license_id = l.id"+
+			" WHERE purl_name = $1 AND mine_id = $2",
 		purlName, mineId)
 	if err != nil {
 		zlog.S.Errorf("Error: Failed to query projects table for %v, %v: %v", purlName, mineId, err)

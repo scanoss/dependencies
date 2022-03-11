@@ -37,7 +37,7 @@ type DependencyFileOutput struct {
 type DependenciesOutput struct {
 	Component string              `json:"component"`
 	Purl      string              `json:"purl"`
-	Version   string              `json:"version:omitempty"`
+	Version   string              `json:"version"`
 	Licenses  []DependencyLicense `json:"licenses"`
 }
 

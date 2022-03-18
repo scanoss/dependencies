@@ -84,6 +84,7 @@ func (m *projectModel) GetProjectByPurlName(purlName string, mineId int32) (Proj
 			" LEFT JOIN licenses l ON p.license_id = l.id"+
 			" WHERE purl_name = $1 AND mine_id = $2",
 		purlName, mineId)
+	defer CloseRows(rows)
 	if err != nil {
 		zlog.S.Errorf("Error: Failed to query projects table for %v, %v: %v", purlName, mineId, err)
 		return Project{}, fmt.Errorf("failed to query the projects table: %v", err)
@@ -92,7 +93,11 @@ func (m *projectModel) GetProjectByPurlName(purlName string, mineId int32) (Proj
 	for rows.Next() {
 		err = rows.StructScan(&project)
 		if err != nil {
-			zlog.S.Errorf("Error: Failed to parse projects table results for %v: %v", rows, err)
+			zlog.S.Errorf("Failed to parse projects table results for %v: %v", rows, err)
+			zlog.S.Errorf("Query failed for purl_name = %v, mine_id = %v", purlName, mineId)
+			if err != nil {
+				return Project{}, err
+			}
 			return Project{}, fmt.Errorf("failed to query the projects table: %v", err)
 		}
 	}

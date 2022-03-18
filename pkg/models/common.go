@@ -63,15 +63,31 @@ func loadTestSqlDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, fil
 }
 
 func CloseDB(db *sqlx.DB) {
-	err := db.Close()
-	if err != nil {
-		zlog.S.Warnf("Problem closing DB connection: %v", err)
+	if db != nil {
+		zlog.S.Debugf("Closing DB...")
+		err := db.Close()
+		if err != nil {
+			zlog.S.Warnf("Problem closing DB: %v", err)
+		}
 	}
 }
 
 func CloseConn(conn *sqlx.Conn) {
-	err := conn.Close()
-	if err != nil {
-		zlog.S.Warnf("Problem closing DB connection: %v", err)
+	if conn != nil {
+		zlog.S.Debugf("Closing Connection...")
+		err := conn.Close()
+		if err != nil {
+			zlog.S.Warnf("Problem closing DB connection: %v", err)
+		}
+	}
+}
+
+func CloseRows(rows *sqlx.Rows) {
+	if rows != nil {
+		zlog.S.Debugf("Closing Rows...")
+		err := rows.Close()
+		if err != nil {
+			zlog.S.Warnf("Problem closing Rows: %v", err)
+		}
 	}
 }

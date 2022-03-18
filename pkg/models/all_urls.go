@@ -99,6 +99,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) (
 					project, err = m.project.GetProjectByPurlName(purlName, url.MineId)
 					if err != nil {
 						zlog.S.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
+						projects[url.MineId] = Project{PurlName: purlName, License: ""} // Cache an empty license id string. no need to search again for the same entry
 					} else {
 						projects[url.MineId] = project
 					}

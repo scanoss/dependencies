@@ -15,3 +15,4 @@ insert into licenses (id, license_name, alias_name, spdx_id, is_spdx) values (13
 insert into licenses (id, license_name, alias_name, spdx_id, is_spdx) values (4863, 'ISC', null, 'ISC', true);
 insert into licenses (id, license_name, alias_name, spdx_id, is_spdx) values (5236, 'LGPLv2.1+', null, 'LGPL-2.1-or-later', true);
 insert into licenses (id, license_name, alias_name, spdx_id, is_spdx) values (5614, 'MIT', null, 'MIT', true);
+insert into licenses (id, license_name, alias_name, spdx_id, is_spdx) values (9999, '', null, '', false);

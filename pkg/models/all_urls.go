@@ -57,6 +57,9 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) 
 	if err != nil {
 		return nil, err
 	}
+	if len(purl.Version) > 0 {
+		return m.GetUrlsByPurlNameTypeVersion(purl.Name, purl.Type, purl.Version)
+	}
 	return m.GetUrlsByPurlNameType(purl.Name, purl.Type)
 }
 
@@ -83,19 +86,54 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) (
 		zlog.S.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
 		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
+	zlog.S.Debugf("Found %v results.", len(allUrls))
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
+	return m.verifyAllUrls(allUrls, purlName, purlType)
+}
+
+func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName string, purlType string, purlVersion string) ([]AllUrl, error) {
+	if len(purlName) == 0 {
+		zlog.S.Errorf("Please specify a valid Purl Name to query")
+		return nil, errors.New("please specify a valid Purl Name to query")
+	}
+	if len(purlType) == 0 {
+		zlog.S.Errorf("Please specify a valid Purl Type to query")
+		return nil, errors.New("please specify a valid Purl Type to query")
+	}
+	if len(purlVersion) == 0 {
+		zlog.S.Errorf("Please specify a valid Purl Version to query")
+		return nil, errors.New("please specify a valid Purl Version to query")
+	}
+	var allUrls []AllUrl
+	err := m.conn.SelectContext(m.ctx, &allUrls,
+		"SELECT component, v.version_name AS version,"+ // TODO add v.semver AS semver,
+			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
+			" purl_name, mine_id FROM all_urls u"+
+			" LEFT JOIN mines m ON u.mine_id = m.id"+
+			" LEFT JOIN licenses l ON u.license_id = l.id"+
+			" LEFT JOIN versions v ON u.version_id = v.id"+
+			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3",
+		purlType, purlName, purlVersion)
+	if err != nil {
+		zlog.S.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
+		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
+	}
+	zlog.S.Debugf("Found %v results.", len(allUrls))
+	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
+	return m.verifyAllUrls(allUrls, purlName, purlType)
+}
+
+func (m *AllUrlsModel) verifyAllUrls(allUrls []AllUrl, purlName string, purlType string) ([]AllUrl, error) {
+
 	if m.project != nil { // TODO should this not be done when loading the URLs table (mining) - i.e. maybe store the project id?
 		var projects = make(map[int32]Project)
 		for i, url := range allUrls {
 			// TODO Add semver here?
-			//allUrls[i].semVer, err = version.NewVersion(url.Version)
-			//if err != nil {
-			//	zlog.S.Warnf("Problem parsing version from string: %v", url)
-			//}
 			if len(url.License) == 0 {
 				project, ok := projects[url.MineId]    // Check if it's already cached
 				if !ok || len(project.PurlName) == 0 { // Only search for the project data once
 					zlog.S.Debugf("Caching project data for %v - %v", purlName, url.MineId)
+					var err error
 					project, err = m.project.GetProjectByPurlName(purlName, url.MineId)
 					if err != nil {
 						zlog.S.Warnf("Problem searching projects table for %v, %v", purlName, purlType)

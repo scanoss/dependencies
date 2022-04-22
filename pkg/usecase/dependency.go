@@ -60,7 +60,8 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				problems = true
 				continue
 			}
-			for _, url := range urls {
+			for _, url := range urls { // TODO what version to choose?
+				depOutput.Purl = url.PurlName
 				depOutput.Component = url.Component
 				depOutput.Version = url.Version
 				var licenses []dtos.DependencyLicense

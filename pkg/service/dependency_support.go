@@ -51,6 +51,5 @@ func convertDependencyOutput(output dtos.DependencyOutput) (*pb.DependencyRespon
 		zlog.S.Errorf("Problem unmarshalling dependency request output: %v", err)
 		return &pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
 	}
-	//zlog.S.Debugf("Dep Response: %-v", depResp)
 	return &depResp, nil
 }

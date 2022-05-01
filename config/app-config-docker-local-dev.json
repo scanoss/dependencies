@@ -1,0 +1,14 @@
+{
+  "App": {
+    "Name": "Dependency Service",
+    "Debug": true,
+    "Mode":  "dev"
+  },
+  "Database": {
+    "Driver": "postgres",
+    "Host":   "host.docker.internal",
+    "User":   "scanoss",
+    "Passwd": "secret123!",
+    "Schema": "scanoss"
+  }
+}

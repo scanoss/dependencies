@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"github.com/golobby/config/v3"
@@ -34,13 +35,22 @@ import (
 	"time"
 )
 
+//go:generate bash ../../get_version.sh
+//go:embed version.txt
+var version string
+
 // getConfig checks command line args for option to feed into the config parser
 func getConfig() (*myconfig.ServerConfig, error) {
 	var jsonConfig, envConfig string
 	flag.StringVar(&jsonConfig, "json-config", "", "Application JSON config")
 	flag.StringVar(&envConfig, "env-config", "", "Application dot-ENV config")
 	debug := flag.Bool("debug", false, "Enable debug")
+	ver := flag.Bool("version", false, "Display current version")
 	flag.Parse()
+	if *ver {
+		fmt.Printf("Version: %v", version)
+		os.Exit(1)
+	}
 	var feeders []config.Feeder
 	if len(jsonConfig) > 0 {
 		feeders = append(feeders, feeder.Json{Path: jsonConfig})
@@ -93,6 +103,7 @@ func RunServer() error {
 		}
 	}
 	defer zlog.SyncZap()
+	zlog.S.Infof("Starting SCANOSS Dependency Service: %v", strings.TrimSpace(version))
 	// Setup database connection pool
 	var dsn string
 	if len(cfg.Database.Dsn) > 0 {

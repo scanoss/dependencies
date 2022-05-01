@@ -23,6 +23,7 @@ import (
 	"scanoss.com/dependencies/pkg/dtos"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/models"
+	"strings"
 )
 
 type DependencyUseCase struct {
@@ -49,30 +50,27 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 		var depOutputs []dtos.DependenciesOutput
 		for _, purl := range file.Purls {
 			if len(purl.Purl) == 0 {
-				zlog.S.Debugf("Empty Purl string supplied for: %v. Skipping", purl)
+				zlog.S.Infof("Empty Purl string supplied for: %v. Skipping", file.File)
 				continue
 			}
 			var depOutput dtos.DependenciesOutput
-			depOutput.Purl = purl.Purl
-			urls, err := d.allUrls.GetUrlsByPurlString(purl.Purl)
+			depOutput.Purl = strings.Split(purl.Purl, "@")[0] // Remove any version specif info from the PURL
+			url, err := d.allUrls.GetUrlsByPurlString(purl.Purl, purl.Requirement)
 			if err != nil {
 				zlog.S.Errorf("Problem encountered extracting URLs for: %v - %v.", purl, err)
 				problems = true
 				continue
+				// TODO add a placeholder in the response?
 			}
-			for _, url := range urls { // TODO what version to choose?
-				depOutput.Purl = url.PurlName
-				depOutput.Component = url.Component
-				depOutput.Version = url.Version
-				var licenses []dtos.DependencyLicense
-				var license dtos.DependencyLicense
-				license.Name = url.License
-				license.SpdxId = url.LicenseId
-				license.IsSpdx = url.IsSpdx
-				licenses = append(licenses, license)
-				depOutput.Licenses = licenses
-				break
-			}
+			depOutput.Component = url.Component
+			depOutput.Version = url.Version
+			var licenses []dtos.DependencyLicense
+			var license dtos.DependencyLicense
+			license.Name = url.License
+			license.SpdxId = url.LicenseId
+			license.IsSpdx = url.IsSpdx
+			licenses = append(licenses, license)
+			depOutput.Licenses = licenses
 			depOutputs = append(depOutputs, depOutput)
 		}
 		fileOutput.Dependencies = depOutputs

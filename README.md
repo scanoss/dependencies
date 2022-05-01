@@ -42,7 +42,9 @@ Adjust configurations by updating an .env file in the root of this repository.
 
 You can build your own image of the SCANOSS Dependency Server with the ```docker build``` command as follows.
 
-```docker build -t scanoss-dependency-server```
+```bash
+make ghcr_build
+```
 
 
 ### How to run
@@ -51,4 +53,14 @@ Run the SCANOSS Dependency Server Docker image by specifying the environmental f
 
 You may also need to expose the ```APP_PORT``` on a given ```interface:port``` with the ```-p``` argument.
 
-```docker run --env-file .env -p 50051:50051 scanoss-dependency-server```
+```bash
+docker run -it -v "$(pwd)":"$(pwd)" -p 50051:50051 ghcr.io/scanoss/scanoss-dependencies -json-config $(pwd)/config/app-config-docker-local-dev.json -debug
+```
+
+## Development
+
+To run locally on your desktop, please use the following command:
+
+```shell
+go run cmd/server/main.go -json-config config/app-config-dev.json -debug
+```

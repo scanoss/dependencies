@@ -20,10 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-version"
+	semver "github.com/Masterminds/semver/v3"
 	"github.com/jmoiron/sqlx"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/utils"
+	"sort"
 )
 
 type AllUrlsModel struct {
@@ -35,122 +36,165 @@ type AllUrlsModel struct {
 type AllUrl struct {
 	Component string `db:"component"`
 	Version   string `db:"version"`
-	//SemVer    string           `db:"semver"` // TODO update database to always have a semver value?
-	License   string           `db:"license"`
-	LicenseId string           `db:"license_id"`
-	IsSpdx    bool             `db:"is_spdx"`
-	PurlName  string           `db:"purl_name"`
-	MineId    int32            `db:"mine_id"`
-	semVer    *version.Version `db:"-"` // TODO what semver should we use?
+	SemVer    string `db:"semver"`
+	License   string `db:"license"`
+	LicenseId string `db:"license_id"`
+	IsSpdx    bool   `db:"is_spdx"`
+	PurlName  string `db:"purl_name"`
+	MineId    int32  `db:"mine_id"`
 }
 
 func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, project *projectModel) *AllUrlsModel {
 	return &AllUrlsModel{ctx: ctx, conn: conn, project: project}
 }
 
-func (m *AllUrlsModel) GetUrlsByPurlString(purlString string) ([]AllUrl, error) {
+func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, error) {
 	if len(purlString) == 0 {
-		zlog.S.Errorf("Please specify a valid Purl String to query: %v", purlString)
-		return nil, errors.New("please specify a valid Purl String to query")
+		zlog.S.Errorf("Please specify a valid Purl String to query")
+		return AllUrl{}, errors.New("please specify a valid Purl String to query")
 	}
 	purl, err := utils.PurlFromString(purlString)
 	if err != nil {
-		return nil, err
+		return AllUrl{}, err
 	}
 	if len(purl.Version) > 0 {
 		return m.GetUrlsByPurlNameTypeVersion(purl.Name, purl.Type, purl.Version)
 	}
-	return m.GetUrlsByPurlNameType(purl.Name, purl.Type)
+	return m.GetUrlsByPurlNameType(purl.Name, purl.Type, purlReq)
 }
 
-func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName string, purlType string) ([]AllUrl, error) {
+func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string) (AllUrl, error) {
 	if len(purlName) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Name to query")
-		return nil, errors.New("please specify a valid Purl Name to query")
+		return AllUrl{}, errors.New("please specify a valid Purl Name to query")
 	}
 	if len(purlType) == 0 {
-		zlog.S.Errorf("Please specify a valid Purl Type to query")
-		return nil, errors.New("please specify a valid Purl Type to query")
+		zlog.S.Errorf("Please specify a valid Purl Type to query: %v", purlName)
+		return AllUrl{}, errors.New("please specify a valid Purl Type to query")
 	}
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, v.version_name AS version,"+ // TODO add v.semver AS semver,
+		"SELECT component, v.version_name AS version, v.semver AS semver,"+
 			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
 			" purl_name, mine_id FROM all_urls u"+
 			" LEFT JOIN mines m ON u.mine_id = m.id"+
 			" LEFT JOIN licenses l ON u.license_id = l.id"+
 			" LEFT JOIN versions v ON u.version_id = v.id"+
-			" WHERE m.purl_type = $1 AND u.purl_name = $2",
+			" WHERE m.purl_type = $1 AND u.purl_name = $2"+
+			" ORDER BY date DESC",
 		purlType, purlName)
 	if err != nil {
 		zlog.S.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
-		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
+		return AllUrl{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	zlog.S.Debugf("Found %v results.", len(allUrls))
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
-	return m.verifyAllUrls(allUrls, purlName, purlType)
+	return m.pickOneUrl(allUrls, purlName, purlType, purlReq)
 }
 
-func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName string, purlType string, purlVersion string) ([]AllUrl, error) {
+func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVersion string) (AllUrl, error) {
 	if len(purlName) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Name to query")
-		return nil, errors.New("please specify a valid Purl Name to query")
+		return AllUrl{}, errors.New("please specify a valid Purl Name to query")
 	}
 	if len(purlType) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Type to query")
-		return nil, errors.New("please specify a valid Purl Type to query")
+		return AllUrl{}, errors.New("please specify a valid Purl Type to query")
 	}
 	if len(purlVersion) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Version to query")
-		return nil, errors.New("please specify a valid Purl Version to query")
+		return AllUrl{}, errors.New("please specify a valid Purl Version to query")
 	}
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, v.version_name AS version,"+ // TODO add v.semver AS semver,
+		"SELECT component, v.version_name AS version, v.semver AS semver,"+
 			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
 			" purl_name, mine_id FROM all_urls u"+
 			" LEFT JOIN mines m ON u.mine_id = m.id"+
 			" LEFT JOIN licenses l ON u.license_id = l.id"+
 			" LEFT JOIN versions v ON u.version_id = v.id"+
-			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3",
+			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3"+
+			" ORDER BY date DESC",
 		purlType, purlName, purlVersion)
 	if err != nil {
 		zlog.S.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
-		return nil, fmt.Errorf("failed to query the all urls table: %v", err)
+		return AllUrl{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	zlog.S.Debugf("Found %v results.", len(allUrls))
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
-	return m.verifyAllUrls(allUrls, purlName, purlType)
+	return m.pickOneUrl(allUrls, purlName, purlType, "")
 }
 
-func (m *AllUrlsModel) verifyAllUrls(allUrls []AllUrl, purlName string, purlType string) ([]AllUrl, error) {
+func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq string) (AllUrl, error) {
 
-	if m.project != nil { // TODO should this not be done when loading the URLs table (mining) - i.e. maybe store the project id?
-		var projects = make(map[int32]Project)
-		for i, url := range allUrls {
-			// TODO Add semver here?
-			if len(url.License) == 0 {
-				project, ok := projects[url.MineId]    // Check if it's already cached
-				if !ok || len(project.PurlName) == 0 { // Only search for the project data once
-					zlog.S.Debugf("Caching project data for %v - %v", purlName, url.MineId)
-					var err error
-					project, err = m.project.GetProjectByPurlName(purlName, url.MineId)
-					if err != nil {
-						zlog.S.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
-						projects[url.MineId] = Project{PurlName: purlName, License: ""} // Cache an empty license id string. no need to search again for the same entry
-					} else {
-						projects[url.MineId] = project
-					}
-				} else {
-					zlog.S.Debugf("Project data already cached for %v - %v", purlName, url.MineId)
-				}
-				project, ok = projects[url.MineId] // Do we have a match?
-				if ok && len(project.License) > 0 {
-					zlog.S.Debugf("Adding license data to %v from %v", url, project)
-					allUrls[i].License = project.License
-				}
-			}
+	if len(allUrls) == 0 {
+		zlog.S.Infof("No component match found for %v, %v", purlName, purlType)
+		return AllUrl{}, nil
+	}
+	zlog.S.Debugf("Matches: %v", allUrls)
+	var c *semver.Constraints
+	var urlMap = make(map[*semver.Version]AllUrl)
+	if len(purlReq) > 0 {
+		zlog.S.Debugf("Building version constraint for %v: %v", purlName, purlReq)
+		var err error
+		c, err = semver.NewConstraint(purlReq)
+		if err != nil {
+			zlog.S.Warnf("Encountered an issue parsing version constraint string '%v' (%v,%v): %v", purlReq, purlName, purlType, err)
 		}
 	}
-	return allUrls, nil
+	zlog.S.Debugf("Checking versions...")
+	for _, url := range allUrls {
+		if len(url.SemVer) > 0 || len(url.Version) > 0 {
+			v, err := semver.NewVersion(url.SemVer)
+			if err != nil && len(url.Version) > 0 {
+				zlog.S.Debugf("Failed to parse SemVer: '%v'. Trying Version instead: %v (%v)", url.SemVer, url.Version, err)
+				v, err = semver.NewVersion(url.Version) // Semver failed, try the normal version
+			}
+			if err != nil {
+				zlog.S.Warnf("Encountered an issue parsing version string '%v' (%v) for %v: %v", url.SemVer, url.Version, url, err)
+			} else {
+				if c == nil || c.Check(v) {
+					//zlog.S.Debugf("Saving URL version %v: %v", v, url)
+					urlMap[v] = url // fits inside the constraint
+				}
+			}
+		} else {
+			zlog.S.Warnf("Skipping match as it doesn't have a version: %#v", url)
+		}
+	}
+	if len(urlMap) == 0 { // TODO should we return the latest version anyway?
+		zlog.S.Warnf("No component match found for %v, %v after filter %v", purlName, purlType, purlReq)
+		return AllUrl{}, nil
+	}
+	var versions = make([]*semver.Version, len(urlMap))
+	var vi = 0
+	for version, _ := range urlMap { // Save the list of versions so they can be sorted
+		versions[vi] = version
+		vi++
+	}
+	zlog.S.Debugf("Version List: %v", versions)
+	sort.Sort(semver.Collection(versions))
+	version := versions[len(versions)-1] // Get the latest (acceptable) URL version
+	zlog.S.Debugf("Sorted versions: %v. Highest: %v", versions, version)
+
+	url, ok := urlMap[version] // Retrieve the latest accepted URL version
+	if !ok {
+		zlog.S.Errorf("Problem retrieving URL data for %v (%v, %v)", version, purlName, purlType)
+		return AllUrl{}, fmt.Errorf("failed to retrieve specific URL version: %v", version)
+	}
+	zlog.S.Debugf("Selected version: %#v", url)
+	if len(url.License) == 0 && m.project != nil { // Check for a project license if we don't have a component one
+		zlog.S.Debugf("Searching for project license for")
+		project, err := m.project.GetProjectByPurlName(purlName, url.MineId)
+		if err != nil {
+			zlog.S.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
+		}
+		if ok && len(project.License) > 0 {
+			zlog.S.Debugf("Adding license data to %v from %v", url, project)
+			url.License = project.License
+			url.IsSpdx = project.IsSpdx
+			url.LicenseId = project.LicenseId
+		}
+	}
+	return url, nil // Return the best component match
 }

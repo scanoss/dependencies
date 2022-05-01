@@ -93,11 +93,8 @@ func (m *projectModel) GetProjectByPurlName(purlName string, mineId int32) (Proj
 	for rows.Next() {
 		err = rows.StructScan(&project)
 		if err != nil {
-			zlog.S.Errorf("Failed to parse projects table results for %v: %v", rows, err)
+			zlog.S.Errorf("Failed to parse projects table results for %#v: %v", rows, err)
 			zlog.S.Errorf("Query failed for purl_name = %v, mine_id = %v", purlName, mineId)
-			if err != nil {
-				return Project{}, err
-			}
 			return Project{}, fmt.Errorf("failed to query the projects table: %v", err)
 		}
 	}

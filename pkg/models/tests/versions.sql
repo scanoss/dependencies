@@ -7,15 +7,17 @@ CREATE TABLE versions
 );
 
 
-insert into versions (id, version_name, semver) values (13229156, '0.14.6', '');
+insert into versions (id, version_name, semver) values (99999999, '', '');
+insert into versions (id, version_name, semver) values (88888888, '02f411578-20211019', '02f411578-20211019');
+insert into versions (id, version_name, semver) values (13229156, '0.14.6', 'v0.14.6');
 insert into versions (id, version_name, semver) values (9393668, '6.0.0-beta.3', 'v6.0.0-beta.3');
-insert into versions (id, version_name, semver) values (11640350, '1.7.0', '');
-insert into versions (id, version_name, semver) values (12096334, '0.1.50', 'v0.1.5-0');
-insert into versions (id, version_name, semver) values (3234675, '1.1', '');
-insert into versions (id, version_name, semver) values (12042247, '1.5', '');
-insert into versions (id, version_name, semver) values (10926836, '2.1', '');
-insert into versions (id, version_name, semver) values (7668517, '2.14.0', '');
-insert into versions (id, version_name, semver) values (10559249, '0.5.4', '');
+insert into versions (id, version_name, semver) values (11640350, '1.7.0', 'v1.7.0');
+insert into versions (id, version_name, semver) values (12096334, '0.1.50', 'v0.1.50');
+insert into versions (id, version_name, semver) values (3234675, '1.1', 'v1.1');
+insert into versions (id, version_name, semver) values (12042247, '1.5', 'v1.5');
+insert into versions (id, version_name, semver) values (10926836, '2.1', 'v2.1');
+insert into versions (id, version_name, semver) values (7668517, '2.14.0', 'v2.14.0');
+insert into versions (id, version_name, semver) values (10559249, '0.5.4', 'v0.5.4');
 insert into versions (id, version_name, semver) values (10624415, '1.25.0', '');
 insert into versions (id, version_name, semver) values (6094632, '2.4.4', '');
 insert into versions (id, version_name, semver) values (3811231, '0.0.0-experimental-8f96c6b2a-20210909', 'v0.0.0-experimental-8f96c6b2a-20210909');
@@ -97,7 +99,7 @@ insert into versions (id, version_name, semver) values (6029874, '18.0.0-alpha-9
 insert into versions (id, version_name, semver) values (4732391, '16.2.0', '');
 insert into versions (id, version_name, semver) values (11289204, '4.4.0-beta.1', 'v4.4.0-beta.1');
 insert into versions (id, version_name, semver) values (11164973, '0.0.0-11565a207', 'v0.0.0-11565a207');
-insert into versions (id, version_name, semver) values (258510, '0.0.12', 'v0.0.1-2');
+insert into versions (id, version_name, semver) values (258510, '0.0.12', 'v0.0.12');
 insert into versions (id, version_name, semver) values (172556, '0.0.0-experimental-1a2d79250', 'v0.0.0-experimental-1a2d79250');
 insert into versions (id, version_name, semver) values (1809300, '0.0.0-experimental-8d7535e54', 'v0.0.0-experimental-8d7535e54');
 insert into versions (id, version_name, semver) values (9238369, '0.0.0-experimental-4729ff6d1-20211202', 'v0.0.0-experimental-4729ff6d1-20211202');
@@ -155,7 +157,7 @@ insert into versions (id, version_name, semver) values (526648, '0.0.0-experimen
 insert into versions (id, version_name, semver) values (12604507, '0.5.10', 'v0.5.1-0');
 insert into versions (id, version_name, semver) values (7730875, '18.0.0-alpha-9175f4d15-20210928', 'v18.0.0-alpha-9175f4d15-20210928');
 insert into versions (id, version_name, semver) values (5575488, '0.12.0', '');
-insert into versions (id, version_name, semver) values (3515237, '0.0.7', '');
+insert into versions (id, version_name, semver) values (3515237, '0.0.7', 'v0.0.7');
 insert into versions (id, version_name, semver) values (10682537, '15.5.0-rc.2', 'v15.5.0-rc.2');
 insert into versions (id, version_name, semver) values (5775158, '0.0.0-bb1c82155', 'v0.0.0-bb1c82155');
 insert into versions (id, version_name, semver) values (9296092, '4.5.0', '');

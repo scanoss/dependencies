@@ -33,7 +33,6 @@ type projectModel struct {
 
 type Project struct {
 	Component string `db:"component"`
-	Versions  int    `db:"versions"`
 	License   string `db:"license"`
 	LicenseId string `db:"license_id"`
 	IsSpdx    bool   `db:"is_spdx"`
@@ -56,7 +55,7 @@ func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) (
 	}
 	var allProjects []Project
 	err := m.conn.SelectContext(m.ctx, &allProjects,
-		"SELECT purl_name, component, versions,"+
+		"SELECT purl_name, component,"+
 			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx FROM projects p"+
 			" LEFT JOIN mines m ON p.mine_id = m.id"+
 			" LEFT JOIN licenses l ON p.license_id = l.id"+
@@ -80,7 +79,7 @@ func (m *projectModel) GetProjectByPurlName(purlName string, mineId int32) (Proj
 		return Project{}, errors.New("please specify a valid Mine ID to query")
 	}
 	rows, err := m.conn.QueryxContext(m.ctx,
-		"SELECT purl_name, component, versions, l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx FROM projects p"+
+		"SELECT purl_name, component, l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx FROM projects p"+
 			" LEFT JOIN licenses l ON p.license_id = l.id"+
 			" WHERE purl_name = $1 AND mine_id = $2",
 		purlName, mineId)

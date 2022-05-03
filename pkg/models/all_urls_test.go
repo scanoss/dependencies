@@ -89,7 +89,7 @@ func TestAllUrlsSearch(t *testing.T) {
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/taballa.hp-PD/tablestyle", "")
+	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = %v", err)
 	}
@@ -263,7 +263,7 @@ func TestAllUrlsSearchNoLicense(t *testing.T) {
 	}
 	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
 
-	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/taballa.hp-PD/tablestyle@0.0.8", "")
+	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = %v", err)
 	}
@@ -291,13 +291,13 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 	}
 	defer CloseConn(conn)
 	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
-	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/taballa.hp-PD/tablestyle", "")
+	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "")
 	if err == nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/taballa.hp-PD/tablestyle@0.0.8", "")
+	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err == nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error: %v", err)
 	} else {
@@ -309,7 +309,7 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
 	//allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "")
-	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/taballa.hp-PD/tablestyle@0.0.8", "")
+	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}

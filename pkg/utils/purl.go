@@ -18,8 +18,13 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"github.com/package-url/packageurl-go"
+	"regexp"
+	"strings"
 )
+
+var r = regexp.MustCompile(`^pkg:\w+/(?P<name>.+)$`) // regex to parse purl name from purl string
 
 // PurlFromString takes an input Purl string and returns a decomposed structure of all the elements
 func PurlFromString(purlString string) (packageurl.PackageURL, error) {
@@ -31,4 +36,21 @@ func PurlFromString(purlString string) (packageurl.PackageURL, error) {
 		return packageurl.PackageURL{}, err
 	}
 	return purl, nil
+}
+
+// PurlNameFromString take an input Purl string and returns the Purl Name only
+func PurlNameFromString(purlString string) (string, error) {
+	if len(purlString) == 0 {
+		return "", fmt.Errorf("no purl string supplied to parse")
+	}
+	matches := r.FindStringSubmatch(purlString)
+	if matches != nil && len(matches) > 0 {
+		index := r.SubexpIndex("name")
+		if index >= 0 {
+			// Remove any version/subpath/qualifiers info from the PURL
+			pn := strings.Split(strings.Split(strings.Split(matches[index], "@")[0], "?")[0], "#")[0]
+			return pn, nil
+		}
+	}
+	return "", fmt.Errorf("no purl name found in '%v'", purlString)
 }

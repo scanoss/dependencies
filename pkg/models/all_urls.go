@@ -57,10 +57,14 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 	if err != nil {
 		return AllUrl{}, err
 	}
-	if len(purl.Version) > 0 {
-		return m.GetUrlsByPurlNameTypeVersion(purl.Name, purl.Type, purl.Version)
+	purlName, err := utils.PurlNameFromString(purlString)
+	if err != nil {
+		return AllUrl{}, err
 	}
-	return m.GetUrlsByPurlNameType(purl.Name, purl.Type, purlReq)
+	if len(purl.Version) > 0 {
+		return m.GetUrlsByPurlNameTypeVersion(purlName, purl.Type, purl.Version)
+	}
+	return m.GetUrlsByPurlNameType(purlName, purl.Type, purlReq)
 }
 
 func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string) (AllUrl, error) {
@@ -87,7 +91,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string)
 		zlog.S.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
 		return AllUrl{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
-	zlog.S.Debugf("Found %v results.", len(allUrls))
+	zlog.S.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
 	return m.pickOneUrl(allUrls, purlName, purlType, purlReq)
 }
@@ -120,7 +124,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVers
 		zlog.S.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
 		return AllUrl{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
-	zlog.S.Debugf("Found %v results.", len(allUrls))
+	zlog.S.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
 	return m.pickOneUrl(allUrls, purlName, purlType, "")
 }
@@ -128,10 +132,10 @@ func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVers
 func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq string) (AllUrl, error) {
 
 	if len(allUrls) == 0 {
-		zlog.S.Infof("No component match found for %v, %v", purlName, purlType)
+		zlog.S.Infof("No component match (in allurls) found for %v, %v", purlName, purlType)
 		return AllUrl{}, nil
 	}
-	zlog.S.Debugf("Matches: %v", allUrls)
+	zlog.S.Debugf("Potential Matches: %v", allUrls)
 	var c *semver.Constraints
 	var urlMap = make(map[*semver.Version]AllUrl)
 	if len(purlReq) > 0 {
@@ -145,13 +149,13 @@ func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq 
 	zlog.S.Debugf("Checking versions...")
 	for _, url := range allUrls {
 		if len(url.SemVer) > 0 || len(url.Version) > 0 {
-			v, err := semver.NewVersion(url.SemVer)
-			if err != nil && len(url.Version) > 0 {
-				zlog.S.Debugf("Failed to parse SemVer: '%v'. Trying Version instead: %v (%v)", url.SemVer, url.Version, err)
-				v, err = semver.NewVersion(url.Version) // Semver failed, try the normal version
+			v, err := semver.NewVersion(url.Version)
+			if err != nil && len(url.SemVer) > 0 {
+				zlog.S.Debugf("Failed to parse SemVer: '%v'. Trying Version instead: %v (%v)", url.Version, url.SemVer, err)
+				v, err = semver.NewVersion(url.SemVer) // Semver failed, try the normal version
 			}
 			if err != nil {
-				zlog.S.Warnf("Encountered an issue parsing version string '%v' (%v) for %v: %v", url.SemVer, url.Version, url, err)
+				zlog.S.Warnf("Encountered an issue parsing version string '%v' (%v) for %v: %v", url.Version, url.SemVer, url, err)
 			} else {
 				if c == nil || c.Check(v) {
 					//zlog.S.Debugf("Saving URL version %v: %v", v, url)
@@ -168,7 +172,7 @@ func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq 
 	}
 	var versions = make([]*semver.Version, len(urlMap))
 	var vi = 0
-	for version, _ := range urlMap { // Save the list of versions so they can be sorted
+	for version := range urlMap { // Save the list of versions so they can be sorted
 		versions[vi] = version
 		vi++
 	}

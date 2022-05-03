@@ -27,6 +27,7 @@ import (
 func TestPurlFromString(t *testing.T) {
 
 	w, _ := packageurl.FromString("pkg:maven/io.prestosql/presto-main@v1.0")
+	w2, _ := packageurl.FromString("pkg:npm/%40babel/core")
 	tests := []struct {
 		name    string
 		input   string
@@ -37,6 +38,11 @@ func TestPurlFromString(t *testing.T) {
 			name:  "Purl from String",
 			input: "pkg:maven/io.prestosql/presto-main@v1.0",
 			want:  w,
+		},
+		{
+			name:  "Purl from String",
+			input: "pkg:npm/%40babel/core",
+			want:  w2,
 		},
 		{
 			name:    "Empty String",
@@ -58,12 +64,66 @@ func TestPurlFromString(t *testing.T) {
 				t.Errorf("utils.PurlFromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			//t.Logf("Got: %v: '%v' '%v' '%v' '%v' '%v' '%v'", got, got.Type, got.Namespace, got.Name, got.Version, got.Qualifiers, got.Subpath)
-			//t.Logf("Exp: %v: '%v' '%v' '%v' '%v' '%v' '%v'", tt.want, tt.want.Type, tt.want.Namespace, tt.want.Name, tt.want.Version, tt.want.Qualifiers, tt.want.Subpath)
+			t.Logf("Got: %v: '%v' '%v' '%v' '%v' '%v' '%v'", got, got.Type, got.Namespace, got.Name, got.Version, got.Qualifiers, got.Subpath)
+			t.Logf("Exp: %v: '%v' '%v' '%v' '%v' '%v' '%v'", tt.want, tt.want.Type, tt.want.Namespace, tt.want.Name, tt.want.Version, tt.want.Qualifiers, tt.want.Subpath)
 			if err == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("utils.PurlFromString() = %v, want %v", got, tt.want)
 			}
 		})
 	}
+}
 
+func TestPurlNameFromString(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "Maven",
+			input: "pkg:maven/io.prestosql/presto-main@v1.0",
+			want:  "io.prestosql/presto-main",
+		},
+		{
+			name:  "NPM",
+			input: "pkg:npm/%40babel/core",
+			want:  "%40babel/core",
+		},
+		{
+			name:  "NPM",
+			input: "pkg:npm/%40babel/core@7.0.0",
+			want:  "%40babel/core",
+		},
+		{
+			name:  "NPM",
+			input: "pkg:npm/core@0.0.1",
+			want:  "core",
+		},
+		{
+			name:    "Empty String",
+			input:   "",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Rubbish String",
+			input:   "rubbish.string",
+			want:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := PurlNameFromString(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("utils.PurlFromString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("utils.PurlFromString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

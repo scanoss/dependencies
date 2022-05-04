@@ -141,7 +141,7 @@ func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq 
 	zlog.S.Debugf("Potential Matches: %v", allUrls)
 	var c *semver.Constraints
 	var urlMap = make(map[*semver.Version]AllUrl)
-	if len(purlReq) > 0 {
+	if len(purlReq) > 0 && !strings.HasPrefix(purlReq, "v0.0.0-") { // We have a version specifier and it's not 0.0.0 rubbish TODO remove once we have golang indexed
 		zlog.S.Debugf("Building version constraint for %v: %v", purlName, purlReq)
 		var err error
 		c, err = semver.NewConstraint(purlReq)
@@ -158,8 +158,10 @@ func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq 
 				v, err = semver.NewVersion(url.SemVer) // Semver failed, try the normal version
 			}
 			if err != nil {
-				zlog.S.Warnf("Encountered an issue parsing version string '%v' (%v) for %v: %v", url.Version, url.SemVer, url, err)
-			} else {
+				zlog.S.Warnf("Encountered an issue parsing version string '%v' (%v) for %v: %v. Using v0.0.0", url.Version, url.SemVer, url, err)
+				v, err = semver.NewVersion("v0.0.0") // Semver failed, just use a standard version zero (for now)
+			}
+			if err != nil {
 				if c == nil || c.Check(v) {
 					//zlog.S.Debugf("Saving URL version %v: %v", v, url)
 					urlMap[v] = url // fits inside the constraint

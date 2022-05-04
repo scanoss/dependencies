@@ -25,6 +25,7 @@ import (
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/utils"
 	"sort"
+	"strings"
 )
 
 type AllUrlsModel struct {
@@ -63,7 +64,7 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 	if err != nil {
 		return AllUrl{}, err
 	}
-	if len(purl.Version) > 0 {
+	if len(purl.Version) > 0 && !strings.HasPrefix(purl.Version, "v0.0.0-") { // We have a version specifier and it's not 0.0.0 rubbish TODO remove once we have golang indexed
 		return m.GetUrlsByPurlNameTypeVersion(purlName, purl.Type, purl.Version)
 	}
 	return m.GetUrlsByPurlNameType(purlName, purl.Type, purlReq)

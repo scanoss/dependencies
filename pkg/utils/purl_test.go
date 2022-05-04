@@ -139,8 +139,13 @@ func TestConvertPurlString(t *testing.T) {
 			want:  "pkg:maven/io.prestosql/presto-main@v1.0",
 		},
 		{
-			name:  "Golang",
+			name:  "Golang1",
 			input: "pkg:golang/github.com/scanoss/papi",
+			want:  "pkg:github/scanoss/papi",
+		},
+		{
+			name:  "Golang2",
+			input: "pkg:golang/github.com/scanoss/papi/v2",
 			want:  "pkg:github/scanoss/papi",
 		},
 		{

@@ -59,7 +59,12 @@ func PurlNameFromString(purlString string) (string, error) {
 func ConvertPurlString(purlString string) string {
 	// Replace Golang GitHub package reference with just GitHub
 	if len(purlString) > 0 && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
-		return strings.Replace(purlString, "pkg:golang/github.com/", "pkg:github/", -1)
+		s := strings.Replace(purlString, "pkg:golang/github.com/", "pkg:github/", -1)
+		p := strings.Split(s, "/")
+		if len(p) >= 3 {
+			return fmt.Sprintf("%s/%s/%s", p[0], p[1], p[2]) // Only return the GitHub part of the url
+		}
+		return s
 	}
 	return purlString
 }

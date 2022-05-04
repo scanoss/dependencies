@@ -74,7 +74,6 @@ func TestPurlFromString(t *testing.T) {
 }
 
 func TestPurlNameFromString(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		input   string
@@ -123,6 +122,118 @@ func TestPurlNameFromString(t *testing.T) {
 			}
 			if err == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("utils.PurlFromString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConvertPurlString(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "Maven",
+			input: "pkg:maven/io.prestosql/presto-main@v1.0",
+			want:  "pkg:maven/io.prestosql/presto-main@v1.0",
+		},
+		{
+			name:  "Golang",
+			input: "pkg:golang/github.com/scanoss/papi",
+			want:  "pkg:github/scanoss/papi",
+		},
+		{
+			name:  "Empty String",
+			input: "",
+			want:  "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ConvertPurlString(tt.input)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("utils.PurlFromString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPurlUrl(t *testing.T) {
+	tests := []struct {
+		name    string
+		pname   string
+		ptype   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "GitHub",
+			pname: "scanoss/scanoss.py",
+			ptype: "github",
+			want:  "https://github.com/scanoss/scanoss.py",
+		},
+		{
+			name:  "Maven",
+			pname: "io.prestosql/presto-main",
+			ptype: "maven",
+			want:  "https://mvnrepository.com/artifact/io.prestosql/presto-main",
+		},
+		{
+			name:  "NPM",
+			pname: "%40babel/core",
+			ptype: "npm",
+			want:  "https://www.npmjs.com/package/%40babel/core",
+		},
+		{
+			name:  "PyPI",
+			pname: "scanoss",
+			ptype: "pypi",
+			want:  "https://pypi.org/project/scanoss",
+		},
+		{
+			name:  "Gem",
+			pname: "tablestyle",
+			ptype: "gem",
+			want:  "https://rubygems.org/gems/tablestyle",
+		},
+		{
+			name:  "Golang",
+			pname: "github.com/scanoss/papi",
+			ptype: "golang",
+			want:  "https://pkg.go.dev/github.com/scanoss/papi",
+		},
+		{
+			name:    "Empty String1",
+			pname:   "",
+			ptype:   "gem",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Empty String2",
+			pname:   "io.prestosql/presto-main",
+			ptype:   "",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Rubbish String",
+			pname:   "rubbish.string",
+			ptype:   "rubbish.string",
+			want:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ProjectUrl(tt.pname, tt.ptype)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("utils.ProjectUrl() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("utils.ProjectUrl() = %v, want %v", got, tt.want)
 			}
 		})
 	}

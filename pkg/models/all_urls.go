@@ -42,6 +42,7 @@ type AllUrl struct {
 	IsSpdx    bool   `db:"is_spdx"`
 	PurlName  string `db:"purl_name"`
 	MineId    int32  `db:"mine_id"`
+	Url       string `db:"-"`
 }
 
 func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, project *projectModel) *AllUrlsModel {
@@ -53,6 +54,7 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 		zlog.S.Errorf("Please specify a valid Purl String to query")
 		return AllUrl{}, errors.New("please specify a valid Purl String to query")
 	}
+	purlString = utils.ConvertPurlString(purlString) // Fix the purl before using it if necessary
 	purl, err := utils.PurlFromString(purlString)
 	if err != nil {
 		return AllUrl{}, err
@@ -78,7 +80,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string)
 	}
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, v.version_name AS version, v.semver AS semver,"+
+		"SELECT DISTINCT component, v.version_name AS version, v.semver AS semver,"+
 			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
 			" purl_name, mine_id FROM all_urls u"+
 			" LEFT JOIN mines m ON u.mine_id = m.id"+
@@ -111,7 +113,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVers
 	}
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, v.version_name AS version, v.semver AS semver,"+
+		"SELECT DISTINCT component, v.version_name AS version, v.semver AS semver,"+
 			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
 			" purl_name, mine_id FROM all_urls u"+
 			" LEFT JOIN mines m ON u.mine_id = m.id"+
@@ -186,6 +188,8 @@ func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq 
 		zlog.S.Errorf("Problem retrieving URL data for %v (%v, %v)", version, purlName, purlType)
 		return AllUrl{}, fmt.Errorf("failed to retrieve specific URL version: %v", version)
 	}
+	url.Url, _ = utils.ProjectUrl(purlName, purlType)
+
 	zlog.S.Debugf("Selected version: %#v", url)
 	if len(url.License) == 0 && m.project != nil { // Check for a project license if we don't have a component one
 		zlog.S.Debugf("Searching for project license for")

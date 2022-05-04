@@ -64,9 +64,10 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			}
 			depOutput.Component = url.Component
 			depOutput.Version = url.Version
+			// TODO add project url
 			var licenses []dtos.DependencyLicense
 			var license dtos.DependencyLicense
-			license.Name = url.License
+			license.Name = url.License // TODO split licenses if multiple returned?
 			license.SpdxId = url.LicenseId
 			license.IsSpdx = url.IsSpdx
 			licenses = append(licenses, license)

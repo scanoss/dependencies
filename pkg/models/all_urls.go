@@ -161,7 +161,7 @@ func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq 
 				zlog.S.Warnf("Encountered an issue parsing version string '%v' (%v) for %v: %v. Using v0.0.0", url.Version, url.SemVer, url, err)
 				v, err = semver.NewVersion("v0.0.0") // Semver failed, just use a standard version zero (for now)
 			}
-			if err != nil {
+			if err == nil {
 				if c == nil || c.Check(v) {
 					//zlog.S.Debugf("Saving URL version %v: %v", v, url)
 					urlMap[v] = url // fits inside the constraint

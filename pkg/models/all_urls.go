@@ -80,7 +80,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string)
 	}
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT DISTINCT component, v.version_name AS version, v.semver AS semver,"+
+		"SELECT component, v.version_name AS version, v.semver AS semver,"+
 			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
 			" purl_name, mine_id FROM all_urls u"+
 			" LEFT JOIN mines m ON u.mine_id = m.id"+
@@ -113,7 +113,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVers
 	}
 	var allUrls []AllUrl
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT DISTINCT component, v.version_name AS version, v.semver AS semver,"+
+		"SELECT component, v.version_name AS version, v.semver AS semver,"+
 			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
 			" purl_name, mine_id FROM all_urls u"+
 			" LEFT JOIN mines m ON u.mine_id = m.id"+

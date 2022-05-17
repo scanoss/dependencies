@@ -29,9 +29,10 @@ import (
 )
 
 type AllUrlsModel struct {
-	ctx     context.Context
-	conn    *sqlx.Conn
-	project *projectModel
+	ctx        context.Context
+	conn       *sqlx.Conn
+	project    *projectModel
+	golangProj *GolangProjects
 }
 
 type AllUrl struct {
@@ -46,8 +47,8 @@ type AllUrl struct {
 	Url       string `db:"-"`
 }
 
-func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, project *projectModel) *AllUrlsModel {
-	return &AllUrlsModel{ctx: ctx, conn: conn, project: project}
+func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, project *projectModel, golangProj *GolangProjects) *AllUrlsModel {
+	return &AllUrlsModel{ctx: ctx, conn: conn, project: project, golangProj: golangProj}
 }
 
 func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, error) {
@@ -55,16 +56,33 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 		zlog.S.Errorf("Please specify a valid Purl String to query")
 		return AllUrl{}, errors.New("please specify a valid Purl String to query")
 	}
-	purlString = utils.ConvertPurlString(purlString) // Fix the purl before using it if necessary
+	//purlString = utils.ConvertPurlString(purlString) // Fix the purl before using it if necessary
 	purl, err := utils.PurlFromString(purlString)
 	if err != nil {
 		return AllUrl{}, err
 	}
-	purlName, err := utils.PurlNameFromString(purlString)
+	purlName, err := utils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
 	if err != nil {
 		return AllUrl{}, err
 	}
-	if len(purl.Version) > 0 && !strings.HasPrefix(purl.Version, "v0.0.0-") { // We have a version specifier and it's not 0.0.0 rubbish TODO remove once we have golang indexed
+	if purl.Type == "golang" {
+		allUrl, err := m.golangProj.GetGoLangUrlByPurl(purl, purlName, purlReq) // Search a separate table for golang dependencies
+		// If no golang package is found, but it's a GitHub component, search GitHub for it
+		if err != nil && allUrl.Component == "" && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
+			purlString = utils.ConvertPurlString(purlString) // Convert to GitHub purl
+			purl, err = utils.PurlFromString(purlString)
+			if err != nil {
+				return AllUrl{}, err
+			}
+			purlName, err = utils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
+			if err != nil {
+				return AllUrl{}, err
+			}
+		} else {
+			return allUrl, err
+		}
+	}
+	if len(purl.Version) > 0 {
 		return m.GetUrlsByPurlNameTypeVersion(purlName, purl.Type, purl.Version)
 	}
 	return m.GetUrlsByPurlNameType(purlName, purl.Type, purlReq)
@@ -95,8 +113,8 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string)
 		return AllUrl{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	zlog.S.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
-	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
-	return m.pickOneUrl(allUrls, purlName, purlType, purlReq)
+	// Pick one URL to return (checking for license details also)
+	return pickOneUrl(m.project, allUrls, purlName, purlType, purlReq)
 }
 
 func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVersion string) (AllUrl, error) {
@@ -128,20 +146,20 @@ func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVers
 		return AllUrl{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	zlog.S.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
-	// Check if any of the URL entries is missing a license. If so, search for it in the projects table
-	return m.pickOneUrl(allUrls, purlName, purlType, "")
+	// Pick one URL to return (checking for license details also)
+	return pickOneUrl(m.project, allUrls, purlName, purlType, "")
 }
 
-func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq string) (AllUrl, error) {
+func pickOneUrl(projModel *projectModel, allUrls []AllUrl, purlName, purlType, purlReq string) (AllUrl, error) {
 
 	if len(allUrls) == 0 {
-		zlog.S.Infof("No component match (in allurls) found for %v, %v", purlName, purlType)
+		zlog.S.Infof("No component match (in urls) found for %v, %v", purlName, purlType)
 		return AllUrl{}, nil
 	}
 	zlog.S.Debugf("Potential Matches: %v", allUrls)
 	var c *semver.Constraints
 	var urlMap = make(map[*semver.Version]AllUrl)
-	if len(purlReq) > 0 && !strings.HasPrefix(purlReq, "v0.0.0-") { // We have a version specifier and it's not 0.0.0 rubbish TODO remove once we have golang indexed
+	if len(purlReq) > 0 {
 		zlog.S.Debugf("Building version constraint for %v: %v", purlName, purlReq)
 		var err error
 		c, err = semver.NewConstraint(purlReq)
@@ -163,8 +181,10 @@ func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq 
 			}
 			if err == nil {
 				if c == nil || c.Check(v) {
-					//zlog.S.Debugf("Saving URL version %v: %v", v, url)
-					urlMap[v] = url // fits inside the constraint
+					_, ok := urlMap[v]
+					if !ok {
+						urlMap[v] = url // fits inside the constraint and hasn't already been stored
+					}
 				}
 			}
 		} else {
@@ -194,9 +214,9 @@ func (m *AllUrlsModel) pickOneUrl(allUrls []AllUrl, purlName, purlType, purlReq 
 	url.Url, _ = utils.ProjectUrl(purlName, purlType)
 
 	zlog.S.Debugf("Selected version: %#v", url)
-	if len(url.License) == 0 && m.project != nil { // Check for a project license if we don't have a component one
+	if len(url.License) == 0 && projModel != nil { // Check for a project license if we don't have a component one
 		zlog.S.Debugf("Searching for project license for")
-		project, err := m.project.GetProjectByPurlName(purlName, url.MineId)
+		project, err := projModel.GetProjectByPurlName(purlName, url.MineId)
 		if err != nil {
 			zlog.S.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
 		}

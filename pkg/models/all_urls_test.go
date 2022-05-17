@@ -45,7 +45,7 @@ func TestAllUrlsSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "")
 	if err != nil {
@@ -97,6 +97,15 @@ func TestAllUrlsSearch(t *testing.T) {
 		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
 	}
 	fmt.Printf("All Urls: %v\n", allUrls)
+
+	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:golang/google.golang.org/grpc", "")
+	if err != nil {
+		t.Errorf("all_urls.GetUrlsByPurlString() error = %v", err)
+	}
+	if len(allUrls.PurlName) == 0 {
+		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
+	}
+	fmt.Printf("Golang Url: %v\n", allUrls)
 }
 
 func TestAllUrlsSearchVersion(t *testing.T) {
@@ -120,7 +129,7 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameTypeVersion("tablestyle", "gem", "0.0.12")
 	if err != nil {
@@ -186,7 +195,7 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", ">0.0.4")
 	if err != nil {
@@ -228,7 +237,7 @@ func TestAllUrlsSearchNoProject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, nil)
+	allUrlsModel := NewAllUrlModel(ctx, conn, nil, NewGolangProjectModel(ctx, conn))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "0.0.8")
 	if err != nil {
@@ -261,7 +270,7 @@ func TestAllUrlsSearchNoLicense(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err != nil {
@@ -290,7 +299,7 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn))
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
 	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "")
 	if err == nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")

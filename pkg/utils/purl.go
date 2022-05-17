@@ -47,7 +47,7 @@ func PurlNameFromString(purlString string) (string, error) {
 	if matches != nil && len(matches) > 0 {
 		index := r.SubexpIndex("name")
 		if index >= 0 {
-			// Remove any version/subpath/qualifiers info from the PURL
+			// Remove any version@/subpath?/qualifiers# info from the PURL
 			pn := strings.Split(strings.Split(strings.Split(matches[index], "@")[0], "?")[0], "#")[0]
 			return pn, nil
 		}
@@ -56,7 +56,7 @@ func PurlNameFromString(purlString string) (string, error) {
 }
 
 // ConvertPurlString takes an input PURL and checks to see if anything needs to be modified before search the KB
-func ConvertPurlString(purlString string) string {
+func ConvertPurlString(purlString string) string { // TODO remove now that we have golang?
 	// Replace Golang GitHub package reference with just GitHub
 	if len(purlString) > 0 && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
 		s := strings.Replace(purlString, "pkg:golang/github.com/", "pkg:github/", -1)

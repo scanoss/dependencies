@@ -47,7 +47,7 @@ func loadSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename str
 // LoadTestSqlData loads all the required test SQL files
 func LoadTestSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn) error {
 	files := []string{"../models/tests/mines.sql", "../models/tests/all_urls.sql", "../models/tests/projects.sql",
-		"../models/tests/licenses.sql", "../models/tests/versions.sql"}
+		"../models/tests/licenses.sql", "../models/tests/versions.sql", "../models/tests/golang_projects.sql"}
 	return loadTestSqlDataFiles(db, ctx, conn, files)
 }
 

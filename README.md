@@ -64,3 +64,5 @@ To run locally on your desktop, please use the following command:
 ```shell
 go run cmd/server/main.go -json-config config/app-config-dev.json -debug
 ```
+
+https://mholt.github.io/json-to-go/

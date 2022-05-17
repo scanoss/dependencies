@@ -46,3 +46,4 @@ INSERT INTO mines (id, name, purl_type) VALUES (38, 'gnome.org', 'gitlab');
 INSERT INTO mines (id, name, purl_type) VALUES (39, 'gitlab.com', 'gitlab');
 INSERT INTO mines (id, name, purl_type) VALUES (40, 'bitbucket.org', 'bitbucket');
 INSERT INTO mines (id, name, purl_type) VALUES (41, 'wordpress.org', 'wordpress');
+INSERT INTO mines (id, name, purl_type) VALUES (45, 'pkg.go.dev', 'golang');

@@ -34,7 +34,7 @@ type DependencyUseCase struct {
 
 func NewDependencies(ctx context.Context, conn *sqlx.Conn) *DependencyUseCase {
 	return &DependencyUseCase{ctx: ctx, conn: conn,
-		allUrls: models.NewAllUrlModel(ctx, conn, models.NewProjectModel(ctx, conn)),
+		allUrls: models.NewAllUrlModel(ctx, conn, models.NewProjectModel(ctx, conn), models.NewGolangProjectModel(ctx, conn)),
 	}
 }
 

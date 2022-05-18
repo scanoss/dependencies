@@ -23,15 +23,17 @@ import (
 	pkggodevclient "github.com/guseggert/pkggodev-client"
 	"github.com/jmoiron/sqlx"
 	"github.com/package-url/packageurl-go"
+	"regexp"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/utils"
-	"strings"
 )
 
 type GolangProjects struct {
 	ctx  context.Context
 	conn *sqlx.Conn
 }
+
+var vRegex = regexp.MustCompile(`^v\d+\.\d+\.\d+-\d+-\w+$`) // regex to check for commit based version
 
 func NewGolangProjectModel(ctx context.Context, conn *sqlx.Conn) *GolangProjects {
 	return &GolangProjects{ctx: ctx, conn: conn}
@@ -148,7 +150,7 @@ func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllUrl, er
 	}
 	zlog.S.Debugf("Checking pkg.go.dev for the latest info: %v", pkg)
 	d, err := client.DescribePackage(pkggodevclient.DescribePackageRequest{Package: pkg})
-	if err != nil && len(purlVersion) > 0 && strings.HasPrefix(purlVersion, "v0.0.0") {
+	if err != nil && len(purlVersion) > 0 && vRegex.MatchString(purlVersion) {
 		// We have a version zero search, so look for the latest one
 		zlog.S.Debugf("Failed to query pkg.go.dev for %v: %v. Trying without version...", pkg, err)
 		d, err = client.DescribePackage(pkggodevclient.DescribePackageRequest{Package: purlName})

@@ -24,7 +24,8 @@ import (
 	"strings"
 )
 
-var r = regexp.MustCompile(`^pkg:\w+/(?P<name>.+)$`) // regex to parse purl name from purl string
+var pkgRegex = regexp.MustCompile(`^pkg:(?P<type>\w+)/(?P<name>.+)$`) // regex to parse purl name from purl string
+var typeRegex = regexp.MustCompile(`^(npm|nuget)$`)                   // regex to parse purl types that should not be lower cased
 
 // PurlFromString takes an input Purl string and returns a decomposed structure of all the elements
 func PurlFromString(purlString string) (packageurl.PackageURL, error) {
@@ -43,12 +44,17 @@ func PurlNameFromString(purlString string) (string, error) {
 	if len(purlString) == 0 {
 		return "", fmt.Errorf("no purl string supplied to parse")
 	}
-	matches := r.FindStringSubmatch(purlString)
+	matches := pkgRegex.FindStringSubmatch(purlString)
 	if matches != nil && len(matches) > 0 {
-		index := r.SubexpIndex("name")
-		if index >= 0 {
+		ti := pkgRegex.SubexpIndex("type")
+		ni := pkgRegex.SubexpIndex("name")
+		if ni >= 0 {
 			// Remove any version@/subpath?/qualifiers# info from the PURL
-			pn := strings.Split(strings.Split(strings.Split(matches[index], "@")[0], "?")[0], "#")[0]
+			pn := strings.Split(strings.Split(strings.Split(matches[ni], "@")[0], "?")[0], "#")[0]
+			// Lowercase the purl name if it's not on the exclusion list (defined in the regex)
+			if ti >= 0 && !typeRegex.MatchString(matches[ti]) {
+				pn = strings.ToLower(pn)
+			}
 			return pn, nil
 		}
 	}

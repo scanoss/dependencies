@@ -82,23 +82,23 @@ func TestPurlNameFromString(t *testing.T) {
 	}{
 		{
 			name:  "Maven",
-			input: "pkg:maven/io.prestosql/presto-main@v1.0",
+			input: "pkg:maven/io.prestosql/Presto-main@v1.0",
 			want:  "io.prestosql/presto-main",
 		},
 		{
-			name:  "NPM",
-			input: "pkg:npm/%40babel/core",
-			want:  "%40babel/core",
+			name:  "NPM1",
+			input: "pkg:npm/%40babel/Core",
+			want:  "%40babel/Core",
 		},
 		{
-			name:  "NPM",
-			input: "pkg:npm/%40babel/core@7.0.0",
-			want:  "%40babel/core",
+			name:  "NPM2",
+			input: "pkg:npm/%40babel/Core@7.0.0",
+			want:  "%40babel/Core",
 		},
 		{
-			name:  "NPM",
-			input: "pkg:npm/core@0.0.1",
-			want:  "core",
+			name:  "NPM3",
+			input: "pkg:npm/Core@0.0.1",
+			want:  "Core",
 		},
 		{
 			name:    "Empty String",

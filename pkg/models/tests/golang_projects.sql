@@ -21,5 +21,5 @@ CREATE TABLE golang_projects
     primary key (purl_name, version)
 );
 
-INSERT INTO golang_projects (component, version, version_id, version_date, license, license_id, repository, purl_name, mine_id, index_timestamp) VALUES ('github.com/scanoss/papi', 'v0.0.1', 5958021, '', 'MIT', 5614, 'github.com/scanoss/papi', 'github.com/scanoss/papi', 45, '2022-02-21T19:51:21.112979Z');
-INSERT INTO golang_projects (component, version, version_id, version_date, license, license_id, repository, purl_name, mine_id, index_timestamp) VALUES ('google.golang.org/grpc', 'v1.19.0', 5193086, '', 'Apache-2.0', 552, 'github.com/grpc/grpc-go', 'google.golang.org/grpc', 45, '2022-05-09T20:17:02.339878Z');
+INSERT INTO golang_projects (component, version, version_id, version_date, license, license_id, repository, purl_name, mine_id, index_timestamp, is_indexed) VALUES ('github.com/scanoss/papi', 'v0.0.1', 5958021, '', 'MIT', 5614, 'github.com/scanoss/papi', 'github.com/scanoss/papi', 45, '2022-02-21T19:51:21.112979Z', True);
+INSERT INTO golang_projects (component, version, version_id, version_date, license, license_id, repository, purl_name, mine_id, index_timestamp, is_indexed) VALUES ('google.golang.org/grpc', 'v1.19.0', 5193086, '', 'Apache-2.0', 552, 'github.com/grpc/grpc-go', 'google.golang.org/grpc', 45, '2022-05-09T20:17:02.339878Z', True);

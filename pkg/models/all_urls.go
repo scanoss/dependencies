@@ -56,7 +56,6 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 		zlog.S.Errorf("Please specify a valid Purl String to query")
 		return AllUrl{}, errors.New("please specify a valid Purl String to query")
 	}
-	//purlString = utils.ConvertPurlString(purlString) // Fix the purl before using it if necessary
 	purl, err := utils.PurlFromString(purlString)
 	if err != nil {
 		return AllUrl{}, err

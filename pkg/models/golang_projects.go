@@ -75,7 +75,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameType(purlName, purlType, purlReq
 			" LEFT JOIN mines m ON u.mine_id = m.id"+
 			" LEFT JOIN licenses l ON u.license_id = l.id"+
 			" LEFT JOIN versions v ON u.version_id = v.id"+
-			" WHERE m.purl_type = $1 AND u.purl_name = $2"+
+			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND is_indexed = True"+
 			" ORDER BY version_date DESC",
 		purlType, purlName)
 	if err != nil {
@@ -108,7 +108,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 			" LEFT JOIN mines m ON u.mine_id = m.id"+
 			" LEFT JOIN licenses l ON u.license_id = l.id"+
 			" LEFT JOIN versions v ON u.version_id = v.id"+
-			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3"+
+			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3 AND is_indexed = True"+
 			" ORDER BY version_date DESC",
 		purlType, purlName, purlVersion)
 	if err != nil {

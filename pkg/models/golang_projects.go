@@ -25,6 +25,7 @@ import (
 	"github.com/package-url/packageurl-go"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/utils"
+	"strings"
 )
 
 type GolangProjects struct {
@@ -124,7 +125,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 		return AllUrl{}, fmt.Errorf("failed to query the golang projects table: %v", err)
 	}
 	zlog.S.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
-	if len(allUrls) == 0 {
+	if len(allUrls) == 0 { // Check pkg.go.dev for the latest data
 		allUrl, err := m.queryPkgGoDev(purlName, purlVersion)
 		if err == nil {
 			zlog.S.Debugf("Retrieved golang data from pkg.go.dev: %#v", allUrl)
@@ -145,8 +146,27 @@ func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllUrl, er
 	if len(purlVersion) > 0 {
 		pkg = fmt.Sprintf("%s@%s", purlName, purlVersion)
 	}
+	zlog.S.Debugf("Checking pkg.go.dev for the latest info: %v", pkg)
 	d, err := client.DescribePackage(pkggodevclient.DescribePackageRequest{Package: pkg})
+	if err != nil && len(purlVersion) > 0 && strings.HasPrefix(purlVersion, "v0.0.0") {
+		// We have a version zero search, so look for the latest one
+		zlog.S.Debugf("Failed to query pkg.go.dev for %v: %v. Trying without version...", pkg, err)
+		d, err = client.DescribePackage(pkggodevclient.DescribePackageRequest{Package: purlName})
+		if err == nil { // Return the details for the latest version
+			allUrl := AllUrl{
+				Component: purlName,
+				Version:   purlVersion, // Force the version to be what was requested
+				License:   d.License,
+				LicenseId: d.License,
+				IsSpdx:    true, // TODO add license lookup
+				PurlName:  purlName,
+				Url:       fmt.Sprintf("https://%v", d.Repository),
+			}
+			return allUrl, nil
+		}
+	}
 	if err != nil {
+		zlog.S.Warnf("Failed to query pkg.go.dev for %v: %v", pkg, err)
 		return AllUrl{}, fmt.Errorf("failed to query pkg.go.dev: %v", err)
 	}
 	allUrl := AllUrl{

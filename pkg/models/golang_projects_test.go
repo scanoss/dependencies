@@ -213,12 +213,25 @@ func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
 	}
 	fmt.Printf("Golang Url Version: %#v\n", url)
 
+	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "v0.0.0-201910101010-s3333")
+	if err != nil {
+		t.Errorf("golang_projects.GetUrlsByPurlName() error = %v", err)
+	}
+	if len(url.PurlName) == 0 {
+		t.Errorf("golang_projects.GetUrlsByPurlName() No URLs returned from query")
+	}
+	fmt.Printf("Golang Url Version: %#v\n", url)
+
 	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "<0.0.4>")
 	if err != nil {
 		t.Errorf("golang_projects.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(url.PurlName) == 0 {
 		t.Errorf("golang_projects.GetUrlsByPurlName() No URLs returned from query")
+	}
+	url, err = golangProjModel.queryPkgGoDev("", "")
+	if err == nil {
+		t.Errorf("golang_projects.queryPkgGoDev() error = did not get an error")
 	}
 }
 

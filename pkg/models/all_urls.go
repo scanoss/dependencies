@@ -64,6 +64,13 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 	if err != nil {
 		return AllUrl{}, err
 	}
+	if len(purl.Version) == 0 && len(purlReq) > 0 { // No version specified, but we might have a specific version in the Requirement
+		ver := utils.GetVersionFromReq(purlReq)
+		if len(ver) > 0 {
+			purl.Version = ver // Switch to exact version search (faster)
+			purlReq = ""
+		}
+	}
 	if purl.Type == "golang" {
 		allUrl, err := m.golangProj.GetGoLangUrlByPurl(purl, purlName, purlReq) // Search a separate table for golang dependencies
 		// If no golang package is found, but it's a GitHub component, search GitHub for it

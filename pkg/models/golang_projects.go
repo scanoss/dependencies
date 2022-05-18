@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	pkggodevclient "github.com/guseggert/pkggodev-client"
 	"github.com/jmoiron/sqlx"
 	"github.com/package-url/packageurl-go"
 	zlog "scanoss.com/dependencies/pkg/logger"
@@ -47,6 +48,13 @@ func (m *GolangProjects) GetGoLangUrlByPurlString(purlString, purlReq string) (A
 	purlName, err := utils.PurlNameFromString(purlString)
 	if err != nil {
 		return AllUrl{}, err
+	}
+	if len(purl.Version) == 0 && len(purlReq) > 0 { // No version specified, but we might have a specific version in the Requirement
+		ver := utils.GetVersionFromReq(purlReq)
+		if len(ver) > 0 {
+			purl.Version = ver
+			purlReq = ""
+		}
 	}
 	return m.GetGoLangUrlByPurl(purl, purlName, purlReq)
 }
@@ -116,6 +124,39 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 		return AllUrl{}, fmt.Errorf("failed to query the golang projects table: %v", err)
 	}
 	zlog.S.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
+	if len(allUrls) == 0 {
+		allUrl, err := m.queryPkgGoDev(purlName, purlVersion)
+		if err == nil {
+			zlog.S.Debugf("Retrieved golang data from pkg.go.dev: %#v", allUrl)
+			allUrls = append(allUrls, allUrl)
+		}
+	}
 	// Pick the most appropriate version to return
 	return pickOneUrl(nil, allUrls, purlName, purlType, "")
+}
+
+func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllUrl, error) {
+	if len(purlName) == 0 {
+		zlog.S.Errorf("Please specify a valid Purl Name to query")
+		return AllUrl{}, errors.New("please specify a valid Purl Name to query")
+	}
+	client := pkggodevclient.New()
+	pkg := purlName
+	if len(purlVersion) > 0 {
+		pkg = fmt.Sprintf("%s@%s", purlName, purlVersion)
+	}
+	d, err := client.DescribePackage(pkggodevclient.DescribePackageRequest{Package: pkg})
+	if err != nil {
+		return AllUrl{}, fmt.Errorf("failed to query pkg.go.dev: %v", err)
+	}
+	allUrl := AllUrl{
+		Component: purlName,
+		Version:   d.Version,
+		License:   d.License,
+		LicenseId: d.License,
+		IsSpdx:    true,
+		PurlName:  purlName,
+		Url:       fmt.Sprintf("https://%v", d.Repository),
+	}
+	return allUrl, nil
 }

@@ -163,6 +163,22 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 	if len(url.PurlName) > 0 {
 		t.Errorf("golang_projects.GetGoLangUrlByPurlString() error = Found match, when we shouldn't: %v", url)
 	}
+	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "=v1.19.0")
+	if err != nil {
+		t.Errorf("golang_projects.GetGoLangUrlByPurlString() error = %v", err)
+	}
+	if len(url.PurlName) == 0 {
+		t.Errorf("golang_projects.GetGoLangUrlByPurlString() No URLs returned from query")
+	}
+	fmt.Printf("Golang Url: %v\n", url)
+	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "==v1.19.0")
+	if err != nil {
+		t.Errorf("golang_projects.GetGoLangUrlByPurlString() error = %v", err)
+	}
+	if len(url.PurlName) == 0 {
+		t.Errorf("golang_projects.GetGoLangUrlByPurlString() No URLs returned from query")
+	}
+	fmt.Printf("Golang Url: %v\n", url)
 }
 
 func TestGolangProjectsSearchVersionRequirement(t *testing.T) {

@@ -74,7 +74,8 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 	if purl.Type == "golang" {
 		allUrl, err := m.golangProj.GetGoLangUrlByPurl(purl, purlName, purlReq) // Search a separate table for golang dependencies
 		// If no golang package is found, but it's a GitHub component, search GitHub for it
-		if err != nil && allUrl.Component == "" && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
+		if err == nil && allUrl.Component == "" && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
+			zlog.S.Debugf("Didn't find golang component in projects table for %v. Checking all urls...", purlString)
 			purlString = utils.ConvertPurlString(purlString) // Convert to GitHub purl
 			purl, err = utils.PurlFromString(purlString)
 			if err != nil {
@@ -84,6 +85,7 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 			if err != nil {
 				return AllUrl{}, err
 			}
+			zlog.S.Debugf("Now searching All Urls for Purl: %#v, PurlName: %v", purl, purlName)
 		} else {
 			return allUrl, err
 		}

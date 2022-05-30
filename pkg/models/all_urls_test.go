@@ -106,6 +106,16 @@ func TestAllUrlsSearch(t *testing.T) {
 		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
 	}
 	fmt.Printf("Golang Url: %v\n", allUrls)
+
+	fmt.Printf("Searching for pkg:golang/github.com/scanoss/dependencies")
+	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:golang/github.com/scanoss/dependencies", "")
+	if err != nil {
+		t.Errorf("all_urls.GetUrlsByPurlString() error = %v", err)
+	}
+	if len(allUrls.PurlName) == 0 {
+		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
+	}
+	fmt.Printf("Golang Url: %v\n", allUrls)
 }
 
 func TestAllUrlsSearchVersion(t *testing.T) {

@@ -16,6 +16,8 @@ CREATE TABLE all_urls
     primary key (package_hash, url, url_hash)
 );
 
+insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('b757a992ada86f72942aa7fc153a992f', 'scanoss',     'dependencies', 'v0.0.1', '2021-12-10', 'https://github.com/scanoss/dependencies/archive/v0.0.1.zip',   'd8fd0cd2822034a356c0e05a1c9c372d', 5, 'MIT', 'scanoss/dependencies',11901716,5614);
+
 insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('4d66775f503b1e76582e7e5b2ea54d92', 'taballa.hp-PD', 'tablestyle', '0.0.10', '2013-08-26', 'https://rubygems.org/downloads/tablestyle-0.0.10.gem', '5a088240b44efa142be4b3c40f8ae9c1', 1, 'MIT', 'tablestyle', 99999999, 5614);
 insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('bfada11fd2b2b8fa23943b8b6fe5cb3f', 'taballa.hp-PD', 'tablestyle', '0.0.12', '2013-08-26', 'https://rubygems.org/downloads/tablestyle-0.0.12.gem', '686dc352775b58652c9d9ddb2117f402', 1, 'MIT', 'tablestyle', 258510, 5614);
 insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('f586d603a9cb2460c4517cffad6ad5e4', 'taballa.hp-PD', 'tablestyle', '0.0.7', null, 'https://rubygems.org/downloads/tablestyle-0.0.7.gem', '2a3251711e7010ca15d232ec4ec4fb16', 1, 'MIT', 'tablestyle', 3515237, 5614);

@@ -48,7 +48,7 @@ func TestVersionsSearch(t *testing.T) {
 	versionModel := NewVersionModel(ctx, conn)
 	var name = "1.0.0"
 	fmt.Printf("Searching for version: %v\n", name)
-	version, err := versionModel.GetVersionByName(name)
+	version, err := versionModel.GetVersionByName(name, false)
 	if err != nil {
 		t.Errorf("versions.GetVersionByName() error = %v", err)
 	}
@@ -59,12 +59,43 @@ func TestVersionsSearch(t *testing.T) {
 
 	name = ""
 	fmt.Printf("Searching for license: %v\n", name)
-	_, err = versionModel.GetVersionByName(name)
+	_, err = versionModel.GetVersionByName(name, false)
 	if err == nil {
 		t.Errorf("versions.GetVersionByName() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
+	name = ""
+	fmt.Printf("Saving for license: %v\n", name)
+	_, err = versionModel.saveVersion(name)
+	if err == nil {
+		t.Errorf("versions.saveVersion() error = did not get an error")
+	} else {
+		fmt.Printf("Got expected error = %v\n", err)
+	}
+
+	name = "22.22.22"
+	fmt.Printf("Searching for version: %v\n", name)
+	version, err = versionModel.GetVersionByName(name, true)
+	if err != nil {
+		t.Errorf("versions.GetVersionByName() error = %v", err)
+	}
+	if len(version.VersionName) == 0 {
+		t.Errorf("versions.GetVersionByName() No version returned from query")
+	}
+	fmt.Printf("Version: %#v\n", version)
+
+	name = "22.22.22"
+	fmt.Printf("Searching for version: %v\n", name)
+	version, err = versionModel.saveVersion(name)
+	if err != nil {
+		t.Errorf("versions.GetVersionByName() error = %v", err)
+	}
+	if len(version.VersionName) == 0 {
+		t.Errorf("versions.GetVersionByName() No version returned from query")
+	}
+	fmt.Printf("Version: %#v\n", version)
+
 }
 
 func TestVersionsSearchBadSql(t *testing.T) {
@@ -85,9 +116,15 @@ func TestVersionsSearchBadSql(t *testing.T) {
 	}
 	defer CloseConn(conn)
 	versionModel := NewVersionModel(ctx, conn)
-	_, err = versionModel.GetVersionByName("rubbish")
+	_, err = versionModel.GetVersionByName("rubbish", false)
 	if err == nil {
 		t.Errorf("versions.GetVersionByName() error = did not get an error")
+	} else {
+		fmt.Printf("Got expected error = %v\n", err)
+	}
+	_, err = versionModel.saveVersion("rubbish")
+	if err == nil {
+		t.Errorf("versions.saveVersion() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}

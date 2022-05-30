@@ -49,7 +49,7 @@ func TestLicensesSearch(t *testing.T) {
 	licenseModel := NewLicenseModel(ctx, conn)
 	var name = "MIT"
 	fmt.Printf("Searching for license: %v\n", name)
-	license, err := licenseModel.GetLicenseByName(name)
+	license, err := licenseModel.GetLicenseByName(name, false)
 	if err != nil {
 		t.Errorf("licenses.GetLicenseByName() error = %v", err)
 	}
@@ -60,12 +60,122 @@ func TestLicensesSearch(t *testing.T) {
 
 	name = ""
 	fmt.Printf("Searching for license: %v\n", name)
-	_, err = licenseModel.GetLicenseByName(name)
+	_, err = licenseModel.GetLicenseByName(name, false)
 	if err == nil {
 		t.Errorf("licenses.GetLicenseByName() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
+
+	name = ""
+	fmt.Printf("Searching for license: %v\n", name)
+	_, err = licenseModel.saveLicense(name)
+	if err == nil {
+		t.Errorf("licenses.saveLicense() error = did not get an error")
+	} else {
+		fmt.Printf("Got expected error = %v\n", err)
+	}
+
+	name = "Unknown License"
+	fmt.Printf("Searching for license: %v\n", name)
+	license, err = licenseModel.GetLicenseByName(name, true)
+	if err != nil {
+		t.Errorf("licenses.GetLicenseByName() error = %v", err)
+	}
+	if len(license.LicenseName) == 0 {
+		t.Errorf("licenses.GetLicenseByName() No license returned from query")
+	}
+	fmt.Printf("Created License: %#v\n", license)
+
+	name = "MIT"
+	fmt.Printf("Searching for license: %v\n", name)
+	license, err = licenseModel.saveLicense(name)
+	if err != nil {
+		t.Errorf("licenses.saveLicense() error = %v", err)
+	}
+	if len(license.LicenseName) == 0 {
+		t.Errorf("licenses.saveLicense() No license returned from query")
+	}
+	fmt.Printf("Found License: %#v\n", license)
+
+	name = "Apache 2.0; MIT; BSD"
+	fmt.Printf("Searching for license: %v\n", name)
+	license, err = licenseModel.GetLicenseByName(name, true)
+	if err != nil {
+		t.Errorf("licenses.GetLicenseByName() error = %v", err)
+	}
+	if len(license.LicenseName) == 0 {
+		t.Errorf("licenses.GetLicenseByName() No license returned from query")
+	}
+	fmt.Printf("Created License: %#v\n", license)
+
+}
+
+func TestLicensesSearchId(t *testing.T) {
+	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	defer zlog.SyncZap()
+	db, err := sqlx.Connect("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer CloseDB(db)
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer CloseConn(conn)
+	err = loadTestSqlDataFiles(db, ctx, conn, []string{"../models/tests/licenses.sql"})
+	if err != nil {
+		t.Fatalf("failed to load SQL test data: %v", err)
+	}
+	licenseModel := NewLicenseModel(ctx, conn)
+
+	name := "MIT"
+	fmt.Printf("Searching for license: %v\n", name)
+	license, err := licenseModel.GetLicenseByName(name, false)
+	if err != nil {
+		t.Errorf("licenses.saveLicense() error = %v", err)
+	}
+	if len(license.LicenseName) == 0 {
+		t.Errorf("licenses.saveLicense() No license returned from query")
+	}
+	fmt.Printf("Found License: %#v\n", license)
+
+	id := license.Id
+	fmt.Printf("Searching for license by id: %v\n", id)
+	license, err = licenseModel.GetLicenseById(id)
+	if err != nil {
+		t.Errorf("licenses.GetLicenseById() error = %v", err)
+	}
+	if len(license.LicenseName) == 0 {
+		t.Errorf("licenses.GetLicenseById() No license returned from query")
+	}
+	fmt.Printf("License: %#v\n", license)
+
+	id = 109
+	fmt.Printf("Searching for license by id: %v\n", id)
+	license, err = licenseModel.GetLicenseById(id)
+	if err != nil {
+		t.Errorf("licenses.GetLicenseById() error = %v", err)
+	}
+	if len(license.LicenseName) == 0 {
+		t.Errorf("licenses.GetLicenseById() No license returned from query")
+	}
+	fmt.Printf("License: %#v\n", license)
+
+	id = -1
+	fmt.Printf("Searching for license by id: %v\n", id)
+	_, err = licenseModel.GetLicenseById(id)
+	if err == nil {
+		t.Errorf("licenses.GetLicenseById() error = did not get an error")
+	} else {
+		fmt.Printf("Got expected error = %v\n", err)
+	}
+
 }
 
 func TestLicensesSearchBadSql(t *testing.T) {
@@ -86,9 +196,27 @@ func TestLicensesSearchBadSql(t *testing.T) {
 	}
 	defer CloseConn(conn)
 	licenseModel := NewLicenseModel(ctx, conn)
-	_, err = licenseModel.GetLicenseByName("rubbish")
+	_, err = licenseModel.GetLicenseByName("rubbish", false)
 	if err == nil {
 		t.Errorf("licenses.GetLicenseByName() error = did not get an error")
+	} else {
+		fmt.Printf("Got expected error = %v\n", err)
+	}
+	_, err = licenseModel.GetLicenseByName("rubbish", true)
+	if err == nil {
+		t.Errorf("licenses.GetLicenseByName() error = did not get an error")
+	} else {
+		fmt.Printf("Got expected error = %v\n", err)
+	}
+	_, err = licenseModel.saveLicense("rubbish")
+	if err == nil {
+		t.Errorf("licenses.saveLicense() error = did not get an error")
+	} else {
+		fmt.Printf("Got expected error = %v\n", err)
+	}
+	_, err = licenseModel.GetLicenseById(100)
+	if err == nil {
+		t.Errorf("licenses.GetLicenseById() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}

@@ -152,24 +152,25 @@ func (m *GolangProjects) getLatestPkgGoDev(purlName, purlVersion string) (AllUrl
 	if err != nil {
 		return allUrl, err
 	}
-	license, err := m.lic.GetLicenseByName(cleansedLicense)
+	license, err := m.lic.GetLicenseByName(cleansedLicense, false)
 	if err != nil {
 		return allUrl, err
 	}
 	if len(license.LicenseName) == 0 {
-		zlog.S.Warnf("Need to insert the license details into the DB: %v", cleansedLicense)
+		zlog.S.Warnf("No license details in DB for: %v", cleansedLicense)
 	} else {
 		allUrl.License = license.LicenseName
 		allUrl.LicenseId = license.LicenseId
 		allUrl.IsSpdx = license.IsSpdx
 	}
-	version, err := m.ver.GetVersionByName(allUrl.Version)
+	version, err := m.ver.GetVersionByName(allUrl.Version, false)
 	if err != nil {
 		return allUrl, err
 	}
 	if len(version.VersionName) == 0 {
-		zlog.S.Warnf("Need to insert the version details into the DB: %v", allUrl.Version)
+		zlog.S.Warnf("No version details in DB for: %v", allUrl.Version)
 	}
+	// TODO add to golang_projects table
 	return allUrl, nil
 }
 

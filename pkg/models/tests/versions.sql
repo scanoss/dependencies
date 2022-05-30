@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS versions;
 CREATE TABLE versions
 (
-    id           integer not null unique,
-    version_name text    not null primary key,
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    version_name text    not null unique,
     semver       text default ''
 );
 

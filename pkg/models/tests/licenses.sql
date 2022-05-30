@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS licenses;
 CREATE TABLE licenses
 (
-    id           integer not null unique,
-    license_name text not null primary key,
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    license_name text not null unique,
     spdx_id      text not null default '',
     is_spdx      boolean not null default false,
     is_sanitized boolean not null default false

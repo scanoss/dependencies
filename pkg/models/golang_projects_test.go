@@ -221,18 +221,53 @@ func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
 		t.Errorf("golang_projects.GetUrlsByPurlName() No URLs returned from query")
 	}
 	fmt.Printf("Golang Url Version: %#v\n", url)
+}
 
-	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "<0.0.4>")
+func TestGolangPkgGoDev(t *testing.T) {
+	ctx := context.Background()
+	err := zlog.NewSugaredDevLogger()
 	if err != nil {
-		t.Errorf("golang_projects.GetUrlsByPurlName() error = %v", err)
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
-	if len(url.PurlName) == 0 {
-		t.Errorf("golang_projects.GetUrlsByPurlName() No URLs returned from query")
+	defer zlog.SyncZap()
+	db, err := sqlx.Connect("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	url, err = golangProjModel.queryPkgGoDev("", "")
+	defer CloseDB(db)
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer CloseConn(conn)
+	err = LoadTestSqlData(db, ctx, conn)
+	if err != nil {
+		t.Fatalf("failed to load SQL test data: %v", err)
+	}
+	golangProjModel := NewGolangProjectModel(ctx, conn)
+
+	_, err = golangProjModel.queryPkgGoDev("", "")
 	if err == nil {
 		t.Errorf("golang_projects.queryPkgGoDev() error = did not get an error")
 	}
+
+	url, err := golangProjModel.getLatestPkgGoDev("google.golang.org/grpc", "v0.0.0-201910101010-s3333")
+	if err != nil {
+		t.Errorf("golang_projects.getLatestPkgGoDev() error = %v", err)
+	}
+	if len(url.PurlName) == 0 {
+		t.Errorf("golang_projects.getLatestPkgGoDev() No URLs returned from query")
+	}
+	fmt.Printf("Golang Url Version: %#v\n", url)
+
+	url, err = golangProjModel.getLatestPkgGoDev("github.com/scanoss/papi", "v0.0.3")
+	if err != nil {
+		t.Errorf("golang_projects.getLatestPkgGoDev() error = %v", err)
+	}
+	if len(url.PurlName) == 0 {
+		t.Errorf("golang_projects.getLatestPkgGoDev() No URLs returned from query")
+	}
+	fmt.Printf("Golang Url Version: %#v\n", url)
 }
 
 func TestGolangProjectsSearchBadSql(t *testing.T) {
@@ -266,4 +301,11 @@ func TestGolangProjectsSearchBadSql(t *testing.T) {
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
+	_, err = golangProjModel.getLatestPkgGoDev("github.com/scanoss/papi", "v0.0.3")
+	if err == nil {
+		t.Errorf("golang_projects.getLatestPkgGoDev() error = did not get an error: %v", err)
+	} else {
+		fmt.Printf("Got expected error = %v\n", err)
+	}
+
 }

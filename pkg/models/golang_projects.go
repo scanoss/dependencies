@@ -31,12 +31,14 @@ import (
 type GolangProjects struct {
 	ctx  context.Context
 	conn *sqlx.Conn
+	ver  *versionModel
+	lic  *licenseModel
 }
 
 var vRegex = regexp.MustCompile(`^v\d+\.\d+\.\d+-\d+-\w+$`) // regex to check for commit based version
 
 func NewGolangProjectModel(ctx context.Context, conn *sqlx.Conn) *GolangProjects {
-	return &GolangProjects{ctx: ctx, conn: conn}
+	return &GolangProjects{ctx: ctx, conn: conn, ver: NewVersionModel(ctx, conn), lic: NewLicenseModel(ctx, conn)}
 }
 
 func (m *GolangProjects) GetGoLangUrlByPurlString(purlString, purlReq string) (AllUrl, error) {
@@ -128,14 +130,47 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 	}
 	zlog.S.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	if len(allUrls) == 0 { // Check pkg.go.dev for the latest data
-		allUrl, err := m.queryPkgGoDev(purlName, purlVersion)
+		allUrl, err := m.getLatestPkgGoDev(purlName, purlVersion)
 		if err == nil {
 			zlog.S.Debugf("Retrieved golang data from pkg.go.dev: %#v", allUrl)
 			allUrls = append(allUrls, allUrl)
+		} else {
+			zlog.S.Infof("Ran into an issue looking up pkg.go.dev for: %v - %v. Ignoring", purlName, purlVersion)
 		}
 	}
 	// Pick the most appropriate version to return
 	return pickOneUrl(nil, allUrls, purlName, purlType, "")
+}
+
+func (m *GolangProjects) getLatestPkgGoDev(purlName, purlVersion string) (AllUrl, error) {
+
+	allUrl, err := m.queryPkgGoDev(purlName, purlVersion)
+	if err != nil {
+		return allUrl, err
+	}
+	cleansedLicense, err := CleanseLicenseName(allUrl.License)
+	if err != nil {
+		return allUrl, err
+	}
+	license, err := m.lic.GetLicenseByName(cleansedLicense)
+	if err != nil {
+		return allUrl, err
+	}
+	if len(license.LicenseName) == 0 {
+		zlog.S.Warnf("Need to insert the license details into the DB: %v", cleansedLicense)
+	} else {
+		allUrl.License = license.LicenseName
+		allUrl.LicenseId = license.LicenseId
+		allUrl.IsSpdx = license.IsSpdx
+	}
+	version, err := m.ver.GetVersionByName(allUrl.Version)
+	if err != nil {
+		return allUrl, err
+	}
+	if len(version.VersionName) == 0 {
+		zlog.S.Warnf("Need to insert the version details into the DB: %v", allUrl.Version)
+	}
+	return allUrl, nil
 }
 
 func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllUrl, error) {
@@ -159,8 +194,6 @@ func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllUrl, er
 				Component: purlName,
 				Version:   purlVersion, // Force the version to be what was requested
 				License:   d.License,
-				LicenseId: d.License,
-				IsSpdx:    true, // TODO add license lookup
 				PurlName:  purlName,
 				Url:       fmt.Sprintf("https://%v", d.Repository),
 			}
@@ -175,8 +208,6 @@ func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllUrl, er
 		Component: purlName,
 		Version:   d.Version,
 		License:   d.License,
-		LicenseId: d.License,
-		IsSpdx:    true,
 		PurlName:  purlName,
 		Url:       fmt.Sprintf("https://%v", d.Repository),
 	}

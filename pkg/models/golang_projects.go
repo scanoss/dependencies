@@ -205,9 +205,13 @@ func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllUrl, er
 		zlog.S.Warnf("Failed to query pkg.go.dev for %v: %v", pkg, err)
 		return AllUrl{}, fmt.Errorf("failed to query pkg.go.dev: %v", err)
 	}
+	version := d.Version
+	if len(purlVersion) > 0 {
+		version = purlVersion // Force the requested version if specified (the returned value can be concatenated)
+	}
 	allUrl := AllUrl{
 		Component: purlName,
-		Version:   d.Version,
+		Version:   version,
 		License:   d.License,
 		PurlName:  purlName,
 		Url:       fmt.Sprintf("https://%v", d.Repository),

@@ -65,4 +65,8 @@ To run locally on your desktop, please use the following command:
 go run cmd/server/main.go -json-config config/app-config-dev.json -debug
 ```
 
+After changing a dependency version, please run the following command:
+```shell
+go mod tidy -compat=1.17
+```
 https://mholt.github.io/json-to-go/

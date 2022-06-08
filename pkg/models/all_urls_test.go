@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	myconfig "scanoss.com/dependencies/pkg/config"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"testing"
 )
@@ -45,7 +46,12 @@ func TestAllUrlsSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	myConfig.Components.CommitMissing = true
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "")
 	if err != nil {
@@ -139,7 +145,12 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	myConfig.Components.CommitMissing = true
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameTypeVersion("tablestyle", "gem", "0.0.12")
 	if err != nil {
@@ -205,7 +216,12 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	myConfig.Components.CommitMissing = true
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", ">0.0.4")
 	if err != nil {
@@ -247,7 +263,12 @@ func TestAllUrlsSearchNoProject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, nil, NewGolangProjectModel(ctx, conn))
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	myConfig.Components.CommitMissing = true
+	allUrlsModel := NewAllUrlModel(ctx, conn, nil, NewGolangProjectModel(ctx, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "0.0.8")
 	if err != nil {
@@ -280,7 +301,12 @@ func TestAllUrlsSearchNoLicense(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	myConfig.Components.CommitMissing = true
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err != nil {
@@ -309,7 +335,12 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn))
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	myConfig.Components.CommitMissing = true
+	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
 	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "")
 	if err == nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")

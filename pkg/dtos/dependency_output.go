@@ -38,6 +38,8 @@ type DependenciesOutput struct {
 	Component string              `json:"component"`
 	Purl      string              `json:"purl"`
 	Version   string              `json:"version"`
+	Url       string              `json:"url"`
+	Comment   string              `json:"comment"`
 	Licenses  []DependencyLicense `json:"licenses"`
 }
 

@@ -32,7 +32,7 @@ type mineModel struct {
 }
 
 type Mine struct {
-	Id       int    `db:"id"`
+	Id       int32  `db:"id"`
 	Name     string `db:"name"`
 	PurlType string `db:"purl_type"`
 }
@@ -41,7 +41,7 @@ func NewMineModel(ctx context.Context, conn *sqlx.Conn) *mineModel {
 	return &mineModel{ctx: ctx, conn: conn}
 }
 
-func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int, error) {
+func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 	if len(purlType) == 0 {
 		zlog.S.Error("Please specify a Purl Type to query")
 		return nil, errors.New("please specify a Purl Type to query")
@@ -55,7 +55,7 @@ func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int, error) {
 		return nil, fmt.Errorf("failed to query the mines table: %v", err)
 	}
 	if len(mines) > 0 {
-		var mineIds []int
+		var mineIds []int32
 		for _, mine := range mines {
 			mineIds = append(mineIds, mine.Id)
 		}

@@ -133,7 +133,7 @@ func RunServer() error {
 		return fmt.Errorf("failed to ping database: %v", err)
 	}
 	defer closeDbConnection(db)
-	v2API := service.NewDependencyServer(db)
+	v2API := service.NewDependencyServer(db, cfg)
 	ctx := context.Background()
 	return grpc.RunServer(ctx, v2API, cfg.App.Port)
 }

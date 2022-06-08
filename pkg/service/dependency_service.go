@@ -23,17 +23,19 @@ import (
 	"github.com/jmoiron/sqlx"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
+	myconfig "scanoss.com/dependencies/pkg/config"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/usecase"
 )
 
 type dependencyServer struct {
 	pb.DependenciesServer
-	db *sqlx.DB
+	db     *sqlx.DB
+	config *myconfig.ServerConfig
 }
 
-func NewDependencyServer(db *sqlx.DB) pb.DependenciesServer {
-	return &dependencyServer{db: db}
+func NewDependencyServer(db *sqlx.DB, config *myconfig.ServerConfig) pb.DependenciesServer {
+	return &dependencyServer{db: db, config: config}
 }
 
 // Echo sends back the same message received
@@ -64,7 +66,7 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	}
 	defer closeDbConnection(conn)
 	// Search the KB for information about each dependency
-	depUc := usecase.NewDependencies(ctx, conn)
+	depUc := usecase.NewDependencies(ctx, conn, d.config)
 	dtoDependencies, err := depUc.GetDependencies(dtoRequest)
 	if err != nil {
 		zlog.S.Errorf("Failed to get dependencies: %v", err)

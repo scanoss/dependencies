@@ -31,7 +31,7 @@ type ServerConfig struct {
 		Name  string `env:"APP_NAME"`
 		Port  string `env:"APP_PORT"`
 		Debug bool   `env:"APP_DEBUG"`
-		Mode  string `env:"APP_MODE"`
+		Mode  string `env:"APP_MODE"` // dev or prod
 	}
 	Database struct {
 		Driver  string `env:"DB_DRIVER"`
@@ -39,8 +39,11 @@ type ServerConfig struct {
 		User    string `env:"DB_USER"`
 		Passwd  string `env:"DB_PASSWD"`
 		Schema  string `env:"DB_SCHEMA"`
-		SslMode string `env:"DB_SSL_MODE"`
+		SslMode string `env:"DB_SSL_MODE"` // enable/disable
 		Dsn     string `env:"DB_DSN"`
+	}
+	Components struct {
+		CommitMissing bool `env:"COMP_COMMIT_MISSING"` // Write component details to the DB if they are looked up live
 	}
 }
 
@@ -72,4 +75,5 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Database.User = "scanoss"
 	cfg.Database.Schema = "scanoss"
 	cfg.Database.SslMode = "disable"
+	cfg.Components.CommitMissing = false
 }

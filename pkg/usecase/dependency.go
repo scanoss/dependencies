@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jmoiron/sqlx"
+	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/models"
@@ -32,9 +33,11 @@ type DependencyUseCase struct {
 	allUrls *models.AllUrlsModel
 }
 
-func NewDependencies(ctx context.Context, conn *sqlx.Conn) *DependencyUseCase {
+func NewDependencies(ctx context.Context, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
 	return &DependencyUseCase{ctx: ctx, conn: conn,
-		allUrls: models.NewAllUrlModel(ctx, conn, models.NewProjectModel(ctx, conn), models.NewGolangProjectModel(ctx, conn)),
+		allUrls: models.NewAllUrlModel(ctx, conn, models.NewProjectModel(ctx, conn),
+			models.NewGolangProjectModel(ctx, conn, config),
+		),
 	}
 }
 
@@ -54,7 +57,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				continue
 			}
 			var depOutput dtos.DependenciesOutput
-			depOutput.Purl = strings.Split(purl.Purl, "@")[0] // Remove any version specif info from the PURL
+			depOutput.Purl = strings.Split(purl.Purl, "@")[0] // Remove any version specific info from the PURL
 			url, err := d.allUrls.GetUrlsByPurlString(purl.Purl, purl.Requirement)
 			if err != nil {
 				zlog.S.Errorf("Problem encountered extracting URLs for: %v - %v.", purl, err)
@@ -64,7 +67,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			}
 			depOutput.Component = url.Component
 			depOutput.Version = url.Version
-			// TODO add project url
+			depOutput.Url = url.Url
 			var licenses []dtos.DependencyLicense
 			var license dtos.DependencyLicense
 			license.Name = url.License // TODO split licenses if multiple returned?

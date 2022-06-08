@@ -71,8 +71,8 @@ func (m *licenseModel) GetLicenseById(id int32) (License, error) {
 // GetLicenseByName retrieves the license details for the given license name
 func (m *licenseModel) GetLicenseByName(name string, create bool) (License, error) {
 	if len(name) == 0 {
-		zlog.S.Error("Please specify a valid License Name to query")
-		return License{}, errors.New("please specify a valid License Name to query")
+		zlog.S.Warnf("No License Name specified to query")
+		return License{}, nil
 	}
 	var license License
 	err := m.conn.QueryRowxContext(m.ctx,

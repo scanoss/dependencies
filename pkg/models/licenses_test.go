@@ -60,16 +60,18 @@ func TestLicensesSearch(t *testing.T) {
 
 	name = ""
 	fmt.Printf("Searching for license: %v\n", name)
-	_, err = licenseModel.GetLicenseByName(name, false)
-	if err == nil {
-		t.Errorf("licenses.GetLicenseByName() error = did not get an error")
-	} else {
-		fmt.Printf("Got expected error = %v\n", err)
+	license, err = licenseModel.GetLicenseByName(name, false)
+	if err != nil {
+		t.Errorf("licenses.GetLicenseByName() error = %v", err)
 	}
+	if len(license.LicenseName) > 0 {
+		t.Errorf("licenses.GetLicenseByName() License returned when one shouldn't")
+	}
+	fmt.Printf("License: %#v\n", license)
 
 	name = ""
 	fmt.Printf("Searching for license: %v\n", name)
-	_, err = licenseModel.saveLicense(name)
+	license, err = licenseModel.saveLicense(name)
 	if err == nil {
 		t.Errorf("licenses.saveLicense() error = did not get an error")
 	} else {

@@ -18,6 +18,9 @@
 // It provides data structures to represent the data retrieved from the system.
 // Current models/tables supported are:
 // - Mines
+// - Licenses
+// - Versions
 // - Projects
 // - All URLs
+// - Golang Projects
 package models

@@ -62,6 +62,7 @@ func loadTestSqlDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, fil
 	return nil
 }
 
+// CloseDB closes the specified DB and logs any errors
 func CloseDB(db *sqlx.DB) {
 	if db != nil {
 		zlog.S.Debugf("Closing DB...")
@@ -72,6 +73,7 @@ func CloseDB(db *sqlx.DB) {
 	}
 }
 
+// CloseConn closes the specified DB connection and logs any errors
 func CloseConn(conn *sqlx.Conn) {
 	if conn != nil {
 		zlog.S.Debugf("Closing Connection...")
@@ -82,6 +84,7 @@ func CloseConn(conn *sqlx.Conn) {
 	}
 }
 
+// CloseRows closes the specified DB query row and logs any errors
 func CloseRows(rows *sqlx.Rows) {
 	if rows != nil {
 		zlog.S.Debugf("Closing Rows...")

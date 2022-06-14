@@ -39,6 +39,7 @@ type Project struct {
 	PurlName  string `db:"purl_name"`
 }
 
+// NewProjectModel creates a new instance of the Project Model
 func NewProjectModel(ctx context.Context, conn *sqlx.Conn) *projectModel {
 	return &projectModel{ctx: ctx, conn: conn}
 }

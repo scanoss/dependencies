@@ -47,10 +47,12 @@ type AllUrl struct {
 	Url       string `db:"-"`
 }
 
+// NewAllUrlModel creates a new instance of the All URL Model
 func NewAllUrlModel(ctx context.Context, conn *sqlx.Conn, project *projectModel, golangProj *GolangProjects) *AllUrlsModel {
 	return &AllUrlsModel{ctx: ctx, conn: conn, project: project, golangProj: golangProj}
 }
 
+// GetUrlsByPurlString searches for component details of the specified Purl string (and optional requirement)
 func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, error) {
 	if len(purlString) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl String to query")
@@ -67,6 +69,7 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 	if len(purl.Version) == 0 && len(purlReq) > 0 { // No version specified, but we might have a specific version in the Requirement
 		ver := utils.GetVersionFromReq(purlReq)
 		if len(ver) > 0 {
+			// TODO check what to do if we get a "file" requirement
 			purl.Version = ver // Switch to exact version search (faster)
 			purlReq = ""
 		}
@@ -96,6 +99,7 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 	return m.GetUrlsByPurlNameType(purlName, purl.Type, purlReq)
 }
 
+// GetUrlsByPurlNameType searches for component details of the specified Purl Name/Type (and optional requirement)
 func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string) (AllUrl, error) {
 	if len(purlName) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Name to query")
@@ -125,6 +129,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string)
 	return pickOneUrl(m.project, allUrls, purlName, purlType, purlReq)
 }
 
+// GetUrlsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version
 func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVersion string) (AllUrl, error) {
 	if len(purlName) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Name to query")
@@ -158,6 +163,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVers
 	return pickOneUrl(m.project, allUrls, purlName, purlType, "")
 }
 
+// pickOneUrl takes the potential matching component/versions and selects the most appropriate one
 func pickOneUrl(projModel *projectModel, allUrls []AllUrl, purlName, purlType, purlReq string) (AllUrl, error) {
 
 	if len(allUrls) == 0 {

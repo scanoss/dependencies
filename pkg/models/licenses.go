@@ -47,10 +47,12 @@ var whiteSpaceRegex = regexp.MustCompile("\\s+")                                
 
 // TODO add cache for licenses already searched for?
 
+// NewLicenseModel create a new instance of the License Model
 func NewLicenseModel(ctx context.Context, conn *sqlx.Conn) *licenseModel {
 	return &licenseModel{ctx: ctx, conn: conn}
 }
 
+// GetLicenseById retrieves license data by the given row ID
 func (m *licenseModel) GetLicenseById(id int32) (License, error) {
 	if id < 0 {
 		zlog.S.Error("Please specify a valid License Id to query")

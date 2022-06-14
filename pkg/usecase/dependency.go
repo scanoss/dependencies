@@ -33,6 +33,7 @@ type DependencyUseCase struct {
 	allUrls *models.AllUrlsModel
 }
 
+// NewDependencies creates a new instance of the Dependency Use Case
 func NewDependencies(ctx context.Context, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
 	return &DependencyUseCase{ctx: ctx, conn: conn,
 		allUrls: models.NewAllUrlModel(ctx, conn, models.NewProjectModel(ctx, conn),
@@ -41,6 +42,7 @@ func NewDependencies(ctx context.Context, conn *sqlx.Conn, config *myconfig.Serv
 	}
 }
 
+// GetDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct
 func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, error) {
 
 	var depFileOutputs []dtos.DependencyFileOutput

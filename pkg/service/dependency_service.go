@@ -34,6 +34,7 @@ type dependencyServer struct {
 	config *myconfig.ServerConfig
 }
 
+// NewDependencyServer creates a new instance of Dependency Server
 func NewDependencyServer(db *sqlx.DB, config *myconfig.ServerConfig) pb.DependenciesServer {
 	return &dependencyServer{db: db, config: config}
 }

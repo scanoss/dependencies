@@ -37,10 +37,12 @@ type Mine struct {
 	PurlType string `db:"purl_type"`
 }
 
+// NewMineModel creates a new instance of the Mine Model
 func NewMineModel(ctx context.Context, conn *sqlx.Conn) *mineModel {
 	return &mineModel{ctx: ctx, conn: conn}
 }
 
+// GetMineIdsByPurlType retreives a list of the Purl Type IDs associated with the given Purl Type (string)
 func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 	if len(purlType) == 0 {
 		zlog.S.Error("Please specify a Purl Type to query")

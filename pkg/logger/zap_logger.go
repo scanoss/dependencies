@@ -27,6 +27,7 @@ import (
 var L *zap.Logger
 var S *zap.SugaredLogger
 
+// NewDevLogger creates a new Development logger
 func NewDevLogger() error {
 	var err error
 	L, err = zap.NewDevelopment()
@@ -36,6 +37,7 @@ func NewDevLogger() error {
 	return nil
 }
 
+// NewProdLogger creates a new Production logger
 func NewProdLogger() error {
 	var err error
 	L, err = zap.NewProduction()
@@ -45,6 +47,7 @@ func NewProdLogger() error {
 	return nil
 }
 
+// NewProdLoggerLevel creates a Prod logger at the specified logging level
 func NewProdLoggerLevel(lvl zapcore.Level) error {
 	pc := zap.NewProductionConfig()
 	pc.Level = zap.NewAtomicLevelAt(lvl)
@@ -56,6 +59,7 @@ func NewProdLoggerLevel(lvl zapcore.Level) error {
 	return nil
 }
 
+// NewSugaredDevLogger creates a new Development Sugared logger
 func NewSugaredDevLogger() error {
 	if err := NewDevLogger(); err != nil {
 		return err
@@ -64,6 +68,7 @@ func NewSugaredDevLogger() error {
 	return nil
 }
 
+// NewSugaredProdLogger creates a new Production Sugared logger
 func NewSugaredProdLogger() error {
 	if err := NewProdLogger(); err != nil {
 		return err
@@ -72,6 +77,7 @@ func NewSugaredProdLogger() error {
 	return nil
 }
 
+// NewSugaredProdLoggerLevel creates a new Production Sugared logger at the specified logging level
 func NewSugaredProdLoggerLevel(lvl zapcore.Level) error {
 	if err := NewProdLoggerLevel(lvl); err != nil {
 		return err
@@ -80,6 +86,7 @@ func NewSugaredProdLoggerLevel(lvl zapcore.Level) error {
 	return nil
 }
 
+// SyncZap flushes the buffered logs and captures any sync issues
 func SyncZap() {
 	// Sync the Sugared logger if it's set
 	if S != nil {

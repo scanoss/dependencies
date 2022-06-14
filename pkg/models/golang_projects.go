@@ -41,12 +41,14 @@ type GolangProjects struct {
 
 var vRegex = regexp.MustCompile(`^v\d+\.\d+\.\d+-\d+-\w+$`) // regex to check for commit based version
 
+// NewGolangProjectModel creates a new instance of Golang Project Model
 func NewGolangProjectModel(ctx context.Context, conn *sqlx.Conn, config *myconfig.ServerConfig) *GolangProjects {
 	return &GolangProjects{ctx: ctx, conn: conn, config: config,
 		ver: NewVersionModel(ctx, conn), lic: NewLicenseModel(ctx, conn), mine: NewMineModel(ctx, conn),
 	}
 }
 
+// GetGoLangUrlByPurlString searches the Golang Projects for the specified Purl (and requirement)
 func (m *GolangProjects) GetGoLangUrlByPurlString(purlString, purlReq string) (AllUrl, error) {
 	if len(purlString) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl String to query")
@@ -70,6 +72,7 @@ func (m *GolangProjects) GetGoLangUrlByPurlString(purlString, purlReq string) (A
 	return m.GetGoLangUrlByPurl(purl, purlName, purlReq)
 }
 
+// GetGoLangUrlByPurl searches the Golang Projects for the specified Purl Package (and optional requirement)
 func (m *GolangProjects) GetGoLangUrlByPurl(purl packageurl.PackageURL, purlName, purlReq string) (AllUrl, error) {
 	if len(purl.Version) > 0 {
 		return m.GetGolangUrlsByPurlNameTypeVersion(purlName, purl.Type, purl.Version)
@@ -77,6 +80,7 @@ func (m *GolangProjects) GetGoLangUrlByPurl(purl packageurl.PackageURL, purlName
 	return m.GetGolangUrlsByPurlNameType(purlName, purl.Type, purlReq)
 }
 
+// GetGolangUrlsByPurlNameType searches Golang Project for the specified Purl by Purl Type (and optional requirement)
 func (m *GolangProjects) GetGolangUrlsByPurlNameType(purlName, purlType, purlReq string) (AllUrl, error) {
 	if len(purlName) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Name to query")
@@ -106,6 +110,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameType(purlName, purlType, purlReq
 	return pickOneUrl(nil, golangUrls, purlName, purlType, purlReq)
 }
 
+// GetGolangUrlsByPurlNameTypeVersion searches Golang Projects for specified Purl, Type and Version
 func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, purlVersion string) (AllUrl, error) {
 	if len(purlName) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Name to query")
@@ -148,6 +153,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 	return pickOneUrl(nil, allUrls, purlName, purlType, "")
 }
 
+// savePkg writes the given package details to the Golang Projects table
 func (m *GolangProjects) savePkg(allUrl AllUrl, version Version, license License, comp *pkggodevclient.Package) error {
 	if len(allUrl.PurlName) == 0 {
 		zlog.S.Error("Please specify a valid Purl to save")
@@ -222,6 +228,8 @@ func (m *GolangProjects) savePkg(allUrl AllUrl, version Version, license License
 	return nil
 }
 
+// getLatestPkgGoDev retrieves the latest information about a Golang Package from https://pkg.go.dev
+// If requested (via config), it will commit that data to the Golang Projects table
 func (m *GolangProjects) getLatestPkgGoDev(purlName, purlType, purlVersion string) (AllUrl, error) {
 
 	allUrl, pkg, latest, err := m.queryPkgGoDev(purlName, purlVersion)
@@ -257,6 +265,7 @@ func (m *GolangProjects) getLatestPkgGoDev(purlName, purlType, purlVersion strin
 	return allUrl, nil
 }
 
+// queryPkgGoDev retrieves the latest information about a Golang Package from https://pkg.go.dev
 func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllUrl, *pkggodevclient.Package, bool, error) {
 	if len(purlName) == 0 {
 		zlog.S.Errorf("Please specify a valid Purl Name to query")

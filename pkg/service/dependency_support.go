@@ -24,6 +24,7 @@ import (
 	zlog "scanoss.com/dependencies/pkg/logger"
 )
 
+// convertDependencyInput converts a Dependency Request structure into an internal Dependency Input struct
 func convertDependencyInput(request *pb.DependencyRequest) (dtos.DependencyInput, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
@@ -38,6 +39,7 @@ func convertDependencyInput(request *pb.DependencyRequest) (dtos.DependencyInput
 	return dtoRequest, nil
 }
 
+// convertDependencyOutput converts an internal Dependency Output structure into a Dependency Response struct
 func convertDependencyOutput(output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
 	data, err := json.Marshal(output)
 	if err != nil {

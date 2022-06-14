@@ -40,6 +40,7 @@ type Version struct {
 
 // TODO add cache for versions already searched for?
 
+// NewVersionModel creates a new instance of the Version Model
 func NewVersionModel(ctx context.Context, conn *sqlx.Conn) *versionModel {
 	return &versionModel{ctx: ctx, conn: conn}
 }

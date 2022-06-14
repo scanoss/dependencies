@@ -64,7 +64,7 @@ func PurlNameFromString(purlString string) (string, error) {
 }
 
 // ConvertPurlString takes an input PURL and checks to see if anything needs to be modified before search the KB
-func ConvertPurlString(purlString string) string { // TODO remove now that we have golang?
+func ConvertPurlString(purlString string) string {
 	// Replace Golang GitHub package reference with just GitHub
 	if len(purlString) > 0 && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
 		s := strings.Replace(purlString, "pkg:golang/github.com/", "pkg:github/", -1)
@@ -77,6 +77,7 @@ func ConvertPurlString(purlString string) string { // TODO remove now that we ha
 	return purlString
 }
 
+// GetVersionFromReq parses a requirement string looking for an exact version specifier
 func GetVersionFromReq(purlReq string) string {
 	matches := vRegex.FindStringSubmatch(purlReq)
 	if matches != nil && len(matches) > 0 {

@@ -24,6 +24,7 @@ import (
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"reflect"
+	myconfig "scanoss.com/dependencies/pkg/config"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/models"
 	"testing"
@@ -41,7 +42,11 @@ func TestDependencyServer_Echo(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer models.CloseDB(db)
-	s := NewDependencyServer(db)
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	s := NewDependencyServer(db, myConfig)
 
 	type args struct {
 		ctx context.Context
@@ -94,7 +99,11 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)
 	}
-	s := NewDependencyServer(db)
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	s := NewDependencyServer(db, myConfig)
 
 	var depRequestData = `{
   "depth": 1,

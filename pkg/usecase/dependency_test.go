@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
+	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/models"
@@ -71,7 +72,11 @@ func TestDependencyUseCase(t *testing.T) {
   ]
 }
 `
-	depUc := NewDependencies(ctx, conn)
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	depUc := NewDependencies(ctx, conn, myConfig)
 	requestDto, err := dtos.ParseDependencyInput([]byte(depRequestData))
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when parsing input json", err)

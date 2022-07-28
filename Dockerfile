@@ -10,7 +10,9 @@ RUN go mod download
 COPY . ./
 
 RUN go generate ./pkg/cmd/server.go
-RUN go build -o ./scanoss-dependencies ./cmd/server
+#RUN go build -o ./scanoss-dependencies ./cmd/server
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o ./scanoss-dependencies ./cmd/server
+
 
 FROM debian:buster-slim
 

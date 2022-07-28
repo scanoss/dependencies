@@ -126,7 +126,7 @@ func RunServer() error {
 	db.SetConnMaxIdleTime(30 * time.Minute) // TODO add to app config
 	db.SetConnMaxLifetime(time.Hour)
 	db.SetMaxIdleConns(20)
-	db.SetMaxOpenConns(100)
+	db.SetMaxOpenConns(200)
 	err = db.Ping()
 	if err != nil {
 		zlog.S.Errorf("Failed to ping database: %v", err)

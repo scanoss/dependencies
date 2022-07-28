@@ -63,7 +63,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			url, err := d.allUrls.GetUrlsByPurlString(purl.Purl, purl.Requirement)
 			if err != nil {
 				zlog.S.Errorf("Problem encountered extracting URLs for: %v - %v.", purl, err)
-				problems = true
+				problems = true // TODO should this be an error or not?
 				continue
 				// TODO add a placeholder in the response?
 			}

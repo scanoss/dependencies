@@ -26,6 +26,7 @@ import (
 	myconfig "scanoss.com/dependencies/pkg/config"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/usecase"
+	"time"
 )
 
 type dependencyServer struct {
@@ -59,6 +60,8 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problem parsing dependency input data"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem parsing dependency input data")
 	}
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second) // Temporary add of context with 2 minute timeout
+	defer cancel()
 	conn, err := d.db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
 		zlog.S.Errorf("Failed to get a database connection from the pool: %v", err)

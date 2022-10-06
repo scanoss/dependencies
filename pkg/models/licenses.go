@@ -29,7 +29,7 @@ import (
 	"strings"
 )
 
-type licenseModel struct {
+type LicenseModel struct {
 	ctx  context.Context
 	conn *sqlx.Conn
 }
@@ -48,12 +48,12 @@ var whiteSpaceRegex = regexp.MustCompile("\\s+")                                
 // TODO add cache for licenses already searched for?
 
 // NewLicenseModel create a new instance of the License Model
-func NewLicenseModel(ctx context.Context, conn *sqlx.Conn) *licenseModel {
-	return &licenseModel{ctx: ctx, conn: conn}
+func NewLicenseModel(ctx context.Context, conn *sqlx.Conn) *LicenseModel {
+	return &LicenseModel{ctx: ctx, conn: conn}
 }
 
 // GetLicenseById retrieves license data by the given row ID
-func (m *licenseModel) GetLicenseById(id int32) (License, error) {
+func (m *LicenseModel) GetLicenseById(id int32) (License, error) {
 	if id < 0 {
 		zlog.S.Error("Please specify a valid License Id to query")
 		return License{}, errors.New("please specify a valid License Name to query")
@@ -71,7 +71,7 @@ func (m *licenseModel) GetLicenseById(id int32) (License, error) {
 }
 
 // GetLicenseByName retrieves the license details for the given license name
-func (m *licenseModel) GetLicenseByName(name string, create bool) (License, error) {
+func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, error) {
 	if len(name) == 0 {
 		zlog.S.Warnf("No License Name specified to query")
 		return License{}, nil
@@ -93,7 +93,7 @@ func (m *licenseModel) GetLicenseByName(name string, create bool) (License, erro
 }
 
 // saveLicense writes the given license name to the licenses table
-func (m *licenseModel) saveLicense(name string) (License, error) {
+func (m *LicenseModel) saveLicense(name string) (License, error) {
 	if len(name) == 0 {
 		zlog.S.Error("Please specify a valid License Name to save")
 		return License{}, errors.New("please specify a valid License Name to save")

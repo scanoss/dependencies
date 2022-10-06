@@ -31,6 +31,7 @@ type DependencyUseCase struct {
 	ctx     context.Context
 	conn    *sqlx.Conn
 	allUrls *models.AllUrlsModel
+	lic     *models.LicenseModel
 }
 
 // NewDependencies creates a new instance of the Dependency Use Case
@@ -39,6 +40,7 @@ func NewDependencies(ctx context.Context, conn *sqlx.Conn, config *myconfig.Serv
 		allUrls: models.NewAllUrlModel(ctx, conn, models.NewProjectModel(ctx, conn),
 			models.NewGolangProjectModel(ctx, conn, config),
 		),
+		lic: models.NewLicenseModel(ctx, conn),
 	}
 }
 
@@ -71,11 +73,36 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			depOutput.Version = url.Version
 			depOutput.Url = url.Url
 			var licenses []dtos.DependencyLicense
-			var license dtos.DependencyLicense
-			license.Name = url.License // TODO split licenses if multiple returned?
-			license.SpdxId = url.LicenseId
-			license.IsSpdx = url.IsSpdx
-			licenses = append(licenses, license)
+			splitLicenses := strings.Split(url.LicenseId, "/") // Check to see if we have multiple licenses returned
+			if len(splitLicenses) > 1 {
+				for _, splitLicense := range splitLicenses {
+					spl := strings.TrimSpace(splitLicense)
+					zlog.S.Debugf("Searching for split license: %v", spl)
+					lic, err := d.lic.GetLicenseByName(spl, false)
+					if err != nil || len(lic.LicenseName) == 0 {
+						if err != nil {
+							zlog.S.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, err)
+						}
+						var license dtos.DependencyLicense
+						license.Name = spl
+						license.SpdxId = spl
+						license.IsSpdx = false
+						licenses = append(licenses, license)
+					} else {
+						var license dtos.DependencyLicense
+						license.Name = lic.LicenseName
+						license.SpdxId = lic.LicenseId
+						license.IsSpdx = lic.IsSpdx
+						licenses = append(licenses, license)
+					}
+				}
+			} else {
+				var license dtos.DependencyLicense
+				license.Name = url.License
+				license.SpdxId = url.LicenseId
+				license.IsSpdx = url.IsSpdx
+				licenses = append(licenses, license)
+			}
 			depOutput.Licenses = licenses
 			depOutputs = append(depOutputs, depOutput)
 		}

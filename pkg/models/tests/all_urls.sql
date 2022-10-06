@@ -16,6 +16,8 @@ CREATE TABLE all_urls
     primary key (package_hash, url, url_hash)
 );
 
+insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('7b1cbed0ad866bd4ece1fc3719fb0c5d', 'goffice', 'goffice', '0.10.52-4', '2022-08-04', 'https://snapshot.debian.org/archive/debian-ports/20220804T151036Z/pool-powerpc/main/g/goffice/libgoffice-0.10-10-dbgsym_0.10.52-4_powerpc.deb', '3a56b97b0b9672a8b2482d028d3ef488', 10, 'GPL-2 or GPL-3', 'debian/goffice', 19836180, 15);
+
 insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('b757a992ada86f72942aa7fc153a992f', 'scanoss',     'dependencies', 'v0.0.1', '2021-12-10', 'https://github.com/scanoss/dependencies/archive/v0.0.1.zip',   'd8fd0cd2822034a356c0e05a1c9c372d', 5, 'MIT', 'scanoss/dependencies',11901716,5614);
 
 insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('4d66775f503b1e76582e7e5b2ea54d92', 'taballa.hp-PD', 'tablestyle', '0.0.10', '2013-08-26', 'https://rubygems.org/downloads/tablestyle-0.0.10.gem', '5a088240b44efa142be4b3c40f8ae9c1', 1, 'MIT', 'tablestyle', 99999999, 5614);
@@ -9112,3 +9114,5 @@ insert into all_urls (package_hash, vendor, component, version, date, url, url_h
 insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('4bc72a10b9ce921e3811b141de2aea9c', 'The gRPC Authors', 'grpcio', '1.12.1', '2018-06-05', 'https://files.pythonhosted.org/packages/c6/b8/47468178ba19143e89b2da778eed660b84136c0a877224e79cc3c1c3fd32/grpcio-1.12.1-cp35-cp35m-manylinux1_x86_64.whl', 'ed02ac8a0d68b08444ccb1f2e0ac095c', 3, 'Apache License 2.0', 'grpcio', 6355554, 850);
 insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('a85e0fcdfb68bb767a730196df8e0900', 'The gRPC Authors', 'grpcio', '1.12.1', '2018-06-05', 'https://files.pythonhosted.org/packages/13/71/87628a8edec5bffc86c5443d2cb9a569c3b65c7ff0ad05d5e6ee68042297/grpcio-1.12.1-cp36-cp36m-manylinux1_i686.whl', 'ee9feb79e16668a823384a24667485ac', 3, 'Apache License 2.0', 'grpcio', 6355554, 850);
 insert into all_urls (package_hash, vendor, component, version, date, url, url_hash, mine_id, license, purl_name, version_id, license_id) values ('55771098c0dc1dd47d63504ad795e595', 'The gRPC Authors', 'grpcio', '1.12.1', '2018-06-05', 'https://files.pythonhosted.org/packages/f7/db/fc084f59804a32a8d6efb467896a505f4dc93ea89ec44da856b91f05a5cb/grpcio-1.12.1-cp35-cp35m-manylinux1_i686.whl', 'f1c10eeaf3d8a7dae3d01ac9f46bc489', 3, 'Apache License 2.0', 'grpcio', 6355554, 850);
+
+

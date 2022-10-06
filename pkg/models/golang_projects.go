@@ -35,7 +35,7 @@ type GolangProjects struct {
 	conn   *sqlx.Conn
 	config *myconfig.ServerConfig
 	ver    *versionModel
-	lic    *licenseModel
+	lic    *LicenseModel
 	mine   *mineModel
 }
 

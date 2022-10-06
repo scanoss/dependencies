@@ -66,6 +66,10 @@ func TestDependencyUseCase(t *testing.T) {
         {
           "purl": "pkg:npm/sort-paths",
           "requirement": "^1.1.1"
+        },
+        {
+          "purl": "pkg:deb/debian/goffice",
+          "requirement": ""
         }
       ]
     }

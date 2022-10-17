@@ -24,13 +24,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 	"regexp"
-	zlog "scanoss.com/dependencies/pkg/logger"
 	"strings"
 )
 
 type LicenseModel struct {
 	ctx  context.Context
+	s    *zap.SugaredLogger
 	conn *sqlx.Conn
 }
 
@@ -48,14 +49,14 @@ var whiteSpaceRegex = regexp.MustCompile("\\s+")                                
 // TODO add cache for licenses already searched for?
 
 // NewLicenseModel create a new instance of the License Model
-func NewLicenseModel(ctx context.Context, conn *sqlx.Conn) *LicenseModel {
-	return &LicenseModel{ctx: ctx, conn: conn}
+func NewLicenseModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *LicenseModel {
+	return &LicenseModel{ctx: ctx, s: s, conn: conn}
 }
 
 // GetLicenseById retrieves license data by the given row ID
 func (m *LicenseModel) GetLicenseById(id int32) (License, error) {
 	if id < 0 {
-		zlog.S.Error("Please specify a valid License Id to query")
+		m.s.Error("Please specify a valid License Id to query")
 		return License{}, errors.New("please specify a valid License Name to query")
 	}
 	var license License
@@ -64,7 +65,7 @@ func (m *LicenseModel) GetLicenseById(id int32) (License, error) {
 			" WHERE id = $1",
 		id).StructScan(&license)
 	if err != nil && err != sql.ErrNoRows {
-		zlog.S.Errorf("Error: Failed to query license table for %v: %#v", id, err)
+		m.s.Errorf("Error: Failed to query license table for %v: %#v", id, err)
 		return License{}, fmt.Errorf("failed to query the license table: %v", err)
 	}
 	return license, nil
@@ -73,7 +74,7 @@ func (m *LicenseModel) GetLicenseById(id int32) (License, error) {
 // GetLicenseByName retrieves the license details for the given license name
 func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, error) {
 	if len(name) == 0 {
-		zlog.S.Warnf("No License Name specified to query")
+		m.s.Warn("No License Name specified to query")
 		return License{}, nil
 	}
 	var license License
@@ -83,7 +84,7 @@ func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, erro
 		name,
 	).StructScan(&license)
 	if err != nil && err != sql.ErrNoRows {
-		zlog.S.Errorf("Error: Failed to query license table for %v: %v", name, err)
+		m.s.Errorf("Failed to query license table for %v: %v", name, err)
 		return License{}, fmt.Errorf("failed to query the license table: %v", err)
 	}
 	if create && len(license.LicenseName) == 0 { // No license found and requested to create an entry
@@ -95,10 +96,10 @@ func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, erro
 // saveLicense writes the given license name to the licenses table
 func (m *LicenseModel) saveLicense(name string) (License, error) {
 	if len(name) == 0 {
-		zlog.S.Error("Please specify a valid License Name to save")
+		m.s.Error("Please specify a valid License Name to save")
 		return License{}, errors.New("please specify a valid License Name to save")
 	}
-	zlog.S.Debugf("Attempting to save '%v' to the licenses table...", name)
+	m.s.Debugf("Attempting to save '%v' to the licenses table...", name)
 	// TODO should we populate the spdx_id before inserting the license?
 	var license License
 	err := m.conn.QueryRowxContext(m.ctx,
@@ -107,7 +108,7 @@ func (m *LicenseModel) saveLicense(name string) (License, error) {
 		name, "", false, false,
 	).StructScan(&license)
 	if err != nil {
-		zlog.S.Errorf("Error: Failed to insert new license name into licenses table for %v: %v", name, err)
+		m.s.Warnf("Failed to insert new license name into licenses table for %v: %v", name, err)
 		return m.GetLicenseByName(name, false) // Search one more time for it, just in case someone else added it
 	}
 	return license, nil

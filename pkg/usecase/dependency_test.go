@@ -19,6 +19,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	myconfig "scanoss.com/dependencies/pkg/config"
@@ -29,12 +30,14 @@ import (
 )
 
 func TestDependencyUseCase(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -80,16 +83,16 @@ func TestDependencyUseCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load Config: %v", err)
 	}
-	depUc := NewDependencies(ctx, conn, myConfig)
-	requestDto, err := dtos.ParseDependencyInput([]byte(depRequestData))
+	depUc := NewDependencies(ctx, s, conn, myConfig)
+	requestDto, err := dtos.ParseDependencyInput(s, []byte(depRequestData))
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when parsing input json", err)
 	}
-	dependencies, err := depUc.GetDependencies(requestDto)
+	dependencies, warn, err := depUc.GetDependencies(requestDto)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when getting dependencies", err)
 	}
-	fmt.Printf("Dependency response: %+v\n", dependencies)
+	fmt.Printf("Dependency response (warn: %v): %+v\n", warn, dependencies)
 
 	var depBadRequestData = `{
   "depth": 1,
@@ -114,13 +117,13 @@ func TestDependencyUseCase(t *testing.T) {
   ]
 }
 `
-	requestDto, err = dtos.ParseDependencyInput([]byte(depBadRequestData))
+	requestDto, err = dtos.ParseDependencyInput(s, []byte(depBadRequestData))
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when parsing input json", err)
 	}
-	dependencies, err = depUc.GetDependencies(requestDto)
+	dependencies, warn, err = depUc.GetDependencies(requestDto)
 	if err == nil {
 		t.Fatalf("did not get an expected error: %v", dependencies)
 	}
-	fmt.Printf("Got expected error: %+v\n", err)
+	fmt.Printf("Got expected error (warn: %v): %+v\n", warn, err)
 }

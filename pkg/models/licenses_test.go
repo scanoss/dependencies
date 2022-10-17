@@ -19,6 +19,7 @@ package models
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	"reflect"
 	zlog "scanoss.com/dependencies/pkg/logger"
@@ -26,12 +27,14 @@ import (
 )
 
 func TestLicensesSearch(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -46,7 +49,7 @@ func TestLicensesSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	licenseModel := NewLicenseModel(ctx, conn)
+	licenseModel := NewLicenseModel(ctx, s, conn)
 	var name = "MIT"
 	fmt.Printf("Searching for license: %v\n", name)
 	license, err := licenseModel.GetLicenseByName(name, false)
@@ -114,12 +117,14 @@ func TestLicensesSearch(t *testing.T) {
 }
 
 func TestLicensesSearchId(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -134,7 +139,7 @@ func TestLicensesSearchId(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	licenseModel := NewLicenseModel(ctx, conn)
+	licenseModel := NewLicenseModel(ctx, s, conn)
 
 	name := "MIT"
 	fmt.Printf("Searching for license: %v\n", name)
@@ -181,12 +186,14 @@ func TestLicensesSearchId(t *testing.T) {
 }
 
 func TestLicensesSearchBadSql(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -197,7 +204,7 @@ func TestLicensesSearchBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	licenseModel := NewLicenseModel(ctx, conn)
+	licenseModel := NewLicenseModel(ctx, s, conn)
 	_, err = licenseModel.GetLicenseByName("rubbish", false)
 	if err == nil {
 		t.Errorf("licenses.GetLicenseByName() error = did not get an error")

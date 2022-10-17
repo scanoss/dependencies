@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	zlog "scanoss.com/dependencies/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type DependencyInput struct {
@@ -39,16 +39,15 @@ type DepPurlInput struct {
 }
 
 // ParseDependencyInput converts the input byte array to a DependencyInput structure
-func ParseDependencyInput(input []byte) (DependencyInput, error) {
+func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, error) {
 	if input == nil || len(input) == 0 {
 		return DependencyInput{}, errors.New("no input dependency data supplied to parse")
 	}
 	var data DependencyInput
 	err := json.Unmarshal(input, &data)
 	if err != nil {
-		zlog.S.Errorf("Parse failure: %v", err)
+		s.Errorf("Parse failure: %v", err)
 		return DependencyInput{}, errors.New(fmt.Sprintf("failed to parse dependency input data: %v", err))
 	}
-	zlog.S.Debugf("Parsed data2: %v", data)
 	return data, nil
 }

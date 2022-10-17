@@ -19,6 +19,7 @@ package models
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	pkggodevclient "github.com/guseggert/pkggodev-client"
 	"github.com/jmoiron/sqlx"
 	myconfig "scanoss.com/dependencies/pkg/config"
@@ -27,12 +28,14 @@ import (
 )
 
 func TestGolangProjectUrlsSearch(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -52,7 +55,7 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
 
 	url, err := golangProjModel.GetGolangUrlsByPurlNameType("google.golang.org/grpc", "golang", "")
 	if err != nil {
@@ -107,12 +110,14 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 }
 
 func TestGolangProjectsSearchVersion(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -132,7 +137,7 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
 
 	url, err := golangProjModel.GetGolangUrlsByPurlNameTypeVersion("google.golang.org/grpc", "golang", "1.19.0")
 	if err != nil {
@@ -194,12 +199,14 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 }
 
 func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -219,7 +226,7 @@ func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
 
 	url, err := golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", ">0.0.4")
 	if err != nil {
@@ -241,12 +248,14 @@ func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
 }
 
 func TestGolangPkgGoDev(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -266,7 +275,7 @@ func TestGolangPkgGoDev(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
 
 	_, _, _, err = golangProjModel.queryPkgGoDev("", "")
 	if err == nil {
@@ -347,12 +356,14 @@ func TestGolangPkgGoDev(t *testing.T) {
 }
 
 func TestGolangProjectsSearchBadSql(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -368,7 +379,7 @@ func TestGolangProjectsSearchBadSql(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
 
 	_, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "")
 	if err == nil {

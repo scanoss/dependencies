@@ -19,18 +19,21 @@ package models
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"testing"
 )
 
 func TestProjectsSearch(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -45,7 +48,7 @@ func TestProjectsSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	projectsModel := NewProjectModel(ctx, conn)
+	projectsModel := NewProjectModel(ctx, s, conn)
 	var purlName = "tablestyle"
 	var purlType = "gem"
 	fmt.Printf("Searching for project list: %v - %v\n", purlName, purlType)
@@ -56,7 +59,7 @@ func TestProjectsSearch(t *testing.T) {
 	if len(projects) < 1 {
 		t.Errorf("projects.GetProjectsByPurlName() No projects returned from query")
 	}
-	fmt.Printf("Projects: %v\n", projects)
+	fmt.Printf("Projects: %#v\n", projects)
 
 	purlName = ""
 	purlType = "npm"
@@ -109,12 +112,14 @@ func TestProjectsSearch(t *testing.T) {
 }
 
 func TestProjectsSearchBadSql(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -125,7 +130,7 @@ func TestProjectsSearchBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	projectsModel := NewProjectModel(ctx, conn)
+	projectsModel := NewProjectModel(ctx, s, conn)
 	_, err = projectsModel.GetProjectsByPurlName("rubbish", "rubbish")
 	if err == nil {
 		t.Errorf("projects.GetProjectsByPurlName() error = did not get an error")

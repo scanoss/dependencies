@@ -33,7 +33,7 @@ func TestOutputConvert(t *testing.T) {
 
 	var outputDto = dtos.DependencyOutput{}
 
-	output, err := convertDependencyOutput(outputDto)
+	output, err := convertDependencyOutput(zlog.S, outputDto)
 	if err != nil {
 		t.Errorf("TestOutputConvert failed: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestInputConvert(t *testing.T) {
 	defer zlog.SyncZap()
 
 	var depIn = &pb.DependencyRequest{}
-	input, err := convertDependencyInput(depIn)
+	input, err := convertDependencyInput(zlog.S, depIn)
 	if err != nil {
 		t.Errorf("TestInputConvert failed: %v", err)
 	}

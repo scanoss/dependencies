@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	zlog "scanoss.com/dependencies/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type DependencyOutput struct {
@@ -50,26 +50,25 @@ type DependencyLicense struct {
 }
 
 // ExportDependencyOutput converts the DependencyOutput structure to a byte array
-func ExportDependencyOutput(output DependencyOutput) ([]byte, error) {
+func ExportDependencyOutput(s *zap.SugaredLogger, output DependencyOutput) ([]byte, error) {
 	data, err := json.Marshal(output)
 	if err != nil {
-		zlog.S.Errorf("Parse failure: %v", err)
+		s.Errorf("Parse failure: %v", err)
 		return nil, errors.New("failed to produce JSON from dependency output data")
 	}
 	return data, nil
 }
 
 // ParseDependencyOutput converts the input byte array to a DependencyOutput structure
-func ParseDependencyOutput(input []byte) (DependencyOutput, error) {
+func ParseDependencyOutput(s *zap.SugaredLogger, input []byte) (DependencyOutput, error) {
 	if input == nil || len(input) == 0 {
 		return DependencyOutput{}, errors.New("no output dependency data supplied to parse")
 	}
 	var data DependencyOutput
 	err := json.Unmarshal(input, &data)
 	if err != nil {
-		zlog.S.Errorf("Parse failure: %v", err)
+		s.Errorf("Parse failure: %v", err)
 		return DependencyOutput{}, errors.New(fmt.Sprintf("failed to parse dependency output data: %v", err))
 	}
-	zlog.S.Debugf("Parsed data2: %v", data)
 	return data, nil
 }

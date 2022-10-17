@@ -19,6 +19,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	common "github.com/scanoss/papi/api/commonv2"
@@ -31,12 +32,13 @@ import (
 )
 
 func TestDependencyServer_Echo(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)

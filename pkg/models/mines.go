@@ -23,11 +23,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	zlog "scanoss.com/dependencies/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type mineModel struct {
 	ctx  context.Context
+	s    *zap.SugaredLogger
 	conn *sqlx.Conn
 }
 
@@ -38,14 +39,14 @@ type Mine struct {
 }
 
 // NewMineModel creates a new instance of the Mine Model
-func NewMineModel(ctx context.Context, conn *sqlx.Conn) *mineModel {
-	return &mineModel{ctx: ctx, conn: conn}
+func NewMineModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *mineModel {
+	return &mineModel{ctx: ctx, s: s, conn: conn}
 }
 
-// GetMineIdsByPurlType retreives a list of the Purl Type IDs associated with the given Purl Type (string)
+// GetMineIdsByPurlType retrieves a list of the Purl Type IDs associated with the given Purl Type (string)
 func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 	if len(purlType) == 0 {
-		zlog.S.Error("Please specify a Purl Type to query")
+		m.s.Error("Please specify a Purl Type to query")
 		return nil, errors.New("please specify a Purl Type to query")
 	}
 	var mines []Mine
@@ -53,7 +54,7 @@ func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 		"SELECT id,name,purl_type FROM mines WHERE purl_type = $1", purlType,
 	)
 	if err != nil {
-		zlog.S.Errorf("Error: Failed to query mines table for %v: %v", purlType, err)
+		m.s.Errorf("Error: Failed to query mines table for %v: %v", purlType, err)
 		return nil, fmt.Errorf("failed to query the mines table: %v", err)
 	}
 	if len(mines) > 0 {
@@ -63,6 +64,6 @@ func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 		}
 		return mineIds, nil
 	}
-	zlog.S.Error("No entries found in the mines table.")
+	m.s.Error("No entries found in the mines table.")
 	return nil, errors.New("no entry in mines table")
 }

@@ -19,6 +19,7 @@ package models
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	zlog "scanoss.com/dependencies/pkg/logger"
@@ -26,12 +27,17 @@ import (
 )
 
 func TestAllUrlsSearch(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
+	if s == nil {
+		t.Fatalf("No sugared logger from context: %#v", ctx)
+	}
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -51,7 +57,7 @@ func TestAllUrlsSearch(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
+	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "")
 	if err != nil {
@@ -125,12 +131,14 @@ func TestAllUrlsSearch(t *testing.T) {
 }
 
 func TestAllUrlsSearchVersion(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -150,7 +158,7 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
+	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameTypeVersion("tablestyle", "gem", "0.0.12")
 	if err != nil {
@@ -196,12 +204,14 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 }
 
 func TestAllUrlsSearchVersionRequirement(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -221,7 +231,7 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
+	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", ">0.0.4")
 	if err != nil {
@@ -243,12 +253,14 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 }
 
 func TestAllUrlsSearchNoProject(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -268,7 +280,7 @@ func TestAllUrlsSearchNoProject(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, conn, nil, NewGolangProjectModel(ctx, conn, myConfig))
+	allUrlsModel := NewAllUrlModel(ctx, s, conn, nil, NewGolangProjectModel(ctx, s, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "0.0.8")
 	if err != nil {
@@ -281,12 +293,14 @@ func TestAllUrlsSearchNoProject(t *testing.T) {
 }
 
 func TestAllUrlsSearchNoLicense(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -306,7 +320,7 @@ func TestAllUrlsSearchNoLicense(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
+	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
 
 	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err != nil {
@@ -319,12 +333,14 @@ func TestAllUrlsSearchNoLicense(t *testing.T) {
 }
 
 func TestAllUrlsSearchBadSql(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -340,7 +356,7 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, conn, NewProjectModel(ctx, conn), NewGolangProjectModel(ctx, conn, myConfig))
+	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
 	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "")
 	if err == nil {
 		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")

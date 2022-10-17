@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
@@ -41,57 +42,59 @@ func NewDependencyServer(db *sqlx.DB, config *myconfig.ServerConfig) pb.Dependen
 
 // Echo sends back the same message received
 func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest) (*common.EchoResponse, error) {
-	zlog.S.Infof("Received (%v): %v", ctx, request.GetMessage())
+	s := ctxzap.Extract(ctx).Sugar()
+	s.Infof("Received %v", request.GetMessage())
 	return &common.EchoResponse{Message: request.GetMessage()}, nil
 }
 
 // GetDependencies searches for information about the supplied dependencies
 func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.DependencyRequest) (*pb.DependencyResponse, error) {
-	zlog.S.Infof("Processing dependency request: %v", request)
+	s := ctxzap.Extract(ctx).Sugar()
+	s.Info("Processing dependency request...")
 	// Make sure we have dependency data to query
 	depRequest := request.GetFiles()
 	if depRequest == nil || len(depRequest) == 0 {
+		s.Warn("No dependency request data supplied to decorate. Ignoring request.")
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "No dependency request data supplied"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("no request data supplied")
 	}
-	dtoRequest, err := convertDependencyInput(request) // Convert to internal DTO for processing
+	dtoRequest, err := convertDependencyInput(s, request) // Convert to internal DTO for processing
 	if err != nil {
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problem parsing dependency input data"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem parsing dependency input data")
 	}
-	//ctx = context.Background() // Background context with no timeout
-	//ctx, cancel := context.WithTimeout(ctx, 120*time.Second) // Temporary add of context with 2 minute timeout
-	//defer cancel()
 	conn, err := d.db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
-		zlog.S.Errorf("Failed to get a database connection from the pool: %v", err)
+		s.Errorf("Failed to get a database connection from the pool: %v", err)
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
 	}
 	defer closeDbConnection(conn)
 	// Search the KB for information about each dependency
-	depUc := usecase.NewDependencies(ctx, conn, d.config)
-	dtoDependencies, err := depUc.GetDependencies(dtoRequest)
+	depUc := usecase.NewDependencies(ctx, s, conn, d.config)
+	dtoDependencies, warn, err := depUc.GetDependencies(dtoRequest)
+	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
 	if err != nil {
-		zlog.S.Errorf("Failed to get dependencies: %v", err)
-		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
-		return &pb.DependencyResponse{Status: &statusResp}, nil
+		if !warn { // Definitely an error, and not a warning
+			s.Errorf("Failed to get dependencies: %v", err)
+			statusResp = common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
+			return &pb.DependencyResponse{Status: &statusResp}, nil
+		}
+		statusResp = common.StatusResponse{Status: common.StatusCode_SUCCEEDED_WITH_WARNINGS, Message: "Problems decorating some purls"}
 	}
-	zlog.S.Debugf("Parsed Dependencies: %+v", dtoDependencies)
-	depResponse, err := convertDependencyOutput(dtoDependencies) // Convert the internal data into a response object
+	depResponse, err := convertDependencyOutput(s, dtoDependencies) // Convert the internal data into a response object
 	if err != nil {
-		zlog.S.Errorf("Failed to covnert parsed dependencies: %v", err)
-		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
-		return &pb.DependencyResponse{Status: &statusResp}, nil
+		s.Errorf("Failed to covnert parsed dependencies: %v", err)
+		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
+		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem converting dependency DTO")
 	}
 	// Set the status and respond with the data
-	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }
 
 // closeDbConnection closes the specified database connection
 func closeDbConnection(conn *sqlx.Conn) {
-	zlog.S.Debugf("Closing DB Connection: %v", conn)
+	zlog.S.Debugf("Closing DB Connection: %v", conn) // TODO comment out/remove
 	err := conn.Close()
 	if err != nil {
 		zlog.S.Warnf("Warning: Problem closing database connection: %v", err)

@@ -65,26 +65,26 @@ func TestDependencyOutput(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	output, err := ParseDependencyOutput([]byte(outputJson))
+	output, err := ParseDependencyOutput(zlog.S, []byte(outputJson))
 	if err != nil {
 		t.Errorf("dtos.ParseDependencyInput() error = %v", err)
 	}
 	fmt.Println("Parsed output object: ", output)
 
-	data, err := ExportDependencyOutput(output)
+	data, err := ExportDependencyOutput(zlog.S, output)
 	if err != nil {
 		t.Errorf("dtos.ParseDependencyInput() error = %v", err)
 	}
 	fmt.Println("Exported output data: ", data)
 
-	_, err = ParseDependencyOutput(nil)
+	_, err = ParseDependencyOutput(zlog.S, nil)
 	if err == nil {
 		t.Errorf("dtos.ParseDependencyOutput() did not fail")
 	}
 	fmt.Println("get expected error: ", err)
 
 	var badJson = `{ "files": [ `
-	_, err = ParseDependencyOutput([]byte(badJson))
+	_, err = ParseDependencyOutput(zlog.S, []byte(badJson))
 	if err == nil {
 		t.Errorf("dtos.ParseDependencyOutput() did not fail")
 	}

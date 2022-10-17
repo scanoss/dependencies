@@ -24,11 +24,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	zlog "scanoss.com/dependencies/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type versionModel struct {
 	ctx  context.Context
+	s    *zap.SugaredLogger
 	conn *sqlx.Conn
 }
 
@@ -41,14 +42,14 @@ type Version struct {
 // TODO add cache for versions already searched for?
 
 // NewVersionModel creates a new instance of the Version Model
-func NewVersionModel(ctx context.Context, conn *sqlx.Conn) *versionModel {
-	return &versionModel{ctx: ctx, conn: conn}
+func NewVersionModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *versionModel {
+	return &versionModel{ctx: ctx, s: s, conn: conn}
 }
 
 // GetVersionByName gets the given version from the versions table
 func (m *versionModel) GetVersionByName(name string, create bool) (Version, error) {
 	if len(name) == 0 {
-		zlog.S.Error("Please specify a valid Version Name to query")
+		m.s.Error("Please specify a valid Version Name to query")
 		return Version{}, errors.New("please specify a valid Version Name to query")
 	}
 	var version Version
@@ -57,7 +58,7 @@ func (m *versionModel) GetVersionByName(name string, create bool) (Version, erro
 			" WHERE version_name = $1",
 		name).StructScan(&version)
 	if err != nil && err != sql.ErrNoRows {
-		zlog.S.Errorf("Error: Failed to query versions table for %v: %v", name, err)
+		m.s.Errorf("Error: Failed to query versions table for %v: %v", name, err)
 		return Version{}, fmt.Errorf("failed to query the versions table: %v", err)
 	}
 	if create && len(version.VersionName) == 0 { // No version found and requested to create an entry
@@ -70,10 +71,10 @@ func (m *versionModel) GetVersionByName(name string, create bool) (Version, erro
 // saveVersion writes the given version name to the versions table
 func (m *versionModel) saveVersion(name string) (Version, error) {
 	if len(name) == 0 {
-		zlog.S.Error("Please specify a valid version Name to save")
+		m.s.Error("Please specify a valid version Name to save")
 		return Version{}, errors.New("please specify a valid Version Name to save")
 	}
-	zlog.S.Debugf("Attempting to save '%v' to the versions table...", name)
+	m.s.Debugf("Attempting to save '%v' to the versions table...", name)
 	var version Version
 	err := m.conn.QueryRowxContext(m.ctx,
 		"INSERT INTO versions (version_name, semver) VALUES($1, $2)"+
@@ -81,9 +82,8 @@ func (m *versionModel) saveVersion(name string) (Version, error) {
 		name, "", false, false,
 	).StructScan(&version)
 	if err != nil {
-		zlog.S.Errorf("Error: Failed to insert new version name into versions table for %v: %v", name, err)
+		m.s.Errorf("Error: Failed to insert new version name into versions table for %v: %v", name, err)
 		return m.GetVersionByName(name, false) // Search one more time for it, just in case someone else added it
 	}
 	return version, nil
-
 }

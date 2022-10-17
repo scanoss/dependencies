@@ -20,54 +20,56 @@ import (
 	"context"
 	"errors"
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
-	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/models"
 	"strings"
 )
 
 type DependencyUseCase struct {
 	ctx     context.Context
+	s       *zap.SugaredLogger
 	conn    *sqlx.Conn
 	allUrls *models.AllUrlsModel
 	lic     *models.LicenseModel
 }
 
 // NewDependencies creates a new instance of the Dependency Use Case
-func NewDependencies(ctx context.Context, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
-	return &DependencyUseCase{ctx: ctx, conn: conn,
-		allUrls: models.NewAllUrlModel(ctx, conn, models.NewProjectModel(ctx, conn),
-			models.NewGolangProjectModel(ctx, conn, config),
+func NewDependencies(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
+	return &DependencyUseCase{ctx: ctx, s: s, conn: conn,
+		allUrls: models.NewAllUrlModel(ctx, s, conn, models.NewProjectModel(ctx, s, conn),
+			models.NewGolangProjectModel(ctx, s, conn, config),
 		),
-		lic: models.NewLicenseModel(ctx, conn),
+		lic: models.NewLicenseModel(ctx, s, conn),
 	}
 }
 
 // GetDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct
-func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, error) {
+func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, bool, error) {
 
 	var depFileOutputs []dtos.DependencyFileOutput
 	var problems = false
+	d.s.Infof("Processing %v dependency files...", len(request.Files))
 	for _, file := range request.Files {
 		var fileOutput dtos.DependencyFileOutput
 		fileOutput.File = file.File
 		fileOutput.Id = "dependency"
 		fileOutput.Status = "pending"
 		var depOutputs []dtos.DependenciesOutput
+		d.s.Infof("Processing %v purls for %v...", len(file.Purls), file.File)
 		for _, purl := range file.Purls {
 			if len(purl.Purl) == 0 {
-				zlog.S.Infof("Empty Purl string supplied for: %v. Skipping", file.File)
+				d.s.Infof("Empty Purl string supplied for: %v. Skipping", file.File)
 				continue
 			}
 			var depOutput dtos.DependenciesOutput
 			depOutput.Purl = strings.Split(purl.Purl, "@")[0] // Remove any version specific info from the PURL
 			url, err := d.allUrls.GetUrlsByPurlString(purl.Purl, purl.Requirement)
 			if err != nil {
-				zlog.S.Errorf("Problem encountered extracting URLs for: %v - %v.", purl, err)
-				problems = true // TODO should this be an error or not?
+				d.s.Warnf("Problem encountered extracting URLs for: %v, %v - %v.", file.File, purl, err)
+				problems = true // Record this as a warning
 				continue
-				// TODO add a placeholder in the response?
 			}
 			depOutput.Component = url.Component
 			depOutput.Version = url.Version
@@ -77,11 +79,11 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			if len(splitLicenses) > 1 {
 				for _, splitLicense := range splitLicenses {
 					spl := strings.TrimSpace(splitLicense)
-					zlog.S.Debugf("Searching for split license: %v", spl)
+					d.s.Debugf("Searching for split license: %v", spl)
 					lic, err := d.lic.GetLicenseByName(spl, false)
 					if err != nil || len(lic.LicenseName) == 0 {
 						if err != nil {
-							zlog.S.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, err)
+							d.s.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, err)
 						}
 						var license dtos.DependencyLicense
 						license.Name = spl
@@ -109,11 +111,11 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 		fileOutput.Dependencies = depOutputs
 		depFileOutputs = append(depFileOutputs, fileOutput)
 	}
+	d.s.Debugf("Output dependencies: %v", depFileOutputs)
 	if problems {
-		zlog.S.Errorf("Encountered issues while processing dependencies: %v", request)
-		return dtos.DependencyOutput{}, errors.New("encountered issues while processing dependencies")
+		d.s.Warnf("Encountered issues while processing dependencies: %v", request)
+		return dtos.DependencyOutput{Files: depFileOutputs}, true, errors.New("encountered issues while processing dependencies")
 	}
-	zlog.S.Debugf("Output dependencies: %v", depFileOutputs)
 
-	return dtos.DependencyOutput{Files: depFileOutputs}, nil
+	return dtos.DependencyOutput{Files: depFileOutputs}, false, nil
 }

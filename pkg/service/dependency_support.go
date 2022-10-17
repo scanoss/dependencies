@@ -20,37 +20,37 @@ import (
 	"encoding/json"
 	"errors"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
+	"go.uber.org/zap"
 	"scanoss.com/dependencies/pkg/dtos"
-	zlog "scanoss.com/dependencies/pkg/logger"
 )
 
 // convertDependencyInput converts a Dependency Request structure into an internal Dependency Input struct
-func convertDependencyInput(request *pb.DependencyRequest) (dtos.DependencyInput, error) {
+func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest) (dtos.DependencyInput, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
-		zlog.S.Errorf("Problem marshalling dependency request input: %v", err)
+		s.Errorf("Problem marshalling dependency request input: %v", err)
 		return dtos.DependencyInput{}, errors.New("problem marshalling dependency input")
 	}
-	dtoRequest, err := dtos.ParseDependencyInput(data)
+	dtoRequest, err := dtos.ParseDependencyInput(s, data)
 	if err != nil {
-		zlog.S.Errorf("Problem parsing dependency request input: %v", err)
+		s.Errorf("Problem parsing dependency request input: %v", err)
 		return dtos.DependencyInput{}, errors.New("problem parsing dependency input")
 	}
 	return dtoRequest, nil
 }
 
 // convertDependencyOutput converts an internal Dependency Output structure into a Dependency Response struct
-func convertDependencyOutput(output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
+func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
 	data, err := json.Marshal(output)
 	if err != nil {
-		zlog.S.Errorf("Problem marshalling dependency request output: %v", err)
+		s.Errorf("Problem marshalling dependency request output: %v", err)
 		return &pb.DependencyResponse{}, errors.New("problem marshalling dependency output")
 	}
-	zlog.S.Debugf("Parsed data: %v", string(data))
+	s.Debugf("Parsed data: %v", string(data))
 	var depResp pb.DependencyResponse
 	err = json.Unmarshal(data, &depResp)
 	if err != nil {
-		zlog.S.Errorf("Problem unmarshalling dependency request output: %v", err)
+		s.Errorf("Problem unmarshalling dependency request output: %v", err)
 		return &pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
 	}
 	return &depResp, nil

@@ -19,6 +19,7 @@ package models
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	zlog "scanoss.com/dependencies/pkg/logger"
@@ -26,12 +27,14 @@ import (
 )
 
 func TestMines(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -46,7 +49,7 @@ func TestMines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	mine := NewMineModel(ctx, conn)
+	mine := NewMineModel(ctx, s, conn)
 	var purlType = "maven"
 	mineIds, err := mine.GetMineIdsByPurlType(purlType)
 	if err != nil {
@@ -86,12 +89,14 @@ func TestMines(t *testing.T) {
 
 // TestMinesBadSql test bad queries without creating/loading the mines table
 func TestMinesBadSql(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -102,7 +107,7 @@ func TestMinesBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	mine := NewMineModel(ctx, conn)
+	mine := NewMineModel(ctx, s, conn)
 	purlType := "NONEXISTENT"
 	mineIds, err := mine.GetMineIdsByPurlType(purlType)
 	if err != nil {

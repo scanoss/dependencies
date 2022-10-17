@@ -79,13 +79,13 @@ func TestDependencyInput(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	data, err := ParseDependencyInput([]byte(inputJson2))
+	data, err := ParseDependencyInput(zlog.S, []byte(inputJson2))
 	if err != nil {
 		t.Errorf("dtos.ParseDependencyInput() error = %v", err)
 	}
 	fmt.Println("Parsed input data2: ", data)
 
-	_, err = ParseDependencyInput(nil)
+	_, err = ParseDependencyInput(zlog.S, nil)
 	if err == nil {
 		t.Errorf("dtos.ParseDependencyInput() did not fail")
 	}
@@ -103,7 +103,7 @@ func TestDependencyInput(t *testing.T) {
 }
 `
 
-	_, err = ParseDependencyInput([]byte(brokenJson))
+	_, err = ParseDependencyInput(zlog.S, []byte(brokenJson))
 	if err == nil {
 		t.Errorf("dtos.ParseDependencyInput() did not fail")
 	}

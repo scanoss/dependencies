@@ -19,18 +19,21 @@ package models
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	zlog "scanoss.com/dependencies/pkg/logger"
 	"testing"
 )
 
 func TestVersionsSearch(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -45,7 +48,7 @@ func TestVersionsSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	versionModel := NewVersionModel(ctx, conn)
+	versionModel := NewVersionModel(ctx, s, conn)
 	var name = "1.0.0"
 	fmt.Printf("Searching for version: %v\n", name)
 	version, err := versionModel.GetVersionByName(name, false)
@@ -99,12 +102,14 @@ func TestVersionsSearch(t *testing.T) {
 }
 
 func TestVersionsSearchBadSql(t *testing.T) {
-	ctx := context.Background()
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
 	db, err := sqlx.Connect("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -115,7 +120,7 @@ func TestVersionsSearchBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	versionModel := NewVersionModel(ctx, conn)
+	versionModel := NewVersionModel(ctx, s, conn)
 	_, err = versionModel.GetVersionByName("rubbish", false)
 	if err == nil {
 		t.Errorf("versions.GetVersionByName() error = did not get an error")

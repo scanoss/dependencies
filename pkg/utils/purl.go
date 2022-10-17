@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/package-url/packageurl-go"
 	"regexp"
-	zlog "scanoss.com/dependencies/pkg/logger"
 	"strings"
 )
 
@@ -83,7 +82,6 @@ func GetVersionFromReq(purlReq string) string {
 	if matches != nil && len(matches) > 0 {
 		ni := vRegex.SubexpIndex("name")
 		if ni >= 0 {
-			zlog.S.Debugf("Changing requirement %v to Version %v", purlReq, matches[ni])
 			return matches[ni]
 		}
 	}

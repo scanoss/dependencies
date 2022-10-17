@@ -145,7 +145,17 @@ func TestConvertPurlString(t *testing.T) {
 		},
 		{
 			name:  "Golang2",
+			input: "pkg:golang/github.com/scanoss",
+			want:  "pkg:github/scanoss",
+		},
+		{
+			name:  "Golang3",
 			input: "pkg:golang/github.com/scanoss/papi/v2",
+			want:  "pkg:github/scanoss/papi",
+		},
+		{
+			name:  "Golang4",
+			input: "pkg:golang/github.com/scanoss/papi/v3",
 			want:  "pkg:github/scanoss/papi",
 		},
 		{
@@ -239,6 +249,38 @@ func TestPurlUrl(t *testing.T) {
 			}
 			if err == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("utils.ProjectUrl() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetVersionFromReq(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "Req1",
+			input: "v1.0.0",
+			want:  "v1.0.0",
+		},
+		{
+			name:  "Req2",
+			input: ">1.0.0",
+			want:  "",
+		},
+		{
+			name:  "Empty String",
+			input: "",
+			want:  "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetVersionFromReq(tt.input)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("utils.GetVersionFromReq() = %v, want %v", got, tt.want)
 			}
 		})
 	}

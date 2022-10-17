@@ -18,7 +18,7 @@
 
 version=$(git describe --tags --abbrev=0)
 if [[ -z "$version" ]] ; then
-  version=$(git describe --tags $(git rev-list --tags --max-count=1))
+  version=$(git describe --tags "$(git rev-list --tags --max-count=1)")
 fi
 if [[ -z "$version" ]] ; then
   echo "Error: Failed to determine a valid version number" >&2

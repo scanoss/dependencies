@@ -13,7 +13,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.10
 	github.com/package-url/packageurl-go v0.1.0
 	github.com/scanoss/papi v0.0.4
-	go.uber.org/zap v1.20.0
+	go.uber.org/zap v1.23.0
 	google.golang.org/grpc v1.43.0
 )
 
@@ -44,7 +44,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 // Details of how to use the "replace" command for local development

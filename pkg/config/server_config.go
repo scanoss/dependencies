@@ -30,8 +30,13 @@ type ServerConfig struct {
 	App struct {
 		Name  string `env:"APP_NAME"`
 		Port  string `env:"APP_PORT"`
-		Debug bool   `env:"APP_DEBUG"`
-		Mode  string `env:"APP_MODE"` // dev or prod
+		Debug bool   `env:"APP_DEBUG"` // true/false
+		Mode  string `env:"APP_MODE"`  // dev or prod
+	}
+	Logging struct {
+		DynamicLogging bool   `env:"LOG_DYNAMIC"`      // true/false
+		DynamicPort    string `env:"LOG_DYNAMIC_PORT"` // host:port
+		ConfigFile     string `env:"LOG_JSON_CONFIG"`
 	}
 	Database struct {
 		Driver  string `env:"DB_DRIVER"`
@@ -76,4 +81,6 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Database.Schema = "scanoss"
 	cfg.Database.SslMode = "disable"
 	cfg.Components.CommitMissing = false
+	cfg.Logging.DynamicLogging = true
+	cfg.Logging.DynamicPort = "localhost:1065"
 }

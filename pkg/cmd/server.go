@@ -25,7 +25,6 @@ import (
 	"github.com/golobby/config/v3/pkg/feeder"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"go.uber.org/zap/zapcore"
 	"os"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	zlog "scanoss.com/dependencies/pkg/logger"
@@ -41,9 +40,10 @@ var version string
 
 // getConfig checks command line args for option to feed into the config parser
 func getConfig() (*myconfig.ServerConfig, error) {
-	var jsonConfig, envConfig string
+	var jsonConfig, envConfig, loggingConfig string
 	flag.StringVar(&jsonConfig, "json-config", "", "Application JSON config")
 	flag.StringVar(&envConfig, "env-config", "", "Application dot-ENV config")
+	flag.StringVar(&loggingConfig, "logging-config", "", "Logging config file")
 	debug := flag.Bool("debug", false, "Enable debug")
 	ver := flag.Bool("version", false, "Display current version")
 	flag.Parse()
@@ -66,6 +66,9 @@ func getConfig() (*myconfig.ServerConfig, error) {
 		}
 	}
 	myConfig, err := myconfig.NewServerConfig(feeders)
+	if len(loggingConfig) > 0 {
+		myConfig.Logging.ConfigFile = loggingConfig // Override any logging config file with this one.
+	}
 	return myConfig, err
 }
 
@@ -85,24 +88,31 @@ func RunServer() error {
 		return fmt.Errorf("failed to load config: %v", err)
 	}
 	// Check mode to determine which logger to load
-	switch strings.ToLower(cfg.App.Mode) {
-	case "prod":
+	{
 		var err error
-		if cfg.App.Debug {
-			err = zlog.NewSugaredProdLoggerLevel(zapcore.DebugLevel)
-		} else {
-			err = zlog.NewSugaredProdLogger()
+		switch strings.ToLower(cfg.App.Mode) {
+		case "prod":
+			if len(cfg.Logging.ConfigFile) > 0 {
+				err = zlog.NewSugaredLoggerFromFile(cfg.Logging.ConfigFile)
+			} else {
+				err = zlog.NewSugaredProdLogger()
+			}
+		default:
+			if len(cfg.Logging.ConfigFile) > 0 {
+				err = zlog.NewSugaredLoggerFromFile(cfg.Logging.ConfigFile)
+			} else {
+				err = zlog.NewSugaredDevLogger()
+			}
 		}
 		if err != nil {
 			return fmt.Errorf("failed to load logger: %v", err)
 		}
-		zlog.L.Debug("Running with debug enabled")
-	default:
-		if err := zlog.NewSugaredDevLogger(); err != nil {
-			return fmt.Errorf("failed to load logger: %v", err)
+		if cfg.App.Debug {
+			zlog.SetLevel("debug")
 		}
+		zlog.L.Debug("Running with debug enabled")
+		defer zlog.SyncZap()
 	}
-	defer zlog.SyncZap()
 	zlog.S.Infof("Starting SCANOSS Dependency Service: %v", strings.TrimSpace(version))
 	// Setup database connection pool
 	var dsn string
@@ -133,6 +143,12 @@ func RunServer() error {
 		return fmt.Errorf("failed to ping database: %v", err)
 	}
 	defer closeDbConnection(db)
+	if cfg.Logging.DynamicLogging && len(cfg.Logging.DynamicPort) > 0 {
+		zlog.S.Infof("Setting up dynamic logging level on %v.", cfg.Logging.DynamicPort)
+		zlog.SetupDynamicLogging(cfg.Logging.DynamicPort)
+		zlog.S.Infof("Use the following to get the current status: curl -X GET %v/log/level", cfg.Logging.DynamicPort)
+		zlog.S.Infof("Use the following to set the current status: curl -X PUT %v/log/level -d level=debug", cfg.Logging.DynamicPort)
+	}
 	v2API := service.NewDependencyServer(db, cfg)
 	ctx := context.Background()
 	return grpc.RunServer(ctx, v2API, cfg.App.Port)

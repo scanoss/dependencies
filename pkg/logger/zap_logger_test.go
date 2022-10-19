@@ -17,7 +17,9 @@
 package logger
 
 import (
+	"fmt"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"testing"
 )
 
@@ -52,8 +54,81 @@ func TestZapPro(t *testing.T) {
 	S = nil
 	err := NewProdLoggerLevel(zap.DebugLevel)
 	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+		t.Fatalf("an error '%s' was not expected when opening a prod logger", err)
 	}
 	defer SyncZap()
 	L.Info("Info test statement.")
+}
+
+func TestZapLocalLog(t *testing.T) {
+	S = nil
+	L = nil
+	logMsg(zapcore.InfoLevel, "Local Info message")
+	logMsg(zapcore.WarnLevel, "Local Warning message")
+	err := NewDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a prod logger", err)
+	}
+	defer SyncZap()
+	logMsg(zapcore.DebugLevel, "Local Debug message")
+	logMsg(zapcore.InfoLevel, "Local Info message")
+	logMsg(zapcore.WarnLevel, "Local Warning message")
+	logMsg(zapcore.ErrorLevel, "Local Error message")
+	logMsg(zapcore.PanicLevel, "Local Panic message")
+}
+
+func TestZapSetLevel(t *testing.T) {
+	S = nil
+	err := NewProdLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a prod logger", err)
+	}
+	defer SyncZap()
+	L.Info("Info message should appear")
+	L.Debug("Debug Message should not appear")
+	SetLevel("debug")
+	L.Debug("Debug Message should appear")
+	SetLevel("error")
+	L.Debug("Debug Message should not appear")
+	L.Warn("Warn Message should not appear")
+	L.Error("Error Message should appear")
+	SetLevel("debug")
+	SetLevel("")
+	SetLevel("random")
+}
+
+func TestZapHttpLogSet(t *testing.T) {
+	S = nil
+	err := NewProdLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a prod logger", err)
+	}
+	defer SyncZap()
+
+	SetupDynamicLogging("")
+	SetupDynamicLogging("doesnotexist")
+	SetupDynamicLogging("localhost:9999")
+}
+
+func TestZapFromLogFile(t *testing.T) {
+
+	err := NewSugaredLoggerFromFile("")
+	if err == nil {
+		t.Fatalf("expected to get an error from unsupplied config file")
+	}
+	err = NewSugaredLoggerFromFile("./tests/does-not-exist.json")
+	if err == nil {
+		t.Fatalf("expected to get an error from non-existant config file")
+	}
+	fmt.Printf("Got expected error message: %v\n", err)
+	err = NewSugaredLoggerFromFile("./tests/zap_config-broken.json")
+	if err == nil {
+		t.Fatalf("expected to get an error from non-existant config file")
+	}
+	fmt.Printf("Got expected error message: %v\n", err)
+	err = NewSugaredLoggerFromFile("./tests/zap_config.json")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a json logger", err)
+	}
+	S.Info("Successful JSON logger config loaded")
 }

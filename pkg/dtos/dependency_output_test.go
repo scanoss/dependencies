@@ -18,7 +18,7 @@ package dtos
 
 import (
 	"fmt"
-	zlog "scanoss.com/dependencies/pkg/logger"
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"testing"
 )
 

@@ -24,8 +24,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	myconfig "scanoss.com/dependencies/pkg/config"
-	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/usecase"
 )
 

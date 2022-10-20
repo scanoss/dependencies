@@ -24,9 +24,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"reflect"
 	myconfig "scanoss.com/dependencies/pkg/config"
-	zlog "scanoss.com/dependencies/pkg/logger"
 	"scanoss.com/dependencies/pkg/models"
 	"testing"
 )

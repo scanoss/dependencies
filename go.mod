@@ -5,7 +5,6 @@ go 1.17
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/golobby/config/v3 v3.3.1
-	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/guseggert/pkggodev-client v0.0.0-20211029144512-2df8afe3ebe4
 	github.com/jmoiron/sqlx v1.3.4
@@ -13,6 +12,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.10
 	github.com/package-url/packageurl-go v0.1.0
 	github.com/scanoss/papi v0.0.4
+	github.com/scanoss/zap-logging-helper v0.0.1
 	go.uber.org/zap v1.23.0
 	google.golang.org/grpc v1.43.0
 )
@@ -33,6 +33,7 @@ require (
 	github.com/golobby/cast v1.3.0 // indirect
 	github.com/golobby/dotenv v1.3.1 // indirect
 	github.com/golobby/env/v2 v2.2.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect

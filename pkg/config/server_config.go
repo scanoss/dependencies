@@ -82,5 +82,5 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Database.SslMode = "disable"
 	cfg.Components.CommitMissing = false
 	cfg.Logging.DynamicLogging = true
-	cfg.Logging.DynamicPort = "localhost:1065"
+	cfg.Logging.DynamicPort = "localhost:60051"
 }

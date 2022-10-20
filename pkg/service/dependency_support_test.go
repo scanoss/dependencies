@@ -19,8 +19,8 @@ package service
 import (
 	"fmt"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"scanoss.com/dependencies/pkg/dtos"
-	zlog "scanoss.com/dependencies/pkg/logger"
 	"testing"
 )
 

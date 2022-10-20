@@ -22,8 +22,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"io/ioutil"
-	zlog "scanoss.com/dependencies/pkg/logger"
 )
 
 // loadSqlData Load the specified SQL files into the supplied DB

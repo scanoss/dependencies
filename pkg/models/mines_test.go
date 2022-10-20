@@ -22,7 +22,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
-	zlog "scanoss.com/dependencies/pkg/logger"
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"testing"
 )
 

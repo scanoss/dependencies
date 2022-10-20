@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	semver "github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver/v3"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"scanoss.com/dependencies/pkg/utils"

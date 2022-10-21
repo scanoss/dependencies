@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"github.com/Masterminds/semver/v3"
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-purl-helper/pkg"
 	"go.uber.org/zap"
-	"scanoss.com/dependencies/pkg/utils"
 	"sort"
 	"strings"
 )
@@ -48,7 +48,7 @@ type AllUrl struct {
 	Url       string `db:"-"`
 }
 
-// NewAllUrlModel creates a new instance of the All URL Model
+// NewAllUrlModel creates a new instance of the 'All URL' Model
 func NewAllUrlModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *projectModel, golangProj *GolangProjects) *AllUrlsModel {
 	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj}
 }
@@ -59,11 +59,11 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 		m.s.Error("Please specify a valid Purl String to query")
 		return AllUrl{}, errors.New("please specify a valid Purl String to query")
 	}
-	purl, err := utils.PurlFromString(purlString)
+	purl, err := purlutils.PurlFromString(purlString)
 	if err != nil {
 		return AllUrl{}, err
 	}
-	purlName, err := utils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
+	purlName, err := purlutils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
 	if err != nil {
 		return AllUrl{}, err
 	}
@@ -73,7 +73,7 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 		purlReq = ""
 	}
 	if len(purl.Version) == 0 && len(purlReq) > 0 { // No version specified, but we might have a specific version in the Requirement
-		ver := utils.GetVersionFromReq(purlReq)
+		ver := purlutils.GetVersionFromReq(purlReq)
 		if len(ver) > 0 {
 			purl.Version = ver // Switch to exact version search (faster)
 			purlReq = ""
@@ -84,12 +84,12 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 		// If no golang package is found, but it's a GitHub component, search GitHub for it
 		if err == nil && allUrl.Component == "" && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
 			m.s.Debugf("Didn't find golang component in projects table for %v. Checking all urls...", purlString)
-			purlString = utils.ConvertPurlString(purlString) // Convert to GitHub purl
-			purl, err = utils.PurlFromString(purlString)
+			purlString = purlutils.ConvertGoPurlStringToGithub(purlString) // Convert to GitHub purl
+			purl, err = purlutils.PurlFromString(purlString)
 			if err != nil {
 				return AllUrl{}, err
 			}
-			purlName, err = utils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
+			purlName, err = purlutils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
 			if err != nil {
 				return AllUrl{}, err
 			}
@@ -228,7 +228,7 @@ func pickOneUrl(s *zap.SugaredLogger, projModel *projectModel, allUrls []AllUrl,
 		s.Errorf("Problem retrieving URL data for %v (%v, %v)", version, purlName, purlType)
 		return AllUrl{}, fmt.Errorf("failed to retrieve specific URL version: %v", version)
 	}
-	url.Url, _ = utils.ProjectUrl(purlName, purlType)
+	url.Url, _ = purlutils.ProjectUrl(purlName, purlType)
 
 	s.Debugf("Selected version: %#v", url)
 	if len(url.License) == 0 && projModel != nil { // Check for a project license if we don't have a component one

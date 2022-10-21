@@ -38,7 +38,7 @@ type Mine struct {
 	PurlType string `db:"purl_type"`
 }
 
-// NewMineModel creates a new instance of the Mine Model
+// NewMineModel creates a new instance of the 'Mine' Model
 func NewMineModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *mineModel {
 	return &mineModel{ctx: ctx, s: s, conn: conn}
 }

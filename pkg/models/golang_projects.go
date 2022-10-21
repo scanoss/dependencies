@@ -24,10 +24,10 @@ import (
 	pkggodevclient "github.com/guseggert/pkggodev-client"
 	"github.com/jmoiron/sqlx"
 	"github.com/package-url/packageurl-go"
+	"github.com/scanoss/go-purl-helper/pkg"
 	"go.uber.org/zap"
 	"regexp"
 	myconfig "scanoss.com/dependencies/pkg/config"
-	"scanoss.com/dependencies/pkg/utils"
 )
 
 type GolangProjects struct {
@@ -55,16 +55,16 @@ func (m *GolangProjects) GetGoLangUrlByPurlString(purlString, purlReq string) (A
 		m.s.Error("Please specify a valid Purl String to query")
 		return AllUrl{}, errors.New("please specify a valid Purl String to query")
 	}
-	purl, err := utils.PurlFromString(purlString)
+	purl, err := purlutils.PurlFromString(purlString)
 	if err != nil {
 		return AllUrl{}, err
 	}
-	purlName, err := utils.PurlNameFromString(purlString)
+	purlName, err := purlutils.PurlNameFromString(purlString)
 	if err != nil {
 		return AllUrl{}, err
 	}
 	if len(purl.Version) == 0 && len(purlReq) > 0 { // No version specified, but we might have a specific version in the Requirement
-		ver := utils.GetVersionFromReq(purlReq)
+		ver := purlutils.GetVersionFromReq(purlReq)
 		if len(ver) > 0 {
 			purl.Version = ver
 			purlReq = ""

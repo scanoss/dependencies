@@ -67,6 +67,12 @@ go run cmd/server/main.go -json-config config/app-config-dev.json -debug
 
 After changing a dependency version, please run the following command:
 ```shell
-go mod tidy -compat=1.17
+go mod tidy -compat=1.19
 ```
 https://mholt.github.io/json-to-go/
+
+## Bugs/Features
+To request features or alert about bugs, please do so [here](https://github.com/scanoss/dependencies/issues).
+
+## Changelog
+Details of major changes to the library can be found in [CHANGELOG.md](CHANGELOG.md).

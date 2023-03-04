@@ -24,3 +24,12 @@
 
 # Ingore the version text file. only used during build
 version.txt
+
+tmp/
+local-build-commands.txt
+
+# Ignore package files
+*.tgz
+*.tar
+*.gz
+*.zip

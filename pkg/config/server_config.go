@@ -17,21 +17,27 @@
 package config
 
 import (
+	"bufio"
+	"fmt"
 	"github.com/golobby/config/v3"
 	"github.com/golobby/config/v3/pkg/feeder"
+	"os"
+	"strings"
 )
 
 const (
 	defaultGrpcPort = "50051"
+	defaultRestPort = "40051"
 )
 
 // ServerConfig is configuration for Server
 type ServerConfig struct {
 	App struct {
-		Name  string `env:"APP_NAME"`
-		Port  string `env:"APP_PORT"`
-		Debug bool   `env:"APP_DEBUG"` // true/false
-		Mode  string `env:"APP_MODE"`  // dev or prod
+		Name     string `env:"APP_NAME"`
+		GRPCPort string `env:"APP_PORT"`
+		RESTPort string `env:"REST_PORT"`
+		Debug    bool   `env:"APP_DEBUG"` // true/false
+		Mode     string `env:"APP_MODE"`  // dev or prod
 	}
 	Logging struct {
 		DynamicLogging bool   `env:"LOG_DYNAMIC"`      // true/false
@@ -49,6 +55,16 @@ type ServerConfig struct {
 	}
 	Components struct {
 		CommitMissing bool `env:"COMP_COMMIT_MISSING"` // Write component details to the DB if they are looked up live
+	}
+	TLS struct {
+		CertFile string `env:"DEPS_TLS_CERT"` // TLS Certificate
+		KeyFile  string `env:"DEPS_TLS_KEY"`  // Private TLS Key
+	}
+	Filtering struct {
+		AllowListFile  string `env:"DEPS_ALLOW_LIST"`       // Allow list file for incoming connections
+		DenyListFile   string `env:"DEPS_DENY_LIST"`        // Deny list file for incoming connections
+		BlockByDefault bool   `env:"DEPS_BLOCK_BY_DEFAULT"` // Block request by default if they are not in the allow list
+		TrustProxy     bool   `env:"DEPS_TRUST_PROXY"`      // Trust the interim proxy or not (causes the source IP to be validated instead of the proxy)
 	}
 }
 
@@ -72,7 +88,8 @@ func NewServerConfig(feeders []config.Feeder) (*ServerConfig, error) {
 // setServerConfigDefaults attempts to set reasonable defaults for the server config
 func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.App.Name = "SCANOSS Dependency Server"
-	cfg.App.Port = defaultGrpcPort
+	cfg.App.GRPCPort = defaultGrpcPort
+	cfg.App.RESTPort = defaultRestPort
 	cfg.App.Mode = "dev"
 	cfg.App.Debug = false
 	cfg.Database.Driver = "postgres"
@@ -83,4 +100,28 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Components.CommitMissing = false
 	cfg.Logging.DynamicLogging = true
 	cfg.Logging.DynamicPort = "localhost:60051"
+}
+
+// LoadFile loads the specified file and returns its contents in a string array.
+func LoadFile(filename string) ([]string, error) {
+	if len(filename) == 0 {
+		return nil, fmt.Errorf("no file supplied to load")
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %v - %v", filename, err)
+	}
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+	var list []string
+	for fileScanner.Scan() {
+		line := strings.TrimSpace(fileScanner.Text())
+		if len(line) > 0 && !strings.HasPrefix(line, "#") {
+			list = append(list, line)
+		}
+	}
+	return list, nil
 }

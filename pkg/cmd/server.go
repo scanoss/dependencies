@@ -19,24 +19,22 @@ package cmd
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/golobby/config/v3"
 	"github.com/golobby/config/v3/pkg/feeder"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/scanoss/go-grpc-helper/pkg/files"
+	gs "github.com/scanoss/go-grpc-helper/pkg/grpc/server"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"net/http"
 	"os"
-	"os/signal"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/protocol/grpc"
 	"scanoss.com/dependencies/pkg/protocol/rest"
 	"scanoss.com/dependencies/pkg/service"
 	"strings"
-	"syscall"
-	"time"
 )
 
 //go:generate bash ../../get_version.sh
@@ -93,75 +91,94 @@ func RunServer() error {
 		return fmt.Errorf("failed to load config: %v", err)
 	}
 	// Check mode to determine which logger to load
-	{
-		var err error
-		switch strings.ToLower(cfg.App.Mode) {
-		case "prod":
-			if len(cfg.Logging.ConfigFile) > 0 {
-				err = zlog.NewSugaredLoggerFromFile(cfg.Logging.ConfigFile)
-			} else {
-				err = zlog.NewSugaredProdLogger()
-			}
-		default:
-			if len(cfg.Logging.ConfigFile) > 0 {
-				err = zlog.NewSugaredLoggerFromFile(cfg.Logging.ConfigFile)
-			} else {
-				err = zlog.NewSugaredDevLogger()
-			}
-		}
-		if err != nil {
-			return fmt.Errorf("failed to load logger: %v", err)
-		}
-		if cfg.App.Debug {
-			zlog.SetLevel("debug")
-		}
-		zlog.L.Debug("Running with debug enabled")
-		defer zlog.SyncZap()
-	}
-	startTLS, err := checkTLS(cfg)
+	err = zlog.SetupAppLogger(cfg.App.Mode, cfg.Logging.ConfigFile, cfg.App.Debug)
 	if err != nil {
 		return err
 	}
-	allowedIPs, deniedIPs, err := loadFiltering(cfg)
+	defer zlog.SyncZap()
+	//{
+	//	var err error
+	//	switch strings.ToLower(cfg.App.Mode) {
+	//	case "prod":
+	//		if len(cfg.Logging.ConfigFile) > 0 {
+	//			err = zlog.NewSugaredLoggerFromFile(cfg.Logging.ConfigFile)
+	//		} else {
+	//			err = zlog.NewSugaredProdLogger()
+	//		}
+	//	default:
+	//		if len(cfg.Logging.ConfigFile) > 0 {
+	//			err = zlog.NewSugaredLoggerFromFile(cfg.Logging.ConfigFile)
+	//		} else {
+	//			err = zlog.NewSugaredDevLogger()
+	//		}
+	//	}
+	//	if err != nil {
+	//		return fmt.Errorf("failed to load logger: %v", err)
+	//	}
+	//	if cfg.App.Debug {
+	//		zlog.SetLevel("debug")
+	//	}
+	//	zlog.L.Debug("Running with debug enabled")
+	//	defer zlog.SyncZap()
+	//}
+
+	//startTLS, err := checkTLS(cfg)
+	startTLS, err := files.CheckTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile, zlog.S)
+	if err != nil {
+		return err
+	}
+	//allowedIPs, deniedIPs, err := loadFiltering(cfg)
+	allowedIPs, deniedIPs, err := files.LoadFiltering(cfg.Filtering.AllowListFile, cfg.Filtering.DenyListFile, zlog.S)
 	if err != nil {
 		return err
 	}
 	zlog.S.Infof("Starting SCANOSS Dependency Service: %v", strings.TrimSpace(version))
 	// Setup database connection pool
-	var dsn string
-	if len(cfg.Database.Dsn) > 0 {
-		dsn = cfg.Database.Dsn
-	} else {
-		dsn = fmt.Sprintf("%s://%s:%s@%s/%s?sslmode=%s",
-			cfg.Database.Driver,
-			cfg.Database.User,
-			cfg.Database.Passwd,
-			cfg.Database.Host,
-			cfg.Database.Schema,
-			cfg.Database.SslMode)
-	}
-	zlog.S.Debug("Connecting to Database...")
-	db, err := sqlx.Open(cfg.Database.Driver, dsn)
+	db, err := gs.OpenDBConnection(cfg.Database.Dsn, cfg.Database.Driver, cfg.Database.User, cfg.Database.Passwd, cfg.Database.Host, cfg.Database.Schema, cfg.Database.SslMode)
 	if err != nil {
-		zlog.S.Errorf("Failed to open database: %v", err)
-		return fmt.Errorf("failed to open database: %v", err)
+		return nil
 	}
-	db.SetConnMaxIdleTime(30 * time.Minute) // TODO add to app config
-	db.SetConnMaxLifetime(time.Hour)
-	db.SetMaxIdleConns(20)
-	db.SetMaxOpenConns(200)
-	err = db.Ping()
-	if err != nil {
-		zlog.S.Errorf("Failed to ping database: %v", err)
-		return fmt.Errorf("failed to ping database: %v", err)
+	//var dsn string
+	//if len(cfg.Database.Dsn) > 0 {
+	//	dsn = cfg.Database.Dsn
+	//} else {
+	//	dsn = fmt.Sprintf("%s://%s:%s@%s/%s?sslmode=%s",
+	//		cfg.Database.Driver,
+	//		cfg.Database.User,
+	//		cfg.Database.Passwd,
+	//		cfg.Database.Host,
+	//		cfg.Database.Schema,
+	//		cfg.Database.SslMode)
+	//}
+	//zlog.S.Debug("Connecting to Database...")
+	//db, err := sqlx.Open(cfg.Database.Driver, dsn)
+	//if err != nil {
+	//	zlog.S.Errorf("Failed to open database: %v", err)
+	//	return fmt.Errorf("failed to open database: %v", err)
+	//}
+	if err = gs.SetDBOptionsAndPing(db); err != nil {
+		return err
 	}
-	defer closeDbConnection(db)
-	if cfg.Logging.DynamicLogging && len(cfg.Logging.DynamicPort) > 0 {
-		zlog.S.Infof("Setting up dynamic logging level on %v.", cfg.Logging.DynamicPort)
-		zlog.SetupDynamicLogging(cfg.Logging.DynamicPort)
-		zlog.S.Infof("Use the following to get the current status: curl -X GET %v/log/level", cfg.Logging.DynamicPort)
-		zlog.S.Infof("Use the following to set the current status: curl -X PUT %v/log/level -d level=debug", cfg.Logging.DynamicPort)
-	}
+	defer gs.CloseDbConnection(db)
+
+	//db.SetConnMaxIdleTime(30 * time.Minute) // TODO add to app config
+	//db.SetConnMaxLifetime(time.Hour)
+	//db.SetMaxIdleConns(20)
+	//db.SetMaxOpenConns(200)
+	//err = db.Ping()
+	//if err != nil {
+	//	zlog.S.Errorf("Failed to ping database: %v", err)
+	//	return fmt.Errorf("failed to ping database: %v", err)
+	//}
+	//defer closeDbConnection(db)
+
+	zlog.SetupAppDynamicLogging(cfg.Logging.DynamicPort, cfg.Logging.DynamicLogging)
+	//if cfg.Logging.DynamicLogging && len(cfg.Logging.DynamicPort) > 0 {
+	//	zlog.S.Infof("Setting up dynamic logging level on %v.", cfg.Logging.DynamicPort)
+	//	zlog.SetupDynamicLogging(cfg.Logging.DynamicPort)
+	//	zlog.S.Infof("Use the following to get the current status: curl -X GET %v/log/level", cfg.Logging.DynamicPort)
+	//	zlog.S.Infof("Use the following to set the current status: curl -X PUT %v/log/level -d level=debug", cfg.Logging.DynamicPort)
+	//}
 	v2API := service.NewDependencyServer(db, cfg)
 	ctx := context.Background()
 	var srv *http.Server
@@ -177,109 +194,110 @@ func RunServer() error {
 		return err
 	}
 	// graceful shutdown
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, syscall.SIGTERM)
-	<-c
-	if srv != nil {
-		zlog.S.Info("shutting down REST server...")
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // Set a deadline for gracefully shutting down
-		defer cancel()
-		if err := srv.Shutdown(ctx); err != nil {
-			zlog.S.Warnf("error shutting down server %s", err)
-			return fmt.Errorf("issue encountered while shutting down service")
-		} else {
-			zlog.S.Info("REST server gracefully stopped")
-		}
-	}
-	if server != nil {
-		zlog.S.Info("shutting down gRPC server...")
-		server.GracefulStop()
-		zlog.S.Info("gRPC server gracefully stopped")
-	}
-	return nil
+	return gs.WaitServerComplete(srv, server)
+	//c := make(chan os.Signal, 1)
+	//signal.Notify(c, os.Interrupt)
+	//signal.Notify(c, syscall.SIGTERM)
+	//<-c
+	//if srv != nil {
+	//	zlog.S.Info("shutting down REST server...")
+	//	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // Set a deadline for gracefully shutting down
+	//	defer cancel()
+	//	if err := srv.Shutdown(ctx); err != nil {
+	//		zlog.S.Warnf("error shutting down server %s", err)
+	//		return fmt.Errorf("issue encountered while shutting down service")
+	//	} else {
+	//		zlog.S.Info("REST server gracefully stopped")
+	//	}
+	//}
+	//if server != nil {
+	//	zlog.S.Info("shutting down gRPC server...")
+	//	server.GracefulStop()
+	//	zlog.S.Info("gRPC server gracefully stopped")
+	//}
+	//return nil
 }
 
 // TODO add these to shared library
 
-// checkFile validates if the given file exists or not.
-func checkFile(filename string) (bool, error) {
-	if len(filename) == 0 {
-		return false, fmt.Errorf("no file specified to check")
-	}
-	fileDetails, err := os.Stat(filename)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return false, fmt.Errorf("file doest no exist")
-		}
-		return false, err
-	}
-	if fileDetails.IsDir() {
-		return false, fmt.Errorf("is a directory and not a file")
-	}
-	return true, nil
-}
-
-// checkTLS tests if TLS should be enabled or not.
-func checkTLS(config *myconfig.ServerConfig) (bool, error) {
-	var startTLS = false
-	if len(config.TLS.CertFile) > 0 && len(config.TLS.KeyFile) > 0 {
-		cf, err := checkFile(config.TLS.CertFile)
-		if err != nil || !cf {
-			zlog.S.Errorf("Cert file is not accessible: %v", config.TLS.CertFile)
-			if err != nil {
-				return false, err
-			} else {
-				return false, fmt.Errorf("cert file not accesible: %v", config.TLS.CertFile)
-			}
-		}
-		kf, err := checkFile(config.TLS.KeyFile)
-		if err != nil || !kf {
-			zlog.S.Errorf("Key file is not accessible: %v", config.TLS.KeyFile)
-			if err != nil {
-				return false, err
-			} else {
-				return false, fmt.Errorf("key file not accesible: %v", config.TLS.KeyFile)
-			}
-		}
-		startTLS = true
-	}
-	return startTLS, nil
-}
-
-// loadFiltering loads the IP filtering options if available.
-func loadFiltering(config *myconfig.ServerConfig) ([]string, []string, error) {
-	var allowedIPs []string
-	if len(config.Filtering.AllowListFile) > 0 {
-		cf, err := checkFile(config.Filtering.AllowListFile)
-		if err != nil || !cf {
-			zlog.S.Errorf("Allow List file is not accessible: %v", config.Filtering.AllowListFile)
-			if err != nil {
-				return nil, nil, err
-			} else {
-				return nil, nil, fmt.Errorf("allow list file not accesible: %v", config.Filtering.AllowListFile)
-			}
-		}
-		allowedIPs, err = myconfig.LoadFile(config.Filtering.AllowListFile)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	var deniedIPs []string
-	if len(config.Filtering.DenyListFile) > 0 {
-		cf, err := checkFile(config.Filtering.DenyListFile)
-		if err != nil || !cf {
-			zlog.S.Errorf("Deny List file is not accessible: %v", config.Filtering.DenyListFile)
-			if err != nil {
-				return nil, nil, err
-			} else {
-				return nil, nil, fmt.Errorf("deny list file not accesible: %v", config.Filtering.DenyListFile)
-			}
-		}
-		deniedIPs, err = myconfig.LoadFile(config.Filtering.DenyListFile)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	return allowedIPs, deniedIPs, nil
-}
+//// checkFile validates if the given file exists or not.
+//func checkFile(filename string) (bool, error) {
+//	if len(filename) == 0 {
+//		return false, fmt.Errorf("no file specified to check")
+//	}
+//	fileDetails, err := os.Stat(filename)
+//	if err != nil {
+//		if errors.Is(err, os.ErrNotExist) {
+//			return false, fmt.Errorf("file doest no exist")
+//		}
+//		return false, err
+//	}
+//	if fileDetails.IsDir() {
+//		return false, fmt.Errorf("is a directory and not a file")
+//	}
+//	return true, nil
+//}
+//
+//// checkTLS tests if TLS should be enabled or not.
+//func checkTLS(config *myconfig.ServerConfig) (bool, error) {
+//	var startTLS = false
+//	if len(config.TLS.CertFile) > 0 && len(config.TLS.KeyFile) > 0 {
+//		cf, err := checkFile(config.TLS.CertFile)
+//		if err != nil || !cf {
+//			zlog.S.Errorf("Cert file is not accessible: %v", config.TLS.CertFile)
+//			if err != nil {
+//				return false, err
+//			} else {
+//				return false, fmt.Errorf("cert file not accesible: %v", config.TLS.CertFile)
+//			}
+//		}
+//		kf, err := checkFile(config.TLS.KeyFile)
+//		if err != nil || !kf {
+//			zlog.S.Errorf("Key file is not accessible: %v", config.TLS.KeyFile)
+//			if err != nil {
+//				return false, err
+//			} else {
+//				return false, fmt.Errorf("key file not accesible: %v", config.TLS.KeyFile)
+//			}
+//		}
+//		startTLS = true
+//	}
+//	return startTLS, nil
+//}
+//
+//// loadFiltering loads the IP filtering options if available.
+//func loadFiltering(config *myconfig.ServerConfig) ([]string, []string, error) {
+//	var allowedIPs []string
+//	if len(config.Filtering.AllowListFile) > 0 {
+//		cf, err := checkFile(config.Filtering.AllowListFile)
+//		if err != nil || !cf {
+//			zlog.S.Errorf("Allow List file is not accessible: %v", config.Filtering.AllowListFile)
+//			if err != nil {
+//				return nil, nil, err
+//			} else {
+//				return nil, nil, fmt.Errorf("allow list file not accesible: %v", config.Filtering.AllowListFile)
+//			}
+//		}
+//		allowedIPs, err = myconfig.LoadFile(config.Filtering.AllowListFile)
+//		if err != nil {
+//			return nil, nil, err
+//		}
+//	}
+//	var deniedIPs []string
+//	if len(config.Filtering.DenyListFile) > 0 {
+//		cf, err := checkFile(config.Filtering.DenyListFile)
+//		if err != nil || !cf {
+//			zlog.S.Errorf("Deny List file is not accessible: %v", config.Filtering.DenyListFile)
+//			if err != nil {
+//				return nil, nil, err
+//			} else {
+//				return nil, nil, fmt.Errorf("deny list file not accesible: %v", config.Filtering.DenyListFile)
+//			}
+//		}
+//		deniedIPs, err = myconfig.LoadFile(config.Filtering.DenyListFile)
+//		if err != nil {
+//			return nil, nil, err
+//		}
+//	}
+//	return allowedIPs, deniedIPs, nil
+//}

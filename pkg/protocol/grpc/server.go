@@ -19,61 +19,60 @@
 package grpc
 
 import (
-	"fmt"
-	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	"github.com/jpillora/ipfilter"
+	gs "github.com/scanoss/go-grpc-helper/pkg/grpc/server"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
-	"github.com/scanoss/zap-logging-helper/pkg/grpc/interceptor"
-	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"net"
 	myconfig "scanoss.com/dependencies/pkg/config"
 )
 
 // RunServer runs gRPC service to serve incoming requests
-func RunServer(config *myconfig.ServerConfig, v2API pb.DependenciesServer, port string, allowedIPs, deniedIPs []string, startTLS bool) (*grpc.Server, error) {
-	listen, err := net.Listen("tcp", ":"+port)
+func RunServer(config *myconfig.ServerConfig, v2API pb.DependenciesServer, port string,
+	allowedIPs, deniedIPs []string, startTLS bool) (*grpc.Server, error) {
+
+	listen, server, err := gs.SetupGrpcServer(port, config.TLS.CertFile, config.TLS.KeyFile,
+		allowedIPs, deniedIPs, startTLS, config.Filtering.BlockByDefault, config.Filtering.TrustProxy)
 	if err != nil {
 		return nil, err
 	}
-	var interceptors []grpc.UnaryServerInterceptor
-	// Configure the list of allowed/denied IPs to connect
-	if len(allowedIPs) > 0 || len(deniedIPs) > 0 {
-		ipFilter := ipfilter.New(ipfilter.Options{AllowedIPs: allowedIPs, BlockedIPs: deniedIPs,
-			BlockByDefault: config.Filtering.BlockByDefault, TrustProxy: config.Filtering.TrustProxy,
-		})
-		interceptors = append(interceptors, ipFilter.IPFilterUnaryServerInterceptor())
-	}
-	interceptors = append(interceptors, grpczap.UnaryServerInterceptor(zlog.L))
-	interceptors = append(interceptors, interceptor.ContextPropagationUnaryServerInterceptor()) // Needs to be called after UnaryServerInterceptor to make sure the logger is set
-	var opts []grpc.ServerOption
-	if startTLS {
-		creds, err := credentials.NewServerTLSFromFile(config.TLS.CertFile, config.TLS.KeyFile)
-		if err != nil {
-			zlog.S.Errorf("Problem loading TLS file: %s - %v", config.TLS.CertFile, err)
-			return nil, fmt.Errorf("failed to load TLS credentials from file")
-		}
-		opts = append(opts, grpc.Creds(creds))
-	}
-	opts = append(opts, grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(interceptors...)))
-	// register service
-	//server := grpc.NewServer(grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(interceptors...)))
-	server := grpc.NewServer(opts...)
+	//if !strings.Contains(port, ":") {
+	//	port = ":" + port
+	//}
+	//listen, err := net.Listen("tcp", port)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//var interceptors []grpc.UnaryServerInterceptor
+	//// Configure the list of allowed/denied IPs to connect
+	//if len(allowedIPs) > 0 || len(deniedIPs) > 0 {
+	//	ipFilter := ipfilter.New(ipfilter.Options{AllowedIPs: allowedIPs, BlockedIPs: deniedIPs,
+	//		BlockByDefault: config.Filtering.BlockByDefault, TrustProxy: config.Filtering.TrustProxy,
+	//	})
+	//	interceptors = append(interceptors, ipFilter.IPFilterUnaryServerInterceptor())
+	//}
+	//interceptors = append(interceptors, grpczap.UnaryServerInterceptor(zlog.L))
+	//interceptors = append(interceptors, interceptor.ContextPropagationUnaryServerInterceptor()) // Needs to be called after UnaryServerInterceptor to make sure the logger is set
+	//var opts []grpc.ServerOption
+	//withTLS := ""
+	//if startTLS {
+	//	creds, err := credentials.NewServerTLSFromFile(config.TLS.CertFile, config.TLS.KeyFile)
+	//	if err != nil {
+	//		zlog.S.Errorf("Problem loading TLS file: %s - %v", config.TLS.CertFile, err)
+	//		return nil, fmt.Errorf("failed to load TLS credentials from file")
+	//	}
+	//	opts = append(opts, grpc.Creds(creds))
+	//	withTLS = " with TLS "
+	//}
+	//opts = append(opts, grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(interceptors...)))
+	//// register service
+	//server := grpc.NewServer(opts...)
 	pb.RegisterDependenciesServer(server, v2API)
 	go func() {
-		var httpErr error
-		if startTLS {
-			zlog.S.Infof("starting gRPC server with TLS on %v ...", listen.Addr())
-			//httpErr = srv.ListenAndServeTLS(config.TLS.CertFile, config.TLS.KeyFile)
-		} else {
-			zlog.S.Infof("starting gRPC server on %v ...", listen.Addr())
-		}
-		httpErr = server.Serve(listen)
-		if httpErr != nil && fmt.Sprintf("%s", httpErr) != "http: Server closed" {
-			zlog.S.Panicf("issue encountered when starting service: %v", httpErr)
-		}
+		gs.StartGrpcServer(listen, server, startTLS)
+		//zlog.S.Infof("starting gRPC server %son %v ...", withTLS, listen.Addr())
+		//httpErr := server.Serve(listen)
+		//if httpErr != nil && fmt.Sprintf("%s", httpErr) != "http: Server closed" {
+		//	zlog.S.Panicf("issue encountered when starting service: %v", httpErr)
+		//}
 	}()
 	return server, nil
 }

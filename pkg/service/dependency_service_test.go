@@ -19,16 +19,17 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"reflect"
+	"testing"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"reflect"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/models"
-	"testing"
 )
 
 func TestDependencyServer_Echo(t *testing.T) {

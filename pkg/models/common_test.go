@@ -17,9 +17,10 @@
 package models
 
 import (
+	"testing"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
-	"testing"
 )
 
 func TestDbLoad(t *testing.T) {

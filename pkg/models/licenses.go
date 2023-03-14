@@ -23,10 +23,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/jmoiron/sqlx"
-	"go.uber.org/zap"
 	"regexp"
 	"strings"
+
+	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 )
 
 type LicenseModel struct {
@@ -48,12 +49,12 @@ var whiteSpaceRegex = regexp.MustCompile("\\s+")                                
 
 // TODO add cache for licenses already searched for?
 
-// NewLicenseModel create a new instance of the License Model
+// NewLicenseModel create a new instance of the License Model.
 func NewLicenseModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *LicenseModel {
 	return &LicenseModel{ctx: ctx, s: s, conn: conn}
 }
 
-// GetLicenseById retrieves license data by the given row ID
+// GetLicenseById retrieves license data by the given row ID.
 func (m *LicenseModel) GetLicenseById(id int32) (License, error) {
 	if id < 0 {
 		m.s.Error("Please specify a valid License Id to query")
@@ -71,7 +72,7 @@ func (m *LicenseModel) GetLicenseById(id int32) (License, error) {
 	return license, nil
 }
 
-// GetLicenseByName retrieves the license details for the given license name
+// GetLicenseByName retrieves the license details for the given license name.
 func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, error) {
 	if len(name) == 0 {
 		m.s.Warn("No License Name specified to query")
@@ -93,7 +94,7 @@ func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, erro
 	return license, nil
 }
 
-// saveLicense writes the given license name to the licenses table
+// saveLicense writes the given license name to the licenses table.
 func (m *LicenseModel) saveLicense(name string) (License, error) {
 	if len(name) == 0 {
 		m.s.Error("Please specify a valid License Name to save")
@@ -114,7 +115,7 @@ func (m *LicenseModel) saveLicense(name string) (License, error) {
 	return license, nil
 }
 
-// CleanseLicenseName cleans up a license name to make it searchable in the licenses table
+// CleanseLicenseName cleans up a license name to make it searchable in the licenses table.
 func CleanseLicenseName(name string) (string, error) {
 	if len(name) > 0 {
 		name = strings.TrimSpace(name)     // remove leading/trailing spaces before even starting
@@ -132,7 +133,7 @@ func CleanseLicenseName(name string) (string, error) {
 		clean := whiteSpaceRegex.ReplaceAllString(name, " ")    // gets rid of new lines, tabs, etc.
 		cleaner := whiteSpaceRegex.ReplaceAllString(clean, " ") // reduces it down to a single space
 		cleanest := strings.ReplaceAll(cleaner, ",", ";")       // swap commas with semicolons
-		//zlog.S.Debugf("in: %v clean: %v cleaner: %v cleanest: %v", name, clean, cleaner, cleanest)
+		// zlog.S.Debugf("in: %v clean: %v cleaner: %v cleanest: %v", name, clean, cleaner, cleanest)
 		return strings.TrimSpace(cleanest), nil // return the cleansed license name
 	}
 	return "", nil // empty string, so just return it.

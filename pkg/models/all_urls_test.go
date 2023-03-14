@@ -19,11 +19,12 @@ package models
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	myconfig "scanoss.com/dependencies/pkg/config"
-	"testing"
 )
 
 func TestAllUrlsSearch(t *testing.T) {
@@ -249,7 +250,6 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 	if len(allUrls.PurlName) == 0 {
 		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
 	}
-
 }
 
 func TestAllUrlsSearchNoProject(t *testing.T) {
@@ -374,7 +374,7 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	//allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "")
+	// allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "")
 	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)

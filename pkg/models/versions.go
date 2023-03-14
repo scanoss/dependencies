@@ -23,11 +23,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
-type versionModel struct {
+type VersionModel struct {
 	ctx  context.Context
 	s    *zap.SugaredLogger
 	conn *sqlx.Conn
@@ -41,13 +42,13 @@ type Version struct {
 
 // TODO add cache for versions already searched for?
 
-// NewVersionModel creates a new instance of the Version Model
-func NewVersionModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *versionModel {
-	return &versionModel{ctx: ctx, s: s, conn: conn}
+// NewVersionModel creates a new instance of the Version Model.
+func NewVersionModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *VersionModel {
+	return &VersionModel{ctx: ctx, s: s, conn: conn}
 }
 
-// GetVersionByName gets the given version from the versions table
-func (m *versionModel) GetVersionByName(name string, create bool) (Version, error) {
+// GetVersionByName gets the given version from the versions table.
+func (m *VersionModel) GetVersionByName(name string, create bool) (Version, error) {
 	if len(name) == 0 {
 		m.s.Error("Please specify a valid Version Name to query")
 		return Version{}, errors.New("please specify a valid Version Name to query")
@@ -68,8 +69,8 @@ func (m *versionModel) GetVersionByName(name string, create bool) (Version, erro
 	return version, nil
 }
 
-// saveVersion writes the given version name to the versions table
-func (m *versionModel) saveVersion(name string) (Version, error) {
+// saveVersion writes the given version name to the versions table.
+func (m *VersionModel) saveVersion(name string) (Version, error) {
 	if len(name) == 0 {
 		m.s.Error("Please specify a valid version Name to save")
 		return Version{}, errors.New("please specify a valid Version Name to save")

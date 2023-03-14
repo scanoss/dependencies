@@ -20,14 +20,15 @@ package rest
 
 import (
 	"context"
+	"net/http"
+
 	gw "github.com/scanoss/go-grpc-helper/pkg/grpc/gateway"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"net/http"
 	myconfig "scanoss.com/dependencies/pkg/config"
 )
 
-// RunServer runs REST grpc gateway to forward requests onto the gRPC server
+// RunServer runs REST grpc gateway to forward requests onto the gRPC server.
 func RunServer(config *myconfig.ServerConfig, ctx context.Context, grpcPort, httpPort string,
 	allowedIPs, deniedIPs []string, startTLS bool) (*http.Server, error) {
 	// configure the gateway for forwarding to gRPC

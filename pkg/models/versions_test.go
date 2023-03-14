@@ -19,10 +19,11 @@ package models
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"testing"
 )
 
 func TestVersionsSearch(t *testing.T) {
@@ -98,7 +99,6 @@ func TestVersionsSearch(t *testing.T) {
 		t.Errorf("versions.GetVersionByName() No version returned from query")
 	}
 	fmt.Printf("Version: %#v\n", version)
-
 }
 
 func TestVersionsSearchBadSql(t *testing.T) {

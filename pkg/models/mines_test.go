@@ -19,11 +19,12 @@ package models
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"testing"
 )
 
 func TestMines(t *testing.T) {
@@ -87,7 +88,7 @@ func TestMines(t *testing.T) {
 	fmt.Printf("Mine IDs for %v: %v\n", purlType, mineIds)
 }
 
-// TestMinesBadSql test bad queries without creating/loading the mines table
+// TestMinesBadSql test bad queries without creating/loading the mines table.
 func TestMinesBadSql(t *testing.T) {
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {

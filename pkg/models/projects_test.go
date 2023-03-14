@@ -19,10 +19,11 @@ package models
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"testing"
 )
 
 func TestProjectsSearch(t *testing.T) {

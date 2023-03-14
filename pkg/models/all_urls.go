@@ -20,19 +20,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"github.com/jmoiron/sqlx"
-	"github.com/scanoss/go-purl-helper/pkg"
-	"go.uber.org/zap"
 	"sort"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/jmoiron/sqlx"
+	purlutils "github.com/scanoss/go-purl-helper/pkg"
+	"go.uber.org/zap"
 )
 
 type AllUrlsModel struct {
 	ctx        context.Context
 	s          *zap.SugaredLogger
 	conn       *sqlx.Conn
-	project    *projectModel
+	project    *ProjectModel
 	golangProj *GolangProjects
 }
 
@@ -48,12 +49,12 @@ type AllUrl struct {
 	Url       string `db:"-"`
 }
 
-// NewAllUrlModel creates a new instance of the 'All URL' Model
-func NewAllUrlModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *projectModel, golangProj *GolangProjects) *AllUrlsModel {
+// NewAllUrlModel creates a new instance of the 'All URL' Model.
+func NewAllUrlModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects) *AllUrlsModel {
 	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj}
 }
 
-// GetUrlsByPurlString searches for component details of the specified Purl string (and optional requirement)
+// GetUrlsByPurlString searches for component details of the specified Purl string (and optional requirement).
 func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, error) {
 	if len(purlString) == 0 {
 		m.s.Error("Please specify a valid Purl String to query")
@@ -104,7 +105,7 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 	return m.GetUrlsByPurlNameType(purlName, purl.Type, purlReq)
 }
 
-// GetUrlsByPurlNameType searches for component details of the specified Purl Name/Type (and optional requirement)
+// GetUrlsByPurlNameType searches for component details of the specified Purl Name/Type (and optional requirement).
 func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string) (AllUrl, error) {
 	if len(purlName) == 0 {
 		m.s.Error("Please specify a valid Purl Name to query")
@@ -134,7 +135,7 @@ func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string)
 	return pickOneUrl(m.s, m.project, allUrls, purlName, purlType, purlReq)
 }
 
-// GetUrlsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version
+// GetUrlsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version.
 func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVersion string) (AllUrl, error) {
 	if len(purlName) == 0 {
 		m.s.Error("Please specify a valid Purl Name to query")
@@ -168,13 +169,13 @@ func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVers
 	return pickOneUrl(m.s, m.project, allUrls, purlName, purlType, "")
 }
 
-// pickOneUrl takes the potential matching component/versions and selects the most appropriate one
-func pickOneUrl(s *zap.SugaredLogger, projModel *projectModel, allUrls []AllUrl, purlName, purlType, purlReq string) (AllUrl, error) {
+// pickOneUrl takes the potential matching component/versions and selects the most appropriate one.
+func pickOneUrl(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllUrl, purlName, purlType, purlReq string) (AllUrl, error) {
 	if len(allUrls) == 0 {
 		s.Infof("No component match (in urls) found for %v, %v", purlName, purlType)
 		return AllUrl{}, nil
 	}
-	//s.Debugf("Potential Matches: %v", allUrls)
+	// s.Debugf("Potential Matches: %v", allUrls)
 	var c *semver.Constraints
 	var urlMap = make(map[*semver.Version]AllUrl)
 	if len(purlReq) > 0 {

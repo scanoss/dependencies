@@ -18,10 +18,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/golobby/config/v3"
-	"github.com/golobby/config/v3/pkg/feeder"
 	"os"
 	"testing"
+
+	"github.com/golobby/config/v3"
+	"github.com/golobby/config/v3/pkg/feeder"
 )
 
 func TestServerConfig(t *testing.T) {

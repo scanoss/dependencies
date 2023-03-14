@@ -20,10 +20,11 @@ package main
 import (
 	"fmt"
 	"os"
+
 	"scanoss.com/dependencies/pkg/cmd"
 )
 
-// main starts the gRPC Dependency Service
+// main starts the gRPC Dependency Service.
 func main() {
 	// Launch the Dependency Server Service
 	if err := cmd.RunServer(); err != nil {

@@ -18,13 +18,13 @@ package dtos
 
 import (
 	"fmt"
-	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"testing"
+
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 )
 
 func TestDependencyInput(t *testing.T) {
-
-	//var inputJson1 = `{
+	// var inputJson1 = `{
 	// "vue-dev/packages/weex-template-compiler/package.json": {
 	//   "purls": [
 	//     {

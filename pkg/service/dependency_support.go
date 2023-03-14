@@ -19,12 +19,13 @@ package service
 import (
 	"encoding/json"
 	"errors"
+
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.uber.org/zap"
 	"scanoss.com/dependencies/pkg/dtos"
 )
 
-// convertDependencyInput converts a Dependency Request structure into an internal Dependency Input struct
+// convertDependencyInput converts a Dependency Request structure into an internal Dependency Input struct.
 func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest) (dtos.DependencyInput, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
@@ -39,7 +40,7 @@ func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest)
 	return dtoRequest, nil
 }
 
-// convertDependencyOutput converts an internal Dependency Output structure into a Dependency Response struct
+// convertDependencyOutput converts an internal Dependency Output structure into a Dependency Response struct.
 func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
 	data, err := json.Marshal(output)
 	if err != nil {

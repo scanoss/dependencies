@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"go.uber.org/zap"
 )
 
@@ -38,7 +39,7 @@ type DepPurlInput struct {
 	Requirement string `json:"requirement,omitempty"`
 }
 
-// ParseDependencyInput converts the input byte array to a DependencyInput structure
+// ParseDependencyInput converts the input byte array to a DependencyInput structure.
 func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, error) {
 	if input == nil || len(input) == 0 {
 		return DependencyInput{}, errors.New("no input dependency data supplied to parse")

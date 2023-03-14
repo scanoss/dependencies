@@ -19,11 +19,12 @@ package models
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"testing"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"reflect"
-	"testing"
 )
 
 func TestLicensesSearch(t *testing.T) {
@@ -113,7 +114,6 @@ func TestLicensesSearch(t *testing.T) {
 		t.Errorf("licenses.GetLicenseByName() No license returned from query")
 	}
 	fmt.Printf("Created License: %#v\n", license)
-
 }
 
 func TestLicensesSearchId(t *testing.T) {
@@ -182,7 +182,6 @@ func TestLicensesSearchId(t *testing.T) {
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-
 }
 
 func TestLicensesSearchBadSql(t *testing.T) {
@@ -232,7 +231,6 @@ func TestLicensesSearchBadSql(t *testing.T) {
 }
 
 func TestCleanseLicenseName(t *testing.T) {
-
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
@@ -255,9 +253,9 @@ func TestCleanseLicenseName(t *testing.T) {
 			want:  "Apache 2.0",
 		},
 		{
-			name: "Apache/MIT",
+			name:  "Apache/MIT",
 			input: " Apache 2.0, 	MIT		",
-			want: "Apache 2.0; MIT",
+			want:  "Apache 2.0; MIT",
 		},
 		{
 			name:  "Empty String",

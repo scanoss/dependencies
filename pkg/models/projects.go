@@ -22,11 +22,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
-type projectModel struct {
+type ProjectModel struct {
 	ctx  context.Context
 	s    *zap.SugaredLogger
 	conn *sqlx.Conn
@@ -43,13 +44,13 @@ type Project struct {
 	GitIsSpdx    bool   `db:"g_is_spdx"`
 }
 
-// NewProjectModel creates a new instance of the Project Model
-func NewProjectModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *projectModel {
-	return &projectModel{ctx: ctx, s: s, conn: conn}
+// NewProjectModel creates a new instance of the Project Model.
+func NewProjectModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *ProjectModel {
+	return &ProjectModel{ctx: ctx, s: s, conn: conn}
 }
 
-// GetProjectsByPurlName searches the projects' table for details about Purl Name and Type
-func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) ([]Project, error) {
+// GetProjectsByPurlName searches the projects' table for details about Purl Name and Type.
+func (m *ProjectModel) GetProjectsByPurlName(purlName string, purlType string) ([]Project, error) {
 	if len(purlName) == 0 {
 		m.s.Error("Please specify a valid Purl Name to query")
 		return nil, errors.New("please specify a valid Purl Name to query")
@@ -76,8 +77,8 @@ func (m *projectModel) GetProjectsByPurlName(purlName string, purlType string) (
 	return allProjects, nil
 }
 
-// GetProjectByPurlName searches the projects' table for details about a Purl Name and Mine ID
-func (m *projectModel) GetProjectByPurlName(purlName string, mineId int32) (Project, error) {
+// GetProjectByPurlName searches the projects' table for details about a Purl Name and Mine ID.
+func (m *ProjectModel) GetProjectByPurlName(purlName string, mineId int32) (Project, error) {
 	if len(purlName) == 0 {
 		m.s.Error("Please specify a valid Purl Name to query")
 		return Project{}, errors.New("please specify a valid Purl Name to query")

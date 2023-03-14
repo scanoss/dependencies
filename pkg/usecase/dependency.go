@@ -19,12 +19,13 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/models"
-	"strings"
 )
 
 type DependencyUseCase struct {
@@ -35,7 +36,7 @@ type DependencyUseCase struct {
 	lic     *models.LicenseModel
 }
 
-// NewDependencies creates a new instance of the Dependency Use Case
+// NewDependencies creates a new instance of the Dependency Use Case.
 func NewDependencies(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
 	return &DependencyUseCase{ctx: ctx, s: s, conn: conn,
 		allUrls: models.NewAllUrlModel(ctx, s, conn, models.NewProjectModel(ctx, s, conn),
@@ -45,9 +46,8 @@ func NewDependencies(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn,
 	}
 }
 
-// GetDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct
+// GetDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
 func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, bool, error) {
-
 	var depFileOutputs []dtos.DependencyFileOutput
 	var problems = false
 	d.s.Infof("Processing %v dependency files...", len(request.Files))

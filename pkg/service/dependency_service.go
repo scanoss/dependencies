@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"errors"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
@@ -35,19 +36,19 @@ type dependencyServer struct {
 	config *myconfig.ServerConfig
 }
 
-// NewDependencyServer creates a new instance of Dependency Server
+// NewDependencyServer creates a new instance of Dependency Server.
 func NewDependencyServer(db *sqlx.DB, config *myconfig.ServerConfig) pb.DependenciesServer {
 	return &dependencyServer{db: db, config: config}
 }
 
-// Echo sends back the same message received
+// Echo sends back the same message received.
 func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest) (*common.EchoResponse, error) {
 	s := ctxzap.Extract(ctx).Sugar()
 	s.Infof("Received %v", request.GetMessage())
 	return &common.EchoResponse{Message: request.GetMessage()}, nil
 }
 
-// GetDependencies searches for information about the supplied dependencies
+// GetDependencies searches for information about the supplied dependencies.
 func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.DependencyRequest) (*pb.DependencyResponse, error) {
 	s := ctxzap.Extract(ctx).Sugar()
 	s.Info("Processing dependency request...")
@@ -69,7 +70,7 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
 	}
-	//defer closeDbConnection(conn)
+	// defer closeDbConnection(conn)
 	defer gd.CloseSQLConnection(conn)
 	// Search the KB for information about each dependency
 	depUc := usecase.NewDependencies(ctx, s, conn, d.config)
@@ -94,7 +95,7 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 }
 
 // closeDbConnection closes the specified database connection
-//func closeDbConnection(conn *sqlx.Conn) {
+// func closeDbConnection(conn *sqlx.Conn) {
 //	zlog.S.Debugf("Closing DB Connection: %v", conn) // TODO comment out/remove
 //	err := conn.Close()
 //	if err != nil {

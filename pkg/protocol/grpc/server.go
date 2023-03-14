@@ -25,7 +25,7 @@ import (
 	myconfig "scanoss.com/dependencies/pkg/config"
 )
 
-// RunServer runs gRPC service to serve incoming requests
+// RunServer runs gRPC service to serve incoming requests.
 func RunServer(config *myconfig.ServerConfig, v2API pb.DependenciesServer, port string,
 	allowedIPs, deniedIPs []string, startTLS bool) (*grpc.Server, error) {
 	// Configure the port, interceptors, TLS and register the service

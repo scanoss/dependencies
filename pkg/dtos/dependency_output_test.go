@@ -18,12 +18,12 @@ package dtos
 
 import (
 	"fmt"
-	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"testing"
+
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 )
 
 func TestDependencyOutput(t *testing.T) {
-
 	var outputJson = `{
   "files": [
     {

@@ -21,6 +21,10 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/golobby/config/v3"
 	"github.com/golobby/config/v3/pkg/feeder"
 	_ "github.com/lib/pq"
@@ -28,20 +32,17 @@ import (
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	gs "github.com/scanoss/go-grpc-helper/pkg/grpc/server"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"net/http"
-	"os"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/protocol/grpc"
 	"scanoss.com/dependencies/pkg/protocol/rest"
 	"scanoss.com/dependencies/pkg/service"
-	"strings"
 )
 
 //go:generate bash ../../get_version.sh
 //go:embed version.txt
 var version string
 
-// getConfig checks command line args for option to feed into the config parser
+// getConfig checks command line args for option to feed into the config parser.
 func getConfig() (*myconfig.ServerConfig, error) {
 	var jsonConfig, envConfig, loggingConfig string
 	flag.StringVar(&jsonConfig, "json-config", "", "Application JSON config")
@@ -75,7 +76,7 @@ func getConfig() (*myconfig.ServerConfig, error) {
 	return myConfig, err
 }
 
-// RunServer runs the gRPC Dependency Server
+// RunServer runs the gRPC Dependency Server.
 func RunServer() error {
 	// Load command line options and config
 	cfg, err := getConfig()

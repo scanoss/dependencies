@@ -18,10 +18,11 @@ package service
 
 import (
 	"fmt"
+	"testing"
+
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"scanoss.com/dependencies/pkg/dtos"
-	"testing"
 )
 
 func TestOutputConvert(t *testing.T) {
@@ -37,7 +38,7 @@ func TestOutputConvert(t *testing.T) {
 	if err != nil {
 		t.Errorf("TestOutputConvert failed: %v", err)
 	}
-	//assert.NotNilf(t, output, "Output dependency empty")
+	// assert.NotNilf(t, output, "Output dependency empty")
 	fmt.Printf("Output: %v\n", output)
 }
 

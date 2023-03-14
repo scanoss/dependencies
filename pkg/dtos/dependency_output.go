@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"go.uber.org/zap"
 )
 
@@ -49,7 +50,7 @@ type DependencyLicense struct {
 	IsSpdx bool   `json:"is_spdx_approved"`
 }
 
-// ExportDependencyOutput converts the DependencyOutput structure to a byte array
+// ExportDependencyOutput converts the DependencyOutput structure to a byte array.
 func ExportDependencyOutput(s *zap.SugaredLogger, output DependencyOutput) ([]byte, error) {
 	data, err := json.Marshal(output)
 	if err != nil {
@@ -59,7 +60,7 @@ func ExportDependencyOutput(s *zap.SugaredLogger, output DependencyOutput) ([]by
 	return data, nil
 }
 
-// ParseDependencyOutput converts the input byte array to a DependencyOutput structure
+// ParseDependencyOutput converts the input byte array to a DependencyOutput structure.
 func ParseDependencyOutput(s *zap.SugaredLogger, input []byte) (DependencyOutput, error) {
 	if input == nil || len(input) == 0 {
 		return DependencyOutput{}, errors.New("no output dependency data supplied to parse")

@@ -21,15 +21,16 @@ package models
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"io/ioutil"
 )
 
-// loadSqlData Load the specified SQL files into the supplied DB
+// loadSqlData Load the specified SQL files into the supplied DB.
 func loadSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename string) error {
 	fmt.Printf("Loading test data file: %v\n", filename)
-	file, err := ioutil.ReadFile(filename)
+	file, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
@@ -44,14 +45,14 @@ func loadSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename str
 	return nil
 }
 
-// LoadTestSqlData loads all the required test SQL files
+// LoadTestSqlData loads all the required test SQL files.
 func LoadTestSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn) error {
 	files := []string{"../models/tests/mines.sql", "../models/tests/all_urls.sql", "../models/tests/projects.sql",
 		"../models/tests/licenses.sql", "../models/tests/versions.sql", "../models/tests/golang_projects.sql"}
 	return loadTestSqlDataFiles(db, ctx, conn, files)
 }
 
-// loadTestSqlDataFiles loads a list of test SQL files
+// loadTestSqlDataFiles loads a list of test SQL files.
 func loadTestSqlDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, files []string) error {
 	for _, file := range files {
 		err := loadSqlData(db, ctx, conn, file)
@@ -62,10 +63,10 @@ func loadTestSqlDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, fil
 	return nil
 }
 
-// CloseDB closes the specified DB and logs any errors
+// CloseDB closes the specified DB and logs any errors.
 func CloseDB(db *sqlx.DB) {
 	if db != nil {
-		//zlog.S.Debugf("Closing DB...")
+		// zlog.S.Debugf("Closing DB...")
 		err := db.Close()
 		if err != nil {
 			zlog.S.Warnf("Problem closing DB: %v", err)
@@ -73,10 +74,10 @@ func CloseDB(db *sqlx.DB) {
 	}
 }
 
-// CloseConn closes the specified DB connection and logs any errors
+// CloseConn closes the specified DB connection and logs any errors.
 func CloseConn(conn *sqlx.Conn) {
 	if conn != nil {
-		//zlog.S.Debugf("Closing Connection...")
+		// zlog.S.Debugf("Closing Connection...")
 		err := conn.Close()
 		if err != nil {
 			zlog.S.Warnf("Problem closing DB connection: %v", err)
@@ -84,10 +85,10 @@ func CloseConn(conn *sqlx.Conn) {
 	}
 }
 
-// CloseRows closes the specified DB query row and logs any errors
+// CloseRows closes the specified DB query row and logs any errors.
 func CloseRows(rows *sqlx.Rows) {
 	if rows != nil {
-		//zlog.S.Debugf("Closing Rows...")
+		// zlog.S.Debugf("Closing Rows...")
 		err := rows.Close()
 		if err != nil {
 			zlog.S.Warnf("Problem closing Rows: %v", err)

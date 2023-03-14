@@ -22,11 +22,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
-type mineModel struct {
+type MineModel struct {
 	ctx  context.Context
 	s    *zap.SugaredLogger
 	conn *sqlx.Conn
@@ -38,13 +39,13 @@ type Mine struct {
 	PurlType string `db:"purl_type"`
 }
 
-// NewMineModel creates a new instance of the 'Mine' Model
-func NewMineModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *mineModel {
-	return &mineModel{ctx: ctx, s: s, conn: conn}
+// NewMineModel creates a new instance of the 'Mine' Model.
+func NewMineModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *MineModel {
+	return &MineModel{ctx: ctx, s: s, conn: conn}
 }
 
-// GetMineIdsByPurlType retrieves a list of the Purl Type IDs associated with the given Purl Type (string)
-func (m *mineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
+// GetMineIdsByPurlType retrieves a list of the Purl Type IDs associated with the given Purl Type (string).
+func (m *MineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 	if len(purlType) == 0 {
 		m.s.Error("Please specify a Purl Type to query")
 		return nil, errors.New("please specify a Purl Type to query")

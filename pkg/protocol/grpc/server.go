@@ -28,51 +28,16 @@ import (
 // RunServer runs gRPC service to serve incoming requests
 func RunServer(config *myconfig.ServerConfig, v2API pb.DependenciesServer, port string,
 	allowedIPs, deniedIPs []string, startTLS bool) (*grpc.Server, error) {
-
+	// Configure the port, interceptors, TLS and register the service
 	listen, server, err := gs.SetupGrpcServer(port, config.TLS.CertFile, config.TLS.KeyFile,
 		allowedIPs, deniedIPs, startTLS, config.Filtering.BlockByDefault, config.Filtering.TrustProxy)
 	if err != nil {
 		return nil, err
 	}
-	//if !strings.Contains(port, ":") {
-	//	port = ":" + port
-	//}
-	//listen, err := net.Listen("tcp", port)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//var interceptors []grpc.UnaryServerInterceptor
-	//// Configure the list of allowed/denied IPs to connect
-	//if len(allowedIPs) > 0 || len(deniedIPs) > 0 {
-	//	ipFilter := ipfilter.New(ipfilter.Options{AllowedIPs: allowedIPs, BlockedIPs: deniedIPs,
-	//		BlockByDefault: config.Filtering.BlockByDefault, TrustProxy: config.Filtering.TrustProxy,
-	//	})
-	//	interceptors = append(interceptors, ipFilter.IPFilterUnaryServerInterceptor())
-	//}
-	//interceptors = append(interceptors, grpczap.UnaryServerInterceptor(zlog.L))
-	//interceptors = append(interceptors, interceptor.ContextPropagationUnaryServerInterceptor()) // Needs to be called after UnaryServerInterceptor to make sure the logger is set
-	//var opts []grpc.ServerOption
-	//withTLS := ""
-	//if startTLS {
-	//	creds, err := credentials.NewServerTLSFromFile(config.TLS.CertFile, config.TLS.KeyFile)
-	//	if err != nil {
-	//		zlog.S.Errorf("Problem loading TLS file: %s - %v", config.TLS.CertFile, err)
-	//		return nil, fmt.Errorf("failed to load TLS credentials from file")
-	//	}
-	//	opts = append(opts, grpc.Creds(creds))
-	//	withTLS = " with TLS "
-	//}
-	//opts = append(opts, grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(interceptors...)))
-	//// register service
-	//server := grpc.NewServer(opts...)
+	// Register the service API and start the server in the background
 	pb.RegisterDependenciesServer(server, v2API)
 	go func() {
 		gs.StartGrpcServer(listen, server, startTLS)
-		//zlog.S.Infof("starting gRPC server %son %v ...", withTLS, listen.Addr())
-		//httpErr := server.Serve(listen)
-		//if httpErr != nil && fmt.Sprintf("%s", httpErr) != "http: Server closed" {
-		//	zlog.S.Panicf("issue encountered when starting service: %v", httpErr)
-		//}
 	}()
 	return server, nil
 }

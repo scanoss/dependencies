@@ -17,12 +17,8 @@
 package config
 
 import (
-	"bufio"
-	"fmt"
 	"github.com/golobby/config/v3"
 	"github.com/golobby/config/v3/pkg/feeder"
-	"os"
-	"strings"
 )
 
 const (
@@ -100,28 +96,4 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Components.CommitMissing = false
 	cfg.Logging.DynamicLogging = true
 	cfg.Logging.DynamicPort = "localhost:60051"
-}
-
-// LoadFile loads the specified file and returns its contents in a string array.
-func LoadFile(filename string) ([]string, error) {
-	if len(filename) == 0 {
-		return nil, fmt.Errorf("no file supplied to load")
-	}
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %v - %v", filename, err)
-	}
-	defer func(file *os.File) {
-		_ = file.Close()
-	}(file)
-	fileScanner := bufio.NewScanner(file)
-	fileScanner.Split(bufio.ScanLines)
-	var list []string
-	for fileScanner.Scan() {
-		line := strings.TrimSpace(fileScanner.Text())
-		if len(line) > 0 && !strings.HasPrefix(line, "#") {
-			list = append(list, line)
-		}
-	}
-	return list, nil
 }

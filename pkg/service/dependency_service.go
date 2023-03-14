@@ -22,9 +22,9 @@ import (
 	"errors"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
+	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
-	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/usecase"
 )
@@ -69,7 +69,8 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
 	}
-	defer closeDbConnection(conn)
+	//defer closeDbConnection(conn)
+	defer gd.CloseSQLConnection(conn)
 	// Search the KB for information about each dependency
 	depUc := usecase.NewDependencies(ctx, s, conn, d.config)
 	dtoDependencies, warn, err := depUc.GetDependencies(dtoRequest)
@@ -93,10 +94,10 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 }
 
 // closeDbConnection closes the specified database connection
-func closeDbConnection(conn *sqlx.Conn) {
-	zlog.S.Debugf("Closing DB Connection: %v", conn) // TODO comment out/remove
-	err := conn.Close()
-	if err != nil {
-		zlog.S.Warnf("Warning: Problem closing database connection: %v", err)
-	}
-}
+//func closeDbConnection(conn *sqlx.Conn) {
+//	zlog.S.Debugf("Closing DB Connection: %v", conn) // TODO comment out/remove
+//	err := conn.Close()
+//	if err != nil {
+//		zlog.S.Warnf("Warning: Problem closing database connection: %v", err)
+//	}
+//}

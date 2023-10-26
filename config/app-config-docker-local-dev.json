@@ -2,7 +2,9 @@
   "App": {
     "Name": "Dependency Service",
     "Debug": true,
-    "Mode":  "dev"
+    "Mode":  "dev",
+    "GRPCPort": "50051",
+    "RESTPort": "40051"
   },
   "Database": {
     "Driver": "postgres",
@@ -10,5 +12,18 @@
     "User":   "scanoss",
     "Passwd": "secret123!",
     "Schema": "scanoss"
+  },
+  "Components": {
+    "CommitMissing": false
+  },
+  "TLS": {
+    "CertFile": "",
+    "KeyFile": ""
+  },
+  "Filtering": {
+    "AllowListFile": "",
+    "DenyListFile": "",
+    "BlockByDefault": false,
+    "TrustProxy": false
   }
 }

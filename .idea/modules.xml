@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/dependencies.iml" filepath="$PROJECT_DIR$/.idea/dependencies.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../platform-dev-database/.idea/platform-dev-database.iml" filepath="$PROJECT_DIR$/../platform-dev-database/.idea/platform-dev-database.iml" />
     </modules>
   </component>
 </project>

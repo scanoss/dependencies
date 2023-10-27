@@ -6,6 +6,10 @@
     "GRPCPort": "50051",
     "RESTPort": "40051"
   },
+  "Telemetry": {
+    "Enabled": true,
+    "OltpExporter": "0.0.0.0:4317"
+  },
   "Database": {
     "Driver": "postgres",
     "Host":   "localhost",

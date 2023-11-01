@@ -4,12 +4,17 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="rebuilt .idea">
+    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="skipping more test linting">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/cmd/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/cmd/server.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/config/server_config.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/config/server_config.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/dtos/dependency_input_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/dtos/dependency_input_test.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/protocol/grpc/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/protocol/grpc/server.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_service.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_service.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_service_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_service_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_support.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_support.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,15 +58,47 @@
       <recent name="$PROJECT_DIR$/tmp" />
     </key>
   </component>
+  <component name="RunManager">
+    <configuration name="go test pkg" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="dependencies" />
+      <working_directory value="$PROJECT_DIR$/pkg" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="DIRECTORY" />
+      <directory value="$PROJECT_DIR$/pkg" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Go Test.go test pkg" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="rebuilt .idea" />
-    <option name="LAST_COMMIT_MESSAGE" value="rebuilt .idea" />
+    <MESSAGE value="skipping more test linting" />
+    <option name="LAST_COMMIT_MESSAGE" value="skipping more test linting" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/dependencies$go_test_pkg.out" NAME="go test pkg Coverage Results" MODIFIED="1698860141200" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
   </component>
 </project>

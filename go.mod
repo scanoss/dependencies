@@ -10,17 +10,19 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.17
-	github.com/package-url/packageurl-go v0.1.1
-	github.com/scanoss/go-grpc-helper v0.1.6
-	github.com/scanoss/go-purl-helper v0.0.1
+	github.com/package-url/packageurl-go v0.1.2
+	github.com/scanoss/go-grpc-helper v0.1.6-unpublished
+	github.com/scanoss/go-purl-helper v0.1.0
 	github.com/scanoss/papi v0.1.0
 	github.com/scanoss/zap-logging-helper v0.2.1
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
 	google.golang.org/grpc v1.59.0
 )
 
 //replace github.com/scanoss/papi => ../papi
-//replace github.com/scanoss/go-grpc-helper => ../go-grpc-helper
+replace github.com/scanoss/go-grpc-helper => ../go-grpc-helper
+
+replace github.com/scanoss/zap-logging-helper => ../zap-logging-helper
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
@@ -29,6 +31,7 @@ require (
 	github.com/antchfx/htmlquery v1.2.4 // indirect
 	github.com/antchfx/xmlquery v1.3.7 // indirect
 	github.com/antchfx/xpath v1.2.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
@@ -49,8 +52,15 @@ require (
 	github.com/tomasen/realip v0.0.0-20180522021738-f0c99a92ddce // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.42.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.42.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 	go.opentelemetry.io/otel/metric v1.19.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.19.0 // indirect
 	go.opentelemetry.io/otel/trace v1.19.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect

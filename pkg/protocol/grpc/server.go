@@ -19,6 +19,7 @@
 package grpc
 
 import (
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/otel"
 	gs "github.com/scanoss/go-grpc-helper/pkg/grpc/server"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"google.golang.org/grpc"
@@ -27,17 +28,30 @@ import (
 
 // RunServer runs gRPC service to serve incoming requests.
 func RunServer(config *myconfig.ServerConfig, v2API pb.DependenciesServer, port string,
-	allowedIPs, deniedIPs []string, startTLS bool) (*grpc.Server, error) {
+	allowedIPs, deniedIPs []string, startTLS bool, version string) (*grpc.Server, error) {
+	// Start up Open Telemetry is requested
+	var oltpShutdown = func() {}
+	if config.Telemetry.Enabled {
+		var err error
+		oltpShutdown, err = otel.InitTelemetryProviders(config.App.Name, "scanoss-dependencies", version,
+			config.Telemetry.OltpExporter, otel.GetTraceSampler(config.App.Mode))
+		if err != nil {
+			return nil, err
+		}
+	}
 	// Configure the port, interceptors, TLS and register the service
 	listen, server, err := gs.SetupGrpcServer(port, config.TLS.CertFile, config.TLS.KeyFile,
-		allowedIPs, deniedIPs, startTLS, config.Filtering.BlockByDefault, config.Filtering.TrustProxy)
+		allowedIPs, deniedIPs, startTLS, config.Filtering.BlockByDefault, config.Filtering.TrustProxy,
+		config.Telemetry.Enabled)
 	if err != nil {
+		oltpShutdown()
 		return nil, err
 	}
 	// Register the service API and start the server in the background
 	pb.RegisterDependenciesServer(server, v2API)
 	go func() {
 		gs.StartGrpcServer(listen, server, startTLS)
+		oltpShutdown()
 	}()
 	return server, nil
 }

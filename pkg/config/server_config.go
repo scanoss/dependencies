@@ -33,12 +33,17 @@ type ServerConfig struct {
 		GRPCPort string `env:"APP_PORT"`
 		RESTPort string `env:"REST_PORT"`
 		Debug    bool   `env:"APP_DEBUG"` // true/false
+		Trace    bool   `env:"APP_TRACE"` // true/false
 		Mode     string `env:"APP_MODE"`  // dev or prod
 	}
 	Logging struct {
 		DynamicLogging bool   `env:"LOG_DYNAMIC"`      // true/false
 		DynamicPort    string `env:"LOG_DYNAMIC_PORT"` // host:port
 		ConfigFile     string `env:"LOG_JSON_CONFIG"`
+	}
+	Telemetry struct {
+		Enabled      bool   `env:"OTEL_ENABLED"`       // true/false
+		OltpExporter string `env:"OTEL_EXPORTER_OLTP"` // OTEL OLTP exporter (default 0.0.0.0:4317)
 	}
 	Database struct {
 		Driver  string `env:"DB_DRIVER"`
@@ -96,4 +101,6 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Components.CommitMissing = false
 	cfg.Logging.DynamicLogging = true
 	cfg.Logging.DynamicPort = "localhost:60051"
+	cfg.Telemetry.Enabled = false
+	cfg.Telemetry.OltpExporter = "0.0.0.0:4317" // Default OTEL OLTP gRPC Exporter endpoint
 }

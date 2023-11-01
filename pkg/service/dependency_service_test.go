@@ -106,6 +106,7 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load Config: %v", err)
 	}
+	myConfig.Telemetry.Enabled = true
 	s := NewDependencyServer(db, myConfig)
 
 	var depRequestData = `{

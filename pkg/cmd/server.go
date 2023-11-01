@@ -104,7 +104,7 @@ func RunServer() error {
 	db, err := gd.OpenDBConnection(cfg.Database.Dsn, cfg.Database.Driver, cfg.Database.User, cfg.Database.Passwd,
 		cfg.Database.Host, cfg.Database.Schema, cfg.Database.SslMode)
 	if err != nil {
-		return nil
+		return err
 	}
 	if err = gd.SetDBOptionsAndPing(db); err != nil {
 		return err
@@ -123,7 +123,7 @@ func RunServer() error {
 		}
 	}
 	// Start the gRPC service
-	server, err := grpc.RunServer(cfg, v2API, cfg.App.GRPCPort, allowedIPs, deniedIPs, startTLS)
+	server, err := grpc.RunServer(cfg, v2API, cfg.App.GRPCPort, allowedIPs, deniedIPs, startTLS, version)
 	if err != nil {
 		return err
 	}

@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="skipping more test linting">
+    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="idea setting updates">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/cmd/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/cmd/server.go" afterDir="false" />
@@ -93,7 +94,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="rebuilt .idea" />
     <MESSAGE value="skipping more test linting" />
-    <option name="LAST_COMMIT_MESSAGE" value="skipping more test linting" />
+    <MESSAGE value="idea setting updates" />
+    <option name="LAST_COMMIT_MESSAGE" value="idea setting updates" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>

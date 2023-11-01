@@ -24,32 +24,6 @@ import (
 )
 
 func TestDependencyInput(t *testing.T) {
-	// var inputJson1 = `{
-	// "vue-dev/packages/weex-template-compiler/package.json": {
-	//   "purls": [
-	//     {
-	//       "purl": "pkg:npm/acorn",
-	//       "requirement": "^5.2.1"
-	//     },
-	//     {
-	//       "purl": "pkg:npm/escodegen",
-	//       "requirement": "^1.8.1"
-	//     },
-	//     {
-	//       "purl": "pkg:npm/he",
-	//       "requirement": "^1.1.0"
-	//     }
-	//   ]
-	// }
-	//}
-	//`
-	//
-	//data, err := ParseDependencyInput1(inputJson1)
-	//if err != nil {
-	//	t.Errorf("dtos.ParseDependencyInput() error = %v", err)
-	//}
-	//fmt.Printf("Parsed input data1: %v\n", data)
-
 	var inputJson2 = `{
   "files": [
     {

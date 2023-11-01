@@ -20,10 +20,30 @@ import (
 	"encoding/json"
 	"errors"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.uber.org/zap"
 	"scanoss.com/dependencies/pkg/dtos"
 )
+
+// Structure for storing OTEL metrics.
+type metricsCounters struct {
+	depFileCounter metric.Int64Counter
+	depsCounter    metric.Int64Counter
+	depHistogram   metric.Int64Histogram // milliseconds
+}
+
+var oltpMetrics = metricsCounters{}
+
+// setupMetrics configures all the metrics recorders for the platform.
+func setupMetrics() {
+	meter := otel.Meter("scanoss.com/dependencies")
+	oltpMetrics.depFileCounter, _ = meter.Int64Counter("deps.file_count", metric.WithDescription("The number of dependency request files received"))
+	oltpMetrics.depsCounter, _ = meter.Int64Counter("deps.dep_count", metric.WithDescription("The number of dependency request components received"))
+	oltpMetrics.depHistogram, _ = meter.Int64Histogram("deps.req_time", metric.WithDescription("The time taken to run a dependency request (ms)"))
+}
 
 // convertDependencyInput converts a Dependency Request structure into an internal Dependency Input struct.
 func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest) (dtos.DependencyInput, error) {

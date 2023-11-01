@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
@@ -38,6 +39,7 @@ type dependencyServer struct {
 
 // NewDependencyServer creates a new instance of Dependency Server.
 func NewDependencyServer(db *sqlx.DB, config *myconfig.ServerConfig) pb.DependenciesServer {
+	setupMetrics()
 	return &dependencyServer{db: db, config: config}
 }
 
@@ -50,11 +52,12 @@ func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest)
 
 // GetDependencies searches for information about the supplied dependencies.
 func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.DependencyRequest) (*pb.DependencyResponse, error) {
+	requestStartTime := time.Now() // Capture the scan start time
 	s := ctxzap.Extract(ctx).Sugar()
 	s.Info("Processing dependency request...")
 	// Make sure we have dependency data to query
 	depRequest := request.GetFiles()
-	if depRequest == nil || len(depRequest) == 0 {
+	if len(depRequest) == 0 {
 		s.Warn("No dependency request data supplied to decorate. Ignoring request.")
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "No dependency request data supplied"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("no request data supplied")
@@ -64,13 +67,13 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problem parsing dependency input data"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem parsing dependency input data")
 	}
-	conn, err := d.db.Connx(ctx) // Get a connection from the pool
+	telemetryReqCounters(ctx, d.config, depRequest) // Update request counters
+	conn, err := d.db.Connx(ctx)                    // Get a connection from the pool
 	if err != nil {
 		s.Errorf("Failed to get a database connection from the pool: %v", err)
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
 	}
-	// defer closeDbConnection(conn)
 	defer gd.CloseSQLConnection(conn)
 	// Search the KB for information about each dependency
 	depUc := usecase.NewDependencies(ctx, s, conn, d.config)
@@ -90,15 +93,27 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem converting dependency DTO")
 	}
+	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
 	// Set the status and respond with the data
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }
 
-// closeDbConnection closes the specified database connection
-// func closeDbConnection(conn *sqlx.Conn) {
-//	zlog.S.Debugf("Closing DB Connection: %v", conn) // TODO comment out/remove
-//	err := conn.Close()
-//	if err != nil {
-//		zlog.S.Warnf("Warning: Problem closing database connection: %v", err)
-//	}
-//}
+// telemetryRequestTime records the request time to telemetry
+func telemetryRequestTime(ctx context.Context, config *myconfig.ServerConfig, requestStartTime time.Time) {
+	if config.Telemetry.Enabled {
+		elapsedTime := time.Since(requestStartTime).Milliseconds() // Time taken to run the dependency request
+		oltpMetrics.depHistogram.Record(ctx, elapsedTime)          // Record dep request time
+	}
+}
+
+// telemetryReqCounters counts the number of requests for telemetry
+func telemetryReqCounters(ctx context.Context, config *myconfig.ServerConfig, depRequest []*pb.DependencyRequest_Files) {
+	if config.Telemetry.Enabled {
+		oltpMetrics.depFileCounter.Add(ctx, int64(len(depRequest))) // count the number of dep files requested (usually one)
+		depCount := 0
+		for _, depFile := range depRequest {
+			depCount += len(depFile.GetPurls())
+		}
+		oltpMetrics.depsCounter.Add(ctx, int64(depCount)) // count the number of dependencies in the request
+	}
+}

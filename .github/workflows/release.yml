@@ -1,0 +1,43 @@
+name: Release
+# Build and attach supported artifacts a draft release tag
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Get tags to allow build script to get build version
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.20.x
+
+      - name: Build
+        run: |
+          make build_amd
+          make build_arm
+
+      - name: Unit Test
+        run: make unit_test
+
+      - name: Package
+        run: |
+          make package_amd
+          make package_arm
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: |
+            target/scanoss-dependencies-api-linux-amd64
+            target/scanoss-dependencies-api-linux-arm64
+            scanoss-dependencies-api_linux-amd64_${{ github.ref_name }}-1.tgz
+            scanoss-dependencies-api_linux-arm64_${{ github.ref_name }}-1.tgz

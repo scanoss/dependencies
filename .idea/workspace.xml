@@ -4,18 +4,14 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="idea setting updates">
+    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="first pass at telemetry">
+      <change afterPath="$PROJECT_DIR$/.github/workflows/golangci-lint.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/workflows/release.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/go-ci.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/go-ci.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/cmd/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/cmd/server.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/config/server_config.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/config/server_config.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/dtos/dependency_input_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/dtos/dependency_input_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/protocol/grpc/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/protocol/grpc/server.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_service.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_service.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_service_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_service_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_support.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_support.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,33 +25,34 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="2XJ7omZguflwaG9P1YJWWxRid0j" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.go.formatter.settings.were.checked": "true",
-    "RunOnceActivity.go.migrated.go.modules.settings": "true",
-    "RunOnceActivity.go.modules.automatic.dependencies.download": "true",
-    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "go.import.settings.migrated": "true",
-    "go.sdk.automatically.set": "true",
-    "last_opened_file_path": "/Users/egans/Development/scanoss/platform2.0/dependencies/tmp",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.modules.automatic.dependencies.download&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
+    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/egans/Development/scanoss/platform2.0/dependencies/.github/workflows&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/.github/workflows" />
       <recent name="$PROJECT_DIR$/tmp" />
     </key>
   </component>
@@ -95,7 +92,8 @@
     <MESSAGE value="rebuilt .idea" />
     <MESSAGE value="skipping more test linting" />
     <MESSAGE value="idea setting updates" />
-    <option name="LAST_COMMIT_MESSAGE" value="idea setting updates" />
+    <MESSAGE value="first pass at telemetry" />
+    <option name="LAST_COMMIT_MESSAGE" value="first pass at telemetry" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>

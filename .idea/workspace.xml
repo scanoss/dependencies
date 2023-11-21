@@ -4,30 +4,11 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="added workflows and upgraded to go 1.20">
+    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="linting naming updates">
       <change afterPath="$PROJECT_DIR$/.github/workflows/golangci-lint.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/dtos/dependency_input.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/dtos/dependency_input.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/dtos/dependency_output.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/dtos/dependency_output.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/all_urls.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/all_urls.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/all_urls_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/all_urls_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/common.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/common.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/common_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/common_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/golang_projects.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/golang_projects.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/golang_projects_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/golang_projects_test.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/models/licenses.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/licenses.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/licenses_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/licenses_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/mines.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/mines.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/mines_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/mines_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/projects.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/projects.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/projects_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/projects_test.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/models/versions.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/versions.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/models/versions_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/versions_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/protocol/rest/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/protocol/rest/server.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_service.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_service.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_service_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_service_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/usecase/dependency.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/usecase/dependency.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/usecase/dependency_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/usecase/dependency_test.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,6 +33,9 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -60,30 +44,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.modules.automatic.dependencies.download&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
-    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/egans/Development/scanoss/platform2.0/dependencies/.github/workflows&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "RunOnceActivity.go.modules.automatic.dependencies.download": "true",
+    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "go.import.settings.migrated": "true",
+    "go.sdk.automatically.set": "true",
+    "last_opened_file_path": "/Users/egans/Development/scanoss/platform2.0/dependencies/.github/workflows",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "run.code.analysis.last.selected.profile": "pProject Default"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/.github/workflows" />
       <recent name="$PROJECT_DIR$/tmp" />
     </key>
   </component>
-  <component name="RunManager" selected="Go Test.go test models">
+  <component name="RunManager" selected="Go Test.go test pkg">
     <configuration name="go build main.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
       <module name="dependencies" />
       <working_directory value="$PROJECT_DIR$" />
@@ -115,9 +100,9 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Go Test.go test pkg" />
         <item itemvalue="Go Test.go test models" />
         <item itemvalue="Go Build.go build main.go" />
-        <item itemvalue="Go Test.go test pkg" />
       </list>
     </recent_temporary>
   </component>
@@ -142,13 +127,14 @@
     <MESSAGE value="idea setting updates" />
     <MESSAGE value="first pass at telemetry" />
     <MESSAGE value="added workflows and upgraded to go 1.20" />
-    <option name="LAST_COMMIT_MESSAGE" value="added workflows and upgraded to go 1.20" />
+    <MESSAGE value="linting naming updates" />
+    <option name="LAST_COMMIT_MESSAGE" value="linting naming updates" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/dependencies$go_test_pkg.out" NAME="go test pkg Coverage Results" MODIFIED="1698860141200" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
+    <SUITE FILE_PATH="coverage/dependencies$go_test_pkg.out" NAME="go test pkg Coverage Results" MODIFIED="1700564037211" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
     <SUITE FILE_PATH="coverage/dependencies$go_test_models.out" NAME="go test models Coverage Results" MODIFIED="1700562356372" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
   </component>
 </project>

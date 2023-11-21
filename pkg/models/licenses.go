@@ -65,7 +65,7 @@ func (m *LicenseModel) GetLicenseByID(id int32) (License, error) {
 		"SELECT id, license_name, spdx_id, is_spdx FROM licenses"+
 			" WHERE id = $1",
 		id).StructScan(&license)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		m.s.Errorf("Error: Failed to query license table for %v: %#v", id, err)
 		return License{}, fmt.Errorf("failed to query the license table: %v", err)
 	}
@@ -84,7 +84,7 @@ func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, erro
 			" WHERE license_name = $1",
 		name,
 	).StructScan(&license)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		m.s.Errorf("Failed to query license table for %v: %v", name, err)
 		return License{}, fmt.Errorf("failed to query the license table: %v", err)
 	}

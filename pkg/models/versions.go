@@ -58,7 +58,7 @@ func (m *VersionModel) GetVersionByName(name string, create bool) (Version, erro
 		"SELECT id, version_name, semver FROM versions"+
 			" WHERE version_name = $1",
 		name).StructScan(&version)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		m.s.Errorf("Error: Failed to query versions table for %v: %v", name, err)
 		return Version{}, fmt.Errorf("failed to query the versions table: %v", err)
 	}

@@ -37,15 +37,15 @@ type LicenseModel struct {
 }
 
 type License struct {
-	Id          int32  `db:"id"`
+	ID          int32  `db:"id"`
 	LicenseName string `db:"license_name"`
-	LicenseId   string `db:"spdx_id"`
+	LicenseID   string `db:"spdx_id"`
 	IsSpdx      bool   `db:"is_spdx"`
 }
 
 var bannedLicPrefixes = []string{"see ", "\"", "'", "-", "*", ".", "/", "?", "@", "\\", ";", ",", "`", "$"} // unwanted license prefixes
 var bannedLicSuffixes = []string{".md", ".txt", ".html"}                                                    // unwanted license suffixes
-var whiteSpaceRegex = regexp.MustCompile("\\s+")                                                            // generic whitespace regex
+var whiteSpaceRegex = regexp.MustCompile(`\s+`)                                                             // generic whitespace regex
 
 // TODO add cache for licenses already searched for?
 
@@ -54,10 +54,10 @@ func NewLicenseModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn)
 	return &LicenseModel{ctx: ctx, s: s, conn: conn}
 }
 
-// GetLicenseById retrieves license data by the given row ID.
-func (m *LicenseModel) GetLicenseById(id int32) (License, error) {
+// GetLicenseByID retrieves license data by the given row ID.
+func (m *LicenseModel) GetLicenseByID(id int32) (License, error) {
 	if id < 0 {
-		m.s.Error("Please specify a valid License Id to query")
+		m.s.Error("Please specify a valid License ID to query")
 		return License{}, errors.New("please specify a valid License Name to query")
 	}
 	var license License

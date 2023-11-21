@@ -35,7 +35,7 @@ type VersionModel struct {
 }
 
 type Version struct {
-	Id          int32  `db:"id"`
+	ID          int32  `db:"id"`
 	VersionName string `db:"version_name"`
 	SemVer      string `db:"semver"`
 }

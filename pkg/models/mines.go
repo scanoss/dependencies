@@ -34,7 +34,7 @@ type MineModel struct {
 }
 
 type Mine struct {
-	Id       int32  `db:"id"`
+	ID       int32  `db:"id"`
 	Name     string `db:"name"`
 	PurlType string `db:"purl_type"`
 }
@@ -61,7 +61,7 @@ func (m *MineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 	if len(mines) > 0 {
 		var mineIds []int32
 		for _, mine := range mines {
-			mineIds = append(mineIds, mine.Id)
+			mineIds = append(mineIds, mine.ID)
 		}
 		return mineIds, nil
 	}

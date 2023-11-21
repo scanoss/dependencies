@@ -49,7 +49,7 @@ func TestDependencyUseCase(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer models.CloseConn(conn)
-	err = models.LoadTestSqlData(db, ctx, conn)
+	err = models.LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)
 	}

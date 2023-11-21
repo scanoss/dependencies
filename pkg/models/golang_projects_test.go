@@ -47,7 +47,7 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -63,9 +63,9 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 		t.Errorf("FAILED: golang_projects.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(url.PurlName) == 0 {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() No URLs returned from query")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url: %#v\n", url)
+	fmt.Printf("Golang URL: %#v\n", url)
 
 	url, err = golangProjModel.GetGolangUrlsByPurlNameType("NONEXISTENT", "none", "")
 	if err != nil {
@@ -84,30 +84,30 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 	}
 	_, err = golangProjModel.GetGolangUrlsByPurlNameType("", "", "")
 	if err == nil {
-		t.Errorf("FAILED: golang_projects.GetUrlsByPurlString() error = did not get an error")
+		t.Errorf("FAILED: golang_projects.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = golangProjModel.GetGoLangUrlByPurlString("", "")
+	_, err = golangProjModel.GetGoLangURLByPurlString("", "")
 	if err == nil {
-		t.Errorf("FAILED: golang_projects.GetUrlsByPurlString() error = did not get an error")
+		t.Errorf("FAILED: golang_projects.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = golangProjModel.GetGoLangUrlByPurlString("rubbish-purl", "")
+	_, err = golangProjModel.GetGoLangURLByPurlString("rubbish-purl", "")
 	if err == nil {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() error = did not get an error")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "")
+	url, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "")
 	if err != nil {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() error = %v", err)
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = %v", err)
 	}
 	if len(url.PurlName) == 0 {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() No URLs returned from query")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url: %v\n", url)
+	fmt.Printf("Golang URL: %v\n", url)
 }
 
 func TestGolangProjectsSearchVersion(t *testing.T) {
@@ -129,7 +129,7 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -147,13 +147,13 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 	if len(url.PurlName) == 0 {
 		t.Errorf("FAILED: golang_projects.GetGolangUrlsByPurlNameTypeVersion() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url Version: %#v\n", url)
+	fmt.Printf("Golang URL Version: %#v\n", url)
 
-	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc@v1.19.0", "")
+	url, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc@v1.19.0", "")
 	if err != nil {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() error = failed to find purl by version string")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = failed to find purl by version string")
 	}
-	fmt.Printf("Golang Url Version: %#v\n", url)
+	fmt.Printf("Golang URL Version: %#v\n", url)
 
 	_, err = golangProjModel.GetGolangUrlsByPurlNameTypeVersion("", "", "")
 	if err == nil {
@@ -174,29 +174,29 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
 
-	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "22.22.22") // Shouldn't exist
+	url, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "22.22.22") // Shouldn't exist
 	if err != nil {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() error = failed to find purl by version string")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = failed to find purl by version string")
 	}
 	if len(url.PurlName) > 0 {
-		t.Errorf("golang_projects.GetGoLangUrlByPurlString() error = Found match, when we shouldn't: %v", url)
+		t.Errorf("golang_projects.GetGoLangURLByPurlString() error = Found match, when we shouldn't: %v", url)
 	}
-	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "=v1.19.0")
+	url, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "=v1.19.0")
 	if err != nil {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() error = %v", err)
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = %v", err)
 	}
 	if len(url.PurlName) == 0 {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() No URLs returned from query")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url: %v\n", url)
-	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "==v1.19.0")
+	fmt.Printf("Golang URL: %v\n", url)
+	url, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "==v1.19.0")
 	if err != nil {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() error = %v", err)
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = %v", err)
 	}
 	if len(url.PurlName) == 0 {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() No URLs returned from query")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url: %v\n", url)
+	fmt.Printf("Golang URL: %v\n", url)
 }
 
 func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
@@ -218,7 +218,7 @@ func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -229,23 +229,23 @@ func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
 	myConfig.Components.CommitMissing = true
 	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
 
-	url, err := golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", ">0.0.4")
+	url, err := golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", ">0.0.4")
 	if err != nil {
 		t.Errorf("FAILED: golang_projects.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(url.PurlName) == 0 {
 		t.Errorf("FAILED: golang_projects.GetUrlsByPurlName() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url Version: %#v\n", url)
+	fmt.Printf("Golang URL Version: %#v\n", url)
 
-	url, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "v0.0.0-201910101010-s3333")
+	url, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "v0.0.0-201910101010-s3333")
 	if err != nil {
 		t.Errorf("FAILED: golang_projects.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(url.PurlName) == 0 {
 		t.Errorf("FAILED: golang_projects.GetUrlsByPurlName() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url Version: %#v\n", url)
+	fmt.Printf("Golang URL Version: %#v\n", url)
 }
 
 func TestGolangPkgGoDev(t *testing.T) {
@@ -267,7 +267,7 @@ func TestGolangPkgGoDev(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -290,7 +290,7 @@ func TestGolangPkgGoDev(t *testing.T) {
 	if len(url.PurlName) == 0 {
 		t.Errorf("FAILED: golang_projects.getLatestPkgGoDev() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url Version: %#v\n", url)
+	fmt.Printf("Golang URL Version: %#v\n", url)
 
 	url, err = golangProjModel.getLatestPkgGoDev("github.com/scanoss/papi", "golang", "v0.0.3")
 	if err != nil {
@@ -299,9 +299,9 @@ func TestGolangPkgGoDev(t *testing.T) {
 	if len(url.PurlName) == 0 {
 		t.Errorf("FAILED: golang_projects.getLatestPkgGoDev() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url Version: %#v\n", url)
+	fmt.Printf("Golang URL Version: %#v\n", url)
 
-	var allUrl AllUrl
+	var allUrl AllURL
 	var license License
 	var version Version
 	fmt.Printf("SavePkg: %#v - %#v - %#v", allUrl, license, version)
@@ -314,20 +314,20 @@ func TestGolangPkgGoDev(t *testing.T) {
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
 	}
-	allUrl.MineId = 45
+	allUrl.MineID = 45
 	err = golangProjModel.savePkg(allUrl, version, license, nil)
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
 	}
 	allUrl.Version = "v0.0.1"
 	version.VersionName = "v0.0.1"
-	version.Id = 5958021
+	version.ID = 5958021
 	err = golangProjModel.savePkg(allUrl, version, license, nil)
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
 	}
 	license.LicenseName = "MIT"
-	license.Id = 5614
+	license.ID = 5614
 	err = golangProjModel.savePkg(allUrl, version, license, nil)
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
@@ -382,15 +382,15 @@ func TestGolangProjectsSearchBadSql(t *testing.T) {
 	myConfig.Components.CommitMissing = true
 	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
 
-	_, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc", "")
+	_, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "")
 	if err == nil {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() error = did not get an error")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = golangProjModel.GetGoLangUrlByPurlString("pkg:golang/google.golang.org/grpc@1.19.0", "")
+	_, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc@1.19.0", "")
 	if err == nil {
-		t.Errorf("FAILED: golang_projects.GetGoLangUrlByPurlString() error = did not get an error")
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}

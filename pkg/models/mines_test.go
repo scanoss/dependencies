@@ -46,7 +46,7 @@ func TestMines(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	err = loadSqlData(db, ctx, conn, "./tests/mines.sql")
+	err = loadSQLData(db, ctx, conn, "./tests/mines.sql")
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}

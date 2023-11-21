@@ -46,7 +46,7 @@ func TestLicensesSearch(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	err = loadTestSqlDataFiles(db, ctx, conn, []string{"../models/tests/licenses.sql"})
+	err = loadTestSQLDataFiles(db, ctx, conn, []string{"../models/tests/licenses.sql"})
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestLicensesSearchId(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer CloseConn(conn)
-	err = loadTestSqlDataFiles(db, ctx, conn, []string{"../models/tests/licenses.sql"})
+	err = loadTestSQLDataFiles(db, ctx, conn, []string{"../models/tests/licenses.sql"})
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -152,33 +152,33 @@ func TestLicensesSearchId(t *testing.T) {
 	}
 	fmt.Printf("Found License: %#v\n", license)
 
-	id := license.Id
+	id := license.ID
 	fmt.Printf("Searching for license by id: %v\n", id)
-	license, err = licenseModel.GetLicenseById(id)
+	license, err = licenseModel.GetLicenseByID(id)
 	if err != nil {
-		t.Errorf("licenses.GetLicenseById() error = %v", err)
+		t.Errorf("licenses.GetLicenseByID() error = %v", err)
 	}
 	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.GetLicenseById() No license returned from query")
+		t.Errorf("licenses.GetLicenseByID() No license returned from query")
 	}
 	fmt.Printf("License: %#v\n", license)
 
 	id = 109
 	fmt.Printf("Searching for license by id: %v\n", id)
-	license, err = licenseModel.GetLicenseById(id)
+	license, err = licenseModel.GetLicenseByID(id)
 	if err != nil {
-		t.Errorf("licenses.GetLicenseById() error = %v", err)
+		t.Errorf("licenses.GetLicenseByID() error = %v", err)
 	}
 	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.GetLicenseById() No license returned from query")
+		t.Errorf("licenses.GetLicenseByID() No license returned from query")
 	}
 	fmt.Printf("License: %#v\n", license)
 
 	id = -1
 	fmt.Printf("Searching for license by id: %v\n", id)
-	_, err = licenseModel.GetLicenseById(id)
+	_, err = licenseModel.GetLicenseByID(id)
 	if err == nil {
-		t.Errorf("licenses.GetLicenseById() error = did not get an error")
+		t.Errorf("licenses.GetLicenseByID() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
@@ -222,9 +222,9 @@ func TestLicensesSearchBadSql(t *testing.T) {
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = licenseModel.GetLicenseById(100)
+	_, err = licenseModel.GetLicenseByID(100)
 	if err == nil {
-		t.Errorf("licenses.GetLicenseById() error = did not get an error")
+		t.Errorf("licenses.GetLicenseByID() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}

@@ -27,8 +27,8 @@ import (
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 )
 
-// loadSqlData Load the specified SQL files into the supplied DB.
-func loadSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename string) error {
+// loadSQLData Load the specified SQL files into the supplied DB.
+func loadSQLData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename string) error {
 	fmt.Printf("Loading test data file: %v\n", filename)
 	file, err := os.ReadFile(filename)
 	if err != nil {
@@ -45,17 +45,17 @@ func loadSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename str
 	return nil
 }
 
-// LoadTestSqlData loads all the required test SQL files.
-func LoadTestSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn) error {
+// LoadTestSQLData loads all the required test SQL files.
+func LoadTestSQLData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn) error {
 	files := []string{"../models/tests/mines.sql", "../models/tests/all_urls.sql", "../models/tests/projects.sql",
 		"../models/tests/licenses.sql", "../models/tests/versions.sql", "../models/tests/golang_projects.sql"}
-	return loadTestSqlDataFiles(db, ctx, conn, files)
+	return loadTestSQLDataFiles(db, ctx, conn, files)
 }
 
-// loadTestSqlDataFiles loads a list of test SQL files.
-func loadTestSqlDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, files []string) error {
+// loadTestSQLDataFiles loads a list of test SQL files.
+func loadTestSQLDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, files []string) error {
 	for _, file := range files {
-		err := loadSqlData(db, ctx, conn, file)
+		err := loadSQLData(db, ctx, conn, file)
 		if err != nil {
 			return err
 		}

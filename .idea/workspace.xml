@@ -4,14 +4,30 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="first pass at telemetry">
+    <list default="true" id="c5c04bbf-02bb-48a1-b61a-0dd9da8a0d9a" name="Changes" comment="added workflows and upgraded to go 1.20">
       <change afterPath="$PROJECT_DIR$/.github/workflows/golangci-lint.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.github/workflows/release.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/go-ci.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/go-ci.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/dtos/dependency_input.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/dtos/dependency_input.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/dtos/dependency_output.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/dtos/dependency_output.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/all_urls.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/all_urls.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/all_urls_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/all_urls_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/common.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/common.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/common_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/common_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/golang_projects.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/golang_projects.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/golang_projects_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/golang_projects_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/licenses.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/licenses.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/licenses_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/licenses_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/mines.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/mines.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/mines_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/mines_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/projects.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/projects.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/projects_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/projects_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/versions.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/versions.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/models/versions_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/models/versions_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/protocol/rest/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/protocol/rest/server.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_service.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_service.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/service/dependency_service_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/service/dependency_service_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/usecase/dependency.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/usecase/dependency.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/usecase/dependency_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/usecase/dependency_test.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -20,6 +36,17 @@
   </component>
   <component name="GOROOT" url="file:///usr/local/go" />
   <component name="Git.Settings">
+    <option name="PUSH_TAGS">
+      <GitPushTagMode>
+        <option name="argument" value="--tags" />
+        <option name="title" value="All" />
+      </GitPushTagMode>
+    </option>
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MarkdownSettingsMigration">
@@ -56,12 +83,31 @@
       <recent name="$PROJECT_DIR$/tmp" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Go Test.go test models">
+    <configuration name="go build main.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="dependencies" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="FILE" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$/src/main.go" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go test models" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="dependencies" />
+      <working_directory value="$PROJECT_DIR$/pkg/models" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="DIRECTORY" />
+      <directory value="$PROJECT_DIR$/pkg/models" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
     <configuration name="go test pkg" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
       <module name="dependencies" />
       <working_directory value="$PROJECT_DIR$/pkg" />
       <root_directory value="$PROJECT_DIR$" />
       <kind value="DIRECTORY" />
+      <package value="scanoss.com/dependencies/pkg" />
       <directory value="$PROJECT_DIR$/pkg" />
       <filePath value="$PROJECT_DIR$" />
       <framework value="gotest" />
@@ -69,6 +115,8 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Go Test.go test models" />
+        <item itemvalue="Go Build.go build main.go" />
         <item itemvalue="Go Test.go test pkg" />
       </list>
     </recent_temporary>
@@ -93,12 +141,14 @@
     <MESSAGE value="skipping more test linting" />
     <MESSAGE value="idea setting updates" />
     <MESSAGE value="first pass at telemetry" />
-    <option name="LAST_COMMIT_MESSAGE" value="first pass at telemetry" />
+    <MESSAGE value="added workflows and upgraded to go 1.20" />
+    <option name="LAST_COMMIT_MESSAGE" value="added workflows and upgraded to go 1.20" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/dependencies$go_test_pkg.out" NAME="go test pkg Coverage Results" MODIFIED="1698860141200" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
+    <SUITE FILE_PATH="coverage/dependencies$go_test_models.out" NAME="go test models Coverage Results" MODIFIED="1700562356372" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
   </component>
 </project>

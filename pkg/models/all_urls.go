@@ -37,36 +37,45 @@ type AllUrlsModel struct {
 	golangProj *GolangProjects
 }
 
-type AllUrl struct {
+type AllURL struct {
 	Component string `db:"component"`
 	Version   string `db:"version"`
 	SemVer    string `db:"semver"`
 	License   string `db:"license"`
-	LicenseId string `db:"license_id"`
+	LicenseID string `db:"license_id"`
 	IsSpdx    bool   `db:"is_spdx"`
 	PurlName  string `db:"purl_name"`
-	MineId    int32  `db:"mine_id"`
-	Url       string `db:"-"`
+	MineID    int32  `db:"mine_id"`
+	URL       string `db:"-"`
 }
 
-// NewAllUrlModel creates a new instance of the 'All URL' Model.
-func NewAllUrlModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects) *AllUrlsModel {
+// SQL Query constants.
+const (
+	purlSQLQuerySelect = "SELECT component, v.version_name AS version, v.semver AS semver,"
+	licSpdxSQLQuery    = " l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"
+	verLeftJoinSQL     = " LEFT JOIN versions v ON u.version_id = v.id"
+	licLeftJoinSQL     = " LEFT JOIN licenses l ON u.license_id = l.id"
+	mineLeftJoinSQL    = " LEFT JOIN mines m ON u.mine_id = m.id"
+)
+
+// NewAllURLModel creates a new instance of the 'All URL' Model.
+func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects) *AllUrlsModel {
 	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj}
 }
 
-// GetUrlsByPurlString searches for component details of the specified Purl string (and optional requirement).
-func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, error) {
+// GetURLsByPurlString searches for component details of the specified Purl string (and optional requirement).
+func (m *AllUrlsModel) GetURLsByPurlString(purlString, purlReq string) (AllURL, error) {
 	if len(purlString) == 0 {
 		m.s.Error("Please specify a valid Purl String to query")
-		return AllUrl{}, errors.New("please specify a valid Purl String to query")
+		return AllURL{}, errors.New("please specify a valid Purl String to query")
 	}
 	purl, err := purlutils.PurlFromString(purlString)
 	if err != nil {
-		return AllUrl{}, err
+		return AllURL{}, err
 	}
 	purlName, err := purlutils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
 	if err != nil {
-		return AllUrl{}, err
+		return AllURL{}, err
 	}
 	// TODO check what to do if we get a "file" requirement
 	if len(purlReq) > 0 && strings.HasPrefix(purlReq, "file:") { // internal dependency requirement. Assume latest
@@ -81,88 +90,88 @@ func (m *AllUrlsModel) GetUrlsByPurlString(purlString, purlReq string) (AllUrl, 
 		}
 	}
 	if purl.Type == "golang" {
-		allUrl, err := m.golangProj.GetGoLangUrlByPurl(purl, purlName, purlReq) // Search a separate table for golang dependencies
+		allURL, err := m.golangProj.GetGoLangURLByPurl(purl, purlName, purlReq) // Search a separate table for golang dependencies
 		// If no golang package is found, but it's a GitHub component, search GitHub for it
-		if err == nil && allUrl.Component == "" && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
+		if err == nil && allURL.Component == "" && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
 			m.s.Debugf("Didn't find golang component in projects table for %v. Checking all urls...", purlString)
 			purlString = purlutils.ConvertGoPurlStringToGithub(purlString) // Convert to GitHub purl
 			purl, err = purlutils.PurlFromString(purlString)
 			if err != nil {
-				return AllUrl{}, err
+				return AllURL{}, err
 			}
 			purlName, err = purlutils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
 			if err != nil {
-				return AllUrl{}, err
+				return AllURL{}, err
 			}
 			m.s.Debugf("Now searching All Urls for Purl: %#v, PurlName: %v", purl, purlName)
 		} else {
-			return allUrl, err
+			return allURL, err
 		}
 	}
 	if len(purl.Version) > 0 {
-		return m.GetUrlsByPurlNameTypeVersion(purlName, purl.Type, purl.Version)
+		return m.GetURLsByPurlNameTypeVersion(purlName, purl.Type, purl.Version)
 	}
-	return m.GetUrlsByPurlNameType(purlName, purl.Type, purlReq)
+	return m.GetURLsByPurlNameType(purlName, purl.Type, purlReq)
 }
 
-// GetUrlsByPurlNameType searches for component details of the specified Purl Name/Type (and optional requirement).
-func (m *AllUrlsModel) GetUrlsByPurlNameType(purlName, purlType, purlReq string) (AllUrl, error) {
+// GetURLsByPurlNameType searches for component details of the specified Purl Name/Type (and optional requirement).
+func (m *AllUrlsModel) GetURLsByPurlNameType(purlName, purlType, purlReq string) (AllURL, error) {
 	if len(purlName) == 0 {
 		m.s.Error("Please specify a valid Purl Name to query")
-		return AllUrl{}, errors.New("please specify a valid Purl Name to query")
+		return AllURL{}, errors.New("please specify a valid Purl Name to query")
 	}
 	if len(purlType) == 0 {
 		m.s.Errorf("Please specify a valid Purl Type to query: %v", purlName)
-		return AllUrl{}, errors.New("please specify a valid Purl Type to query")
+		return AllURL{}, errors.New("please specify a valid Purl Type to query")
 	}
-	var allUrls []AllUrl
+	var allUrls []AllURL
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, v.version_name AS version, v.semver AS semver,"+
-			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
+		purlSQLQuerySelect+
+			licSpdxSQLQuery+
 			" purl_name, mine_id FROM all_urls u"+
-			" LEFT JOIN mines m ON u.mine_id = m.id"+
-			" LEFT JOIN licenses l ON u.license_id = l.id"+
-			" LEFT JOIN versions v ON u.version_id = v.id"+
+			mineLeftJoinSQL+
+			licLeftJoinSQL+
+			verLeftJoinSQL+
 			" WHERE m.purl_type = $1 AND u.purl_name = $2"+
 			" ORDER BY date DESC",
 		purlType, purlName)
 	if err != nil {
 		m.s.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
-		return AllUrl{}, fmt.Errorf("failed to query the all urls table: %v", err)
+		return AllURL{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Pick one URL to return (checking for license details also)
 	return pickOneUrl(m.s, m.project, allUrls, purlName, purlType, purlReq)
 }
 
-// GetUrlsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version.
-func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVersion string) (AllUrl, error) {
+// GetURLsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version.
+func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVersion string) (AllURL, error) {
 	if len(purlName) == 0 {
 		m.s.Error("Please specify a valid Purl Name to query")
-		return AllUrl{}, errors.New("please specify a valid Purl Name to query")
+		return AllURL{}, errors.New("please specify a valid Purl Name to query")
 	}
 	if len(purlType) == 0 {
 		m.s.Error("Please specify a valid Purl Type to query")
-		return AllUrl{}, errors.New("please specify a valid Purl Type to query")
+		return AllURL{}, errors.New("please specify a valid Purl Type to query")
 	}
 	if len(purlVersion) == 0 {
 		m.s.Error("Please specify a valid Purl Version to query")
-		return AllUrl{}, errors.New("please specify a valid Purl Version to query")
+		return AllURL{}, errors.New("please specify a valid Purl Version to query")
 	}
-	var allUrls []AllUrl
+	var allUrls []AllURL
 	err := m.conn.SelectContext(m.ctx, &allUrls,
-		"SELECT component, v.version_name AS version, v.semver AS semver,"+
-			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
+		purlSQLQuerySelect+
+			licSpdxSQLQuery+
 			" purl_name, mine_id FROM all_urls u"+
-			" LEFT JOIN mines m ON u.mine_id = m.id"+
-			" LEFT JOIN licenses l ON u.license_id = l.id"+
-			" LEFT JOIN versions v ON u.version_id = v.id"+
+			mineLeftJoinSQL+
+			licLeftJoinSQL+
+			verLeftJoinSQL+
 			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3"+
 			" ORDER BY date DESC",
 		purlType, purlName, purlVersion)
 	if err != nil {
 		m.s.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
-		return AllUrl{}, fmt.Errorf("failed to query the all urls table: %v", err)
+		return AllURL{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Pick one URL to return (checking for license details also)
@@ -170,14 +179,14 @@ func (m *AllUrlsModel) GetUrlsByPurlNameTypeVersion(purlName, purlType, purlVers
 }
 
 // pickOneUrl takes the potential matching component/versions and selects the most appropriate one.
-func pickOneUrl(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllUrl, purlName, purlType, purlReq string) (AllUrl, error) {
+func pickOneUrl(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
 	if len(allUrls) == 0 {
 		s.Infof("No component match (in urls) found for %v, %v", purlName, purlType)
-		return AllUrl{}, nil
+		return AllURL{}, nil
 	}
 	// s.Debugf("Potential Matches: %v", allUrls)
 	var c *semver.Constraints
-	var urlMap = make(map[*semver.Version]AllUrl)
+	var urlMap = make(map[*semver.Version]AllURL)
 	if len(purlReq) > 0 {
 		s.Debugf("Building version constraint for %v: %v", purlName, purlReq)
 		var err error
@@ -212,7 +221,7 @@ func pickOneUrl(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllUrl,
 	}
 	if len(urlMap) == 0 { // TODO should we return the latest version anyway?
 		s.Warnf("No component match found for %v, %v after filter %v", purlName, purlType, purlReq)
-		return AllUrl{}, nil
+		return AllURL{}, nil
 	}
 	var versions = make([]*semver.Version, len(urlMap))
 	var vi = 0
@@ -227,25 +236,26 @@ func pickOneUrl(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllUrl,
 	url, ok := urlMap[version] // Retrieve the latest accepted URL version
 	if !ok {
 		s.Errorf("Problem retrieving URL data for %v (%v, %v)", version, purlName, purlType)
-		return AllUrl{}, fmt.Errorf("failed to retrieve specific URL version: %v", version)
+		return AllURL{}, fmt.Errorf("failed to retrieve specific URL version: %v", version)
 	}
-	url.Url, _ = purlutils.ProjectUrl(purlName, purlType)
+	url.URL, _ = purlutils.ProjectUrl(purlName, purlType)
 
 	s.Debugf("Selected version: %#v", url)
 	if len(url.License) == 0 && projModel != nil { // Check for a project license if we don't have a component one
-		project, err := projModel.GetProjectByPurlName(purlName, url.MineId)
-		if err != nil {
+		project, err := projModel.GetProjectByPurlName(purlName, url.MineID)
+		switch {
+		case err != nil:
 			s.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
-		} else if len(project.License) > 0 {
+		case len(project.License) > 0:
 			s.Debugf("Adding project license data to %v from %v", url, project)
 			url.License = project.License
 			url.IsSpdx = project.IsSpdx
-			url.LicenseId = project.LicenseId
-		} else if len(project.GitLicense) > 0 {
+			url.LicenseID = project.LicenseID
+		case len(project.GitLicense) > 0:
 			s.Debugf("Adding project git license data to %v from %v", url, project)
 			url.License = project.GitLicense
 			url.IsSpdx = project.GitIsSpdx
-			url.LicenseId = project.GitLicenseId
+			url.LicenseID = project.GitLicenseID
 		}
 	}
 	return url, nil // Return the best component match

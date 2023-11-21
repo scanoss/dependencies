@@ -98,7 +98,7 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }
 
-// telemetryRequestTime records the request time to telemetry
+// telemetryRequestTime records the request time to telemetry.
 func telemetryRequestTime(ctx context.Context, config *myconfig.ServerConfig, requestStartTime time.Time) {
 	if config.Telemetry.Enabled {
 		elapsedTime := time.Since(requestStartTime).Milliseconds() // Time taken to run the dependency request
@@ -106,7 +106,7 @@ func telemetryRequestTime(ctx context.Context, config *myconfig.ServerConfig, re
 	}
 }
 
-// telemetryReqCounters counts the number of requests for telemetry
+// telemetryReqCounters counts the number of requests for telemetry.
 func telemetryReqCounters(ctx context.Context, config *myconfig.ServerConfig, depRequest []*pb.DependencyRequest_Files) {
 	if config.Telemetry.Enabled {
 		oltpMetrics.depFileCounter.Add(ctx, int64(len(depRequest))) // count the number of dep files requested (usually one)

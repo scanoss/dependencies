@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2018-2022 SCANOSS.COM
+ * Copyright (C) 2018-2023 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,24 +92,25 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameType(purlName, purlType, purlReq
 		m.s.Errorf("Please specify a valid Purl Type to query: %v", purlName)
 		return AllURL{}, errors.New("please specify a valid Purl Type to query")
 	}
-	var golangUrls []AllURL
-	err := m.conn.SelectContext(m.ctx, &golangUrls,
-		"SELECT component, v.version_name AS version, v.semver AS semver,"+
-			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
-			" purl_name, mine_id FROM golang_projects u"+
-			" LEFT JOIN mines m ON u.mine_id = m.id"+
-			" LEFT JOIN licenses l ON u.license_id = l.id"+
-			" LEFT JOIN versions v ON u.version_id = v.id"+
-			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND is_indexed = True"+
-			" ORDER BY version_date DESC",
-		purlType, purlName)
+	query := "SELECT component, v.version_name AS version, v.semver AS semver," +
+		" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx," +
+		" purl_name, mine_id FROM golang_projects u" +
+		" LEFT JOIN mines m ON u.mine_id = m.id" +
+		" LEFT JOIN licenses l ON u.license_id = l.id" +
+		" LEFT JOIN versions v ON u.version_id = v.id" +
+		" WHERE m.purl_type = $1 AND u.purl_name = $2 AND is_indexed = True" +
+		" ORDER BY version_date DESC"
+	sqlQueryTrace(m.config.Database.Trace, m.s, query, purlType, purlName)
+	var allUrls []AllURL
+	err := m.conn.SelectContext(m.ctx, &allUrls, query, purlType, purlName)
 	if err != nil {
 		m.s.Errorf("Failed to query golang projects table for %v - %v: %v", purlType, purlName, err)
 		return AllURL{}, fmt.Errorf("failed to query the golang projects table: %v", err)
 	}
-	m.s.Debugf("Found %v results for %v, %v.", len(golangUrls), purlType, purlName)
+	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
+	sqlResultsTrace(m.config.Database.Trace, m.s, allUrls)
 	// Pick the most appropriate version to return
-	return pickOneUrl(m.s, nil, golangUrls, purlName, purlType, purlReq)
+	return pickOneUrl(m.s, nil, allUrls, purlName, purlType, purlReq)
 }
 
 // GetGolangUrlsByPurlNameTypeVersion searches Golang Projects for specified Purl, Type and Version.
@@ -126,23 +127,24 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 		m.s.Error("Please specify a valid Purl Version to query")
 		return AllURL{}, errors.New("please specify a valid Purl Version to query")
 	}
+	query := "SELECT component, v.version_name AS version, v.semver AS semver," +
+		" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx," +
+		" purl_name, mine_id FROM golang_projects u" +
+		" LEFT JOIN mines m ON u.mine_id = m.id" +
+		" LEFT JOIN licenses l ON u.license_id = l.id" +
+		" LEFT JOIN versions v ON u.version_id = v.id" +
+		" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3 AND is_indexed = True" +
+		" ORDER BY version_date DESC"
+	sqlQueryTrace(m.config.Database.Trace, m.s, query, purlType, purlName, purlVersion)
 	var allURLs []AllURL
-	err := m.conn.SelectContext(m.ctx, &allURLs,
-		"SELECT component, v.version_name AS version, v.semver AS semver,"+
-			" l.license_name AS license, l.spdx_id AS license_id, l.is_spdx AS is_spdx,"+
-			" purl_name, mine_id FROM golang_projects u"+
-			" LEFT JOIN mines m ON u.mine_id = m.id"+
-			" LEFT JOIN licenses l ON u.license_id = l.id"+
-			" LEFT JOIN versions v ON u.version_id = v.id"+
-			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3 AND is_indexed = True"+
-			" ORDER BY version_date DESC",
-		purlType, purlName, purlVersion)
+	err := m.conn.SelectContext(m.ctx, &allURLs, query, purlType, purlName, purlVersion)
 	if err != nil {
 		m.s.Errorf("Failed to query golang projects table for %v - %v: %v", purlType, purlName, err)
 		return AllURL{}, fmt.Errorf("failed to query the golang projects table: %v", err)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allURLs), purlType, purlName)
 	if len(allURLs) == 0 { // Check pkg.go.dev for the latest data
+		m.s.Debugf("Checking PkgGoDev for live info...")
 		allURL, err := m.getLatestPkgGoDev(purlName, purlType, purlVersion)
 		if err == nil {
 			m.s.Debugf("Retrieved golang data from pkg.go.dev: %#v", allURL)
@@ -151,6 +153,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 			m.s.Infof("Ran into an issue looking up pkg.go.dev for: %v - %v. Ignoring", purlName, purlVersion)
 		}
 	}
+	sqlResultsTrace(m.config.Database.Trace, m.s, allURLs)
 	// Pick the most appropriate version to return
 	return pickOneUrl(m.s, nil, allURLs, purlName, purlType, "")
 }

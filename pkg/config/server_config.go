@@ -53,6 +53,7 @@ type ServerConfig struct {
 		Schema  string `env:"DB_SCHEMA"`
 		SslMode string `env:"DB_SSL_MODE"` // enable/disable
 		Dsn     string `env:"DB_DSN"`
+		Trace   bool   `env:"APP_TRACE"` // true/false
 	}
 	Components struct {
 		CommitMissing bool `env:"COMP_COMMIT_MISSING"` // Write component details to the DB if they are looked up live
@@ -98,6 +99,7 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Database.User = "scanoss"
 	cfg.Database.Schema = "scanoss"
 	cfg.Database.SslMode = "disable"
+	cfg.Database.Trace = false
 	cfg.Components.CommitMissing = false
 	cfg.Logging.DynamicLogging = true
 	cfg.Logging.DynamicPort = "localhost:60051"

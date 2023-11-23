@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2018-2022 SCANOSS.COM
+ * Copyright (C) 2018-2023 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,10 @@ package models
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"os"
+	"regexp"
+	"testing"
 
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
@@ -63,6 +66,24 @@ func loadTestSQLDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, fil
 	return nil
 }
 
+// sqliteSetup sets up an in-memory SQL Lite DB for testing.
+func sqliteSetup(t *testing.T) *sqlx.DB {
+	db, err := sqlx.Connect("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	return db
+}
+
+// sqliteConn sets up a connection to a test DB.
+func sqliteConn(t *testing.T, ctx context.Context, db *sqlx.DB) *sqlx.Conn {
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	return conn
+}
+
 // CloseDB closes the specified DB and logs any errors.
 func CloseDB(db *sqlx.DB) {
 	if db != nil {
@@ -88,10 +109,25 @@ func CloseConn(conn *sqlx.Conn) {
 // CloseRows closes the specified DB query row and logs any errors.
 func CloseRows(rows *sqlx.Rows) {
 	if rows != nil {
-		// zlog.S.Debugf("Closing Rows...")
 		err := rows.Close()
 		if err != nil {
 			zlog.S.Warnf("Problem closing Rows: %v", err)
 		}
+	}
+}
+
+var sqlRegex = regexp.MustCompile(`\$\d+`) // regex to check for SQL parameters
+
+// sqlQueryTrace logs the given SQL query if trace and debug are enabled.
+func sqlQueryTrace(trace bool, s *zap.SugaredLogger, query string, args ...interface{}) {
+	if trace {
+		s.Debugf("SQL Query: "+sqlRegex.ReplaceAllString(query, "%v"), args...)
+	}
+}
+
+// sqlResultsTrace logs the given SQL result if trace and debug are enabled.
+func sqlResultsTrace(trace bool, s *zap.SugaredLogger, results interface{}) {
+	if trace {
+		s.Debugf("SQL Results: %#v", results)
 	}
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2018-2022 SCANOSS.COM
+ * Copyright (C) 2018-2023 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
-	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 )
 
@@ -32,18 +31,11 @@ func TestProjectsSearch(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := context.Background()
-	ctx = ctxzap.ToContext(ctx, zlog.L)
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db, err := sqlx.Connect("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	db := sqliteSetup(t) // Setup SQL Lite DB
 	defer CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
 	err = loadTestSQLDataFiles(db, ctx, conn, []string{"../models/tests/projects.sql", "../models/tests/mines.sql", "../models/tests/licenses.sql"})
 	if err != nil {
@@ -118,18 +110,11 @@ func TestProjectsSearchBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := context.Background()
-	ctx = ctxzap.ToContext(ctx, zlog.L)
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db, err := sqlx.Connect("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	db := sqliteSetup(t) // Setup SQL Lite DB
 	defer CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
 	projectsModel := NewProjectModel(ctx, s, conn)
 	_, err = projectsModel.GetProjectsByPurlName("rubbish", "rubbish")

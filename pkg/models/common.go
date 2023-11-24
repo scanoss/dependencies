@@ -21,10 +21,11 @@ package models
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"regexp"
 	"testing"
+
+	"go.uber.org/zap"
 
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"

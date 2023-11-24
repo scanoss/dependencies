@@ -53,7 +53,7 @@ type ServerConfig struct {
 		Schema  string `env:"DB_SCHEMA"`
 		SslMode string `env:"DB_SSL_MODE"` // enable/disable
 		Dsn     string `env:"DB_DSN"`
-		Trace   bool   `env:"APP_TRACE"` // true/false
+		Trace   bool   `env:"DB_TRACE"` // true/false
 	}
 	Components struct {
 		CommitMissing bool `env:"COMP_COMMIT_MISSING"` // Write component details to the DB if they are looked up live

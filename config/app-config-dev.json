@@ -15,7 +15,8 @@
     "Host":   "localhost",
     "User":   "scanoss",
     "Passwd": "secret123!",
-    "Schema": "scanoss"
+    "Schema": "scanoss",
+    "Trace": false
   },
   "Components": {
     "CommitMissing": false

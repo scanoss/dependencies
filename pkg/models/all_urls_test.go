@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2018-2022 SCANOSS.COM
+ * Copyright (C) 2018-2023 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
-	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	myconfig "scanoss.com/dependencies/pkg/config"
 )
@@ -33,23 +34,13 @@ func TestAllUrlsSearch(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := context.Background()
-	ctx = ctxzap.ToContext(ctx, zlog.L)
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	if s == nil {
-		t.Fatalf("No sugared logger from context: %#v", ctx)
-	}
-	db, err := sqlx.Connect("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	db := sqliteSetup(t) // Setup SQL Lite DB
 	defer CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -58,9 +49,11 @@ func TestAllUrlsSearch(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
+	myConfig.Database.Trace = true
+	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
+		NewGolangProjectModel(ctx, s, conn, myConfig), database.NewDBSelectContext(s, conn, myConfig.Database.Trace))
 
-	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "")
+	allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem", "")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
@@ -69,66 +62,66 @@ func TestAllUrlsSearch(t *testing.T) {
 	}
 	fmt.Printf("All Urls: %#v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetUrlsByPurlNameType("NONEXISTENT", "none", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlNameType("NONEXISTENT", "none", "")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(allUrls.PurlName) > 0 {
-		t.Errorf("all_urls.GetUrlsByPurlNameType() URLs found when none should be: %v", allUrlsModel)
+		t.Errorf("all_urls.GetURLsByPurlNameType() URLs found when none should be: %v", allUrlsModel)
 	}
 	fmt.Printf("No Urls: %v\n", allUrls)
 
-	_, err = allUrlsModel.GetUrlsByPurlNameType("NONEXISTENT", "", "")
+	_, err = allUrlsModel.GetURLsByPurlNameType("NONEXISTENT", "", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
+		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetUrlsByPurlNameType("", "", "")
+	_, err = allUrlsModel.GetURLsByPurlNameType("", "", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
+		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetUrlsByPurlString("", "")
+	_, err = allUrlsModel.GetURLsByPurlString("", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
+		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetUrlsByPurlString("rubbish-purl", "")
+	_, err = allUrlsModel.GetURLsByPurlString("rubbish-purl", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
+		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", "")
 	if err != nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = %v", err)
+		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlString() No URLs returned from query")
 	}
 	fmt.Printf("All Urls: %v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:golang/google.golang.org/grpc", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:golang/google.golang.org/grpc", "")
 	if err != nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = %v", err)
+		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlString() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url: %v\n", allUrls)
+	fmt.Printf("Golang URL: %v\n", allUrls)
 
 	fmt.Printf("Searching for pkg:golang/github.com/scanoss/dependencies")
-	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:golang/github.com/scanoss/dependencies", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:golang/github.com/scanoss/dependencies", "")
 	if err != nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = %v", err)
+		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlString() No URLs returned from query")
 	}
-	fmt.Printf("Golang Url: %v\n", allUrls)
+	fmt.Printf("Golang URL: %v\n", allUrls)
 }
 
 func TestAllUrlsSearchVersion(t *testing.T) {
@@ -137,20 +130,13 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := context.Background()
-	ctx = ctxzap.ToContext(ctx, zlog.L)
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db, err := sqlx.Connect("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	db := sqliteSetup(t) // Setup SQL Lite DB
 	defer CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -159,48 +145,50 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
+	myConfig.Database.Trace = true
+	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
+		NewGolangProjectModel(ctx, s, conn, myConfig), database.NewDBSelectContext(s, conn, myConfig.Database.Trace))
 
-	allUrls, err := allUrlsModel.GetUrlsByPurlNameTypeVersion("tablestyle", "gem", "0.0.12")
+	allUrls, err := allUrlsModel.GetURLsByPurlNameTypeVersion("tablestyle", "gem", "0.0.12")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlNameTypeVersion() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlNameTypeVersion() No URLs returned from query")
 	}
 	fmt.Printf("All Urls Version: %#v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.7", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle@0.0.7", "")
 	if err != nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = failed to find purl by version string")
+		t.Errorf("all_urls.GetURLsByPurlString() error = failed to find purl by version string")
 	}
 	fmt.Printf("All Urls Version String: %#v\n", allUrls)
 
-	_, err = allUrlsModel.GetUrlsByPurlNameTypeVersion("", "", "")
+	_, err = allUrlsModel.GetURLsByPurlNameTypeVersion("", "", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlNameTypeVersion() error = did not get an error")
+		t.Errorf("all_urls.GetURLsByPurlNameTypeVersion() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetUrlsByPurlNameTypeVersion("NONEXISTENT", "", "")
+	_, err = allUrlsModel.GetURLsByPurlNameTypeVersion("NONEXISTENT", "", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlNameTypeVersion() error = did not get an error")
+		t.Errorf("all_urls.GetURLsByPurlNameTypeVersion() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetUrlsByPurlNameTypeVersion("NONEXISTENT", "NONEXISTENT", "")
+	_, err = allUrlsModel.GetURLsByPurlNameTypeVersion("NONEXISTENT", "NONEXISTENT", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlNameTypeVersion() error = did not get an error")
+		t.Errorf("all_urls.GetURLsByPurlNameTypeVersion() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
 
-	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "22.22.22") // Shouldn't exist
+	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", "22.22.22") // Shouldn't exist
 	if err != nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = failed to find purl by version string")
+		t.Errorf("all_urls.GetURLsByPurlString() error = failed to find purl by version string")
 	}
 	if len(allUrls.PurlName) > 0 {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = Found match, when we shouldn't: %v", allUrls)
+		t.Errorf("all_urls.GetURLsByPurlString() error = Found match, when we shouldn't: %v", allUrls)
 	}
 }
 
@@ -210,20 +198,13 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := context.Background()
-	ctx = ctxzap.ToContext(ctx, zlog.L)
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db, err := sqlx.Connect("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	db := sqliteSetup(t) // Setup SQL Lite DB
 	defer CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -232,23 +213,25 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
+	myConfig.Database.Trace = true
+	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
+		NewGolangProjectModel(ctx, s, conn, myConfig), database.NewDBSelectContext(s, conn, myConfig.Database.Trace))
 
-	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", ">0.0.4")
+	allUrls, err := allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", ">0.0.4")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlString() No URLs returned from query")
 	}
 	fmt.Printf("All Urls Version: %#v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "<0.0.4>")
+	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", "<0.0.4>")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlString() No URLs returned from query")
 	}
 }
 
@@ -258,20 +241,13 @@ func TestAllUrlsSearchNoProject(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := context.Background()
-	ctx = ctxzap.ToContext(ctx, zlog.L)
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db, err := sqlx.Connect("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	db := sqliteSetup(t) // Setup SQL Lite DB
 	defer CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -280,14 +256,15 @@ func TestAllUrlsSearchNoProject(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, s, conn, nil, NewGolangProjectModel(ctx, s, conn, myConfig))
+	myConfig.App.Trace = true
+	allUrlsModel := NewAllURLModel(ctx, s, conn, nil, NewGolangProjectModel(ctx, s, conn, myConfig), database.NewDBSelectContext(s, conn, myConfig.Database.Trace))
 
-	allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "0.0.8")
+	allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem", "0.0.8")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlNameType() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlNameType() No URLs returned from query")
 	}
 	fmt.Printf("All Urls: %#v\n", allUrls)
 }
@@ -298,20 +275,13 @@ func TestAllUrlsSearchNoLicense(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := context.Background()
-	ctx = ctxzap.ToContext(ctx, zlog.L)
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db, err := sqlx.Connect("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	db := sqliteSetup(t) // Setup SQL Lite DB
 	defer CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
-	err = LoadTestSqlData(db, ctx, conn)
+	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
@@ -320,14 +290,16 @@ func TestAllUrlsSearchNoLicense(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
+	myConfig.App.Trace = true
+	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
+		NewGolangProjectModel(ctx, s, conn, myConfig), database.NewDBSelectContext(s, conn, myConfig.Database.Trace))
 
-	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
+	allUrls, err := allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err != nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = %v", err)
+		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlString() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlString() No URLs returned from query")
 	}
 	fmt.Printf("All (with project) Urls: %#v\n", allUrls)
 }
@@ -338,49 +310,44 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := context.Background()
-	ctx = ctxzap.ToContext(ctx, zlog.L)
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db, err := sqlx.Connect("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	db := sqliteSetup(t) // Setup SQL Lite DB
 	defer CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
 	myConfig, err := myconfig.NewServerConfig(nil)
 	if err != nil {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	allUrlsModel := NewAllUrlModel(ctx, s, conn, NewProjectModel(ctx, s, conn), NewGolangProjectModel(ctx, s, conn, myConfig))
-	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle", "")
+	myConfig.App.Trace = true
+	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
+		NewGolangProjectModel(ctx, s, conn, myConfig), database.NewDBSelectContext(s, conn, myConfig.Database.Trace))
+	_, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error")
+		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
+	_, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err == nil {
-		t.Errorf("all_urls.GetUrlsByPurlString() error = did not get an error: %v", err)
+		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error: %v", err)
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
 	// Load some tables (leaving out projects)
-	err = loadTestSqlDataFiles(db, ctx, conn, []string{"./tests/mines.sql", "./tests/all_urls.sql", "./tests/licenses.sql", "./tests/versions.sql"})
+	err = loadTestSQLDataFiles(db, ctx, conn, []string{"./tests/mines.sql", "./tests/all_urls.sql", "./tests/licenses.sql", "./tests/versions.sql"})
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	// allUrls, err := allUrlsModel.GetUrlsByPurlNameType("tablestyle", "gem", "")
-	allUrls, err := allUrlsModel.GetUrlsByPurlString("pkg:gem/tablestyle@0.0.8", "")
+	// allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem", "")
+	allUrls, err := allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle@0.0.8", "")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
 	if len(allUrls.PurlName) == 0 {
-		t.Errorf("all_urls.GetUrlsByPurlNameType() No URLs returned from query")
+		t.Errorf("all_urls.GetURLsByPurlNameType() No URLs returned from query")
 	}
 	fmt.Printf("All Urls: %v\n", allUrls)
 }

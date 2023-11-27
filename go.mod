@@ -11,7 +11,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.18
 	github.com/package-url/packageurl-go v0.1.2
-	github.com/scanoss/go-grpc-helper v0.2.0
+	github.com/scanoss/go-grpc-helper v0.3.0
 	github.com/scanoss/go-purl-helper v0.2.0
 	github.com/scanoss/papi v0.2.0
 	github.com/scanoss/zap-logging-helper v0.3.0

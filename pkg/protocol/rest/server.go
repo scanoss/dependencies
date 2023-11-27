@@ -40,9 +40,9 @@ func RunServer(config *myconfig.ServerConfig, ctx context.Context, grpcPort, htt
 	}
 	// Open TCP port (in the background) and listen for requests
 	go func() {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx2, cancel := context.WithCancel(ctx)
 		defer cancel()
-		if err := pb.RegisterDependenciesHandlerFromEndpoint(ctx, mux, grpcGateway, opts); err != nil {
+		if err := pb.RegisterDependenciesHandlerFromEndpoint(ctx2, mux, grpcGateway, opts); err != nil {
 			zlog.S.Panicf("Failed to start HTTP gateway %v", err)
 		}
 		gw.StartGateway(srv, config.TLS.CertFile, config.TLS.KeyFile, startTLS)

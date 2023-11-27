@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2018-2022 SCANOSS.COM
+ * Copyright (C) 2018-2023 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,13 +22,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"testing"
 
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 )
 
-// loadSqlData Load the specified SQL files into the supplied DB.
-func loadSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename string) error {
+// loadSQLData Load the specified SQL files into the supplied DB.
+func loadSQLData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename string) error {
 	fmt.Printf("Loading test data file: %v\n", filename)
 	file, err := os.ReadFile(filename)
 	if err != nil {
@@ -45,22 +46,40 @@ func loadSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename str
 	return nil
 }
 
-// LoadTestSqlData loads all the required test SQL files.
-func LoadTestSqlData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn) error {
+// LoadTestSQLData loads all the required test SQL files.
+func LoadTestSQLData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn) error {
 	files := []string{"../models/tests/mines.sql", "../models/tests/all_urls.sql", "../models/tests/projects.sql",
 		"../models/tests/licenses.sql", "../models/tests/versions.sql", "../models/tests/golang_projects.sql"}
-	return loadTestSqlDataFiles(db, ctx, conn, files)
+	return loadTestSQLDataFiles(db, ctx, conn, files)
 }
 
-// loadTestSqlDataFiles loads a list of test SQL files.
-func loadTestSqlDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, files []string) error {
+// loadTestSQLDataFiles loads a list of test SQL files.
+func loadTestSQLDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, files []string) error {
 	for _, file := range files {
-		err := loadSqlData(db, ctx, conn, file)
+		err := loadSQLData(db, ctx, conn, file)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// sqliteSetup sets up an in-memory SQL Lite DB for testing.
+func sqliteSetup(t *testing.T) *sqlx.DB {
+	db, err := sqlx.Connect("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	return db
+}
+
+// sqliteConn sets up a connection to a test DB.
+func sqliteConn(t *testing.T, ctx context.Context, db *sqlx.DB) *sqlx.Conn {
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	return conn
 }
 
 // CloseDB closes the specified DB and logs any errors.
@@ -88,7 +107,6 @@ func CloseConn(conn *sqlx.Conn) {
 // CloseRows closes the specified DB query row and logs any errors.
 func CloseRows(rows *sqlx.Rows) {
 	if rows != nil {
-		// zlog.S.Debugf("Closing Rows...")
 		err := rows.Close()
 		if err != nil {
 			zlog.S.Warnf("Problem closing Rows: %v", err)

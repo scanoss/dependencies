@@ -30,7 +30,7 @@ type DependencyOutput struct {
 
 type DependencyFileOutput struct {
 	File         string               `json:"file"`
-	Id           string               `json:"id"`
+	ID           string               `json:"id"`
 	Status       string               `json:"status"`
 	Dependencies []DependenciesOutput `json:"dependencies"`
 }
@@ -39,14 +39,14 @@ type DependenciesOutput struct {
 	Component string              `json:"component"`
 	Purl      string              `json:"purl"`
 	Version   string              `json:"version"`
-	Url       string              `json:"url"`
+	URL       string              `json:"url"`
 	Comment   string              `json:"comment"`
 	Licenses  []DependencyLicense `json:"licenses"`
 }
 
 type DependencyLicense struct {
 	Name   string `json:"name"`
-	SpdxId string `json:"spdx_id"`
+	SpdxID string `json:"spdx_id"`
 	IsSpdx bool   `json:"is_spdx_approved"`
 }
 
@@ -62,14 +62,14 @@ func ExportDependencyOutput(s *zap.SugaredLogger, output DependencyOutput) ([]by
 
 // ParseDependencyOutput converts the input byte array to a DependencyOutput structure.
 func ParseDependencyOutput(s *zap.SugaredLogger, input []byte) (DependencyOutput, error) {
-	if input == nil || len(input) == 0 {
+	if len(input) == 0 {
 		return DependencyOutput{}, errors.New("no output dependency data supplied to parse")
 	}
 	var data DependencyOutput
 	err := json.Unmarshal(input, &data)
 	if err != nil {
 		s.Errorf("Parse failure: %v", err)
-		return DependencyOutput{}, errors.New(fmt.Sprintf("failed to parse dependency output data: %v", err))
+		return DependencyOutput{}, fmt.Errorf("failed to parse dependency output data: %v", err)
 	}
 	return data, nil
 }

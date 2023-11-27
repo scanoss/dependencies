@@ -34,8 +34,8 @@ type MineModel struct {
 }
 
 type Mine struct {
-	Id       int32  `db:"id"`
-	Name     string `db:"name"`
+	ID       int32  `db:"id"`
+	Name     string `db:"mine_name"`
 	PurlType string `db:"purl_type"`
 }
 
@@ -52,7 +52,7 @@ func (m *MineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 	}
 	var mines []Mine
 	err := m.conn.SelectContext(m.ctx, &mines,
-		"SELECT id,name,purl_type FROM mines WHERE purl_type = $1", purlType,
+		"SELECT id,mine_name,purl_type FROM mines WHERE purl_type = $1", purlType,
 	)
 	if err != nil {
 		m.s.Errorf("Error: Failed to query mines table for %v: %v", purlType, err)
@@ -61,7 +61,7 @@ func (m *MineModel) GetMineIdsByPurlType(purlType string) ([]int32, error) {
 	if len(mines) > 0 {
 		var mineIds []int32
 		for _, mine := range mines {
-			mineIds = append(mineIds, mine.Id)
+			mineIds = append(mineIds, mine.ID)
 		}
 		return mineIds, nil
 	}

@@ -37,10 +37,10 @@ type Project struct {
 	PurlName     string `db:"purl_name"`
 	Component    string `db:"component"`
 	License      string `db:"license"`
-	LicenseId    string `db:"license_id"`
+	LicenseID    string `db:"license_id"`
 	IsSpdx       bool   `db:"is_spdx"`
 	GitLicense   string `db:"g_license"`
-	GitLicenseId string `db:"g_license_id"`
+	GitLicenseID string `db:"g_license_id"`
 	GitIsSpdx    bool   `db:"g_is_spdx"`
 }
 
@@ -78,12 +78,12 @@ func (m *ProjectModel) GetProjectsByPurlName(purlName string, purlType string) (
 }
 
 // GetProjectByPurlName searches the projects' table for details about a Purl Name and Mine ID.
-func (m *ProjectModel) GetProjectByPurlName(purlName string, mineId int32) (Project, error) {
+func (m *ProjectModel) GetProjectByPurlName(purlName string, mineID int32) (Project, error) {
 	if len(purlName) == 0 {
 		m.s.Error("Please specify a valid Purl Name to query")
 		return Project{}, errors.New("please specify a valid Purl Name to query")
 	}
-	if mineId < 0 {
+	if mineID < 0 {
 		m.s.Error("Please specify a valid Mine ID to query")
 		return Project{}, errors.New("please specify a valid Mine ID to query")
 	}
@@ -95,10 +95,10 @@ func (m *ProjectModel) GetProjectByPurlName(purlName string, mineId int32) (Proj
 			" LEFT JOIN licenses l ON p.license_id = l.id"+
 			" LEFT JOIN licenses g ON p.git_license_id = g.id"+
 			" WHERE purl_name = $1 AND mine_id = $2",
-		purlName, mineId)
+		purlName, mineID)
 	defer CloseRows(rows)
 	if err != nil {
-		m.s.Errorf("Error: Failed to query projects table for %v, %v: %v", purlName, mineId, err)
+		m.s.Errorf("Error: Failed to query projects table for %v, %v: %v", purlName, mineID, err)
 		return Project{}, fmt.Errorf("failed to query the projects table: %v", err)
 	}
 	var project Project
@@ -106,7 +106,7 @@ func (m *ProjectModel) GetProjectByPurlName(purlName string, mineId int32) (Proj
 		err = rows.StructScan(&project)
 		if err != nil {
 			m.s.Errorf("Failed to parse projects table results for %#v: %v", rows, err)
-			m.s.Errorf("Query failed for purl_name = %v, mine_id = %v", purlName, mineId)
+			m.s.Errorf("Query failed for purl_name = %v, mine_id = %v", purlName, mineID)
 			return Project{}, fmt.Errorf("failed to query the projects table: %v", err)
 		}
 	}

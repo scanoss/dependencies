@@ -41,14 +41,14 @@ type DepPurlInput struct {
 
 // ParseDependencyInput converts the input byte array to a DependencyInput structure.
 func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, error) {
-	if input == nil || len(input) == 0 {
+	if len(input) == 0 {
 		return DependencyInput{}, errors.New("no input dependency data supplied to parse")
 	}
 	var data DependencyInput
 	err := json.Unmarshal(input, &data)
 	if err != nil {
 		s.Errorf("Parse failure: %v", err)
-		return DependencyInput{}, errors.New(fmt.Sprintf("failed to parse dependency input data: %v", err))
+		return DependencyInput{}, fmt.Errorf("failed to parse dependency input data: %v", err)
 	}
 	return data, nil
 }

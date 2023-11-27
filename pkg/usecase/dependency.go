@@ -21,6 +21,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
@@ -39,8 +41,9 @@ type DependencyUseCase struct {
 // NewDependencies creates a new instance of the Dependency Use Case.
 func NewDependencies(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
 	return &DependencyUseCase{ctx: ctx, s: s, conn: conn,
-		allUrls: models.NewAllUrlModel(ctx, s, conn, models.NewProjectModel(ctx, s, conn),
+		allUrls: models.NewAllURLModel(ctx, s, conn, models.NewProjectModel(ctx, s, conn),
 			models.NewGolangProjectModel(ctx, s, conn, config),
+			database.NewDBSelectContext(s, conn, config.Database.Trace),
 		),
 		lic: models.NewLicenseModel(ctx, s, conn),
 	}
@@ -54,7 +57,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 	for _, file := range request.Files {
 		var fileOutput dtos.DependencyFileOutput
 		fileOutput.File = file.File
-		fileOutput.Id = "dependency"
+		fileOutput.ID = "dependency"
 		fileOutput.Status = "pending"
 		var depOutputs []dtos.DependenciesOutput
 		d.s.Infof("Processing %v purls for %v...", len(file.Purls), file.File)
@@ -65,7 +68,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			}
 			var depOutput dtos.DependenciesOutput
 			depOutput.Purl = strings.Split(purl.Purl, "@")[0] // Remove any version specific info from the PURL
-			url, err := d.allUrls.GetUrlsByPurlString(purl.Purl, purl.Requirement)
+			url, err := d.allUrls.GetURLsByPurlString(purl.Purl, purl.Requirement)
 			if err != nil {
 				d.s.Warnf("Problem encountered extracting URLs for: %v, %v - %v.", file.File, purl, err)
 				problems = true // Record this as a warning
@@ -73,9 +76,9 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			}
 			depOutput.Component = url.Component
 			depOutput.Version = url.Version
-			depOutput.Url = url.Url
+			depOutput.URL = url.URL
 			var licenses []dtos.DependencyLicense
-			splitLicenses := strings.Split(url.LicenseId, "/") // Check to see if we have multiple licenses returned
+			splitLicenses := strings.Split(url.LicenseID, "/") // Check to see if we have multiple licenses returned
 			if len(splitLicenses) > 1 {
 				for _, splitLicense := range splitLicenses {
 					spl := strings.TrimSpace(splitLicense)
@@ -87,13 +90,13 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 						}
 						var license dtos.DependencyLicense
 						license.Name = spl
-						license.SpdxId = spl
+						license.SpdxID = spl
 						license.IsSpdx = false
 						licenses = append(licenses, license)
 					} else {
 						var license dtos.DependencyLicense
 						license.Name = lic.LicenseName
-						license.SpdxId = lic.LicenseId
+						license.SpdxID = lic.LicenseID
 						license.IsSpdx = lic.IsSpdx
 						licenses = append(licenses, license)
 					}
@@ -101,7 +104,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			} else {
 				var license dtos.DependencyLicense
 				license.Name = url.License
-				license.SpdxId = url.LicenseId
+				license.SpdxID = url.LicenseID
 				license.IsSpdx = url.IsSpdx
 				licenses = append(licenses, license)
 			}

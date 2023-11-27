@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2018-2022 SCANOSS.COM
+ * Copyright (C) 2018-2023 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/jmoiron/sqlx"
 	purlutils "github.com/scanoss/go-purl-helper/pkg"
@@ -35,6 +37,7 @@ type AllUrlsModel struct {
 	conn       *sqlx.Conn
 	project    *ProjectModel
 	golangProj *GolangProjects
+	q          *database.DBQueryContext
 }
 
 type AllURL struct {
@@ -59,8 +62,8 @@ const (
 )
 
 // NewAllURLModel creates a new instance of the 'All URL' Model.
-func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects) *AllUrlsModel {
-	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj}
+func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects, q *database.DBQueryContext) *AllUrlsModel {
+	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj, q: q}
 }
 
 // GetURLsByPurlString searches for component details of the specified Purl string (and optional requirement).
@@ -91,9 +94,13 @@ func (m *AllUrlsModel) GetURLsByPurlString(purlString, purlReq string) (AllURL, 
 	}
 	if purl.Type == "golang" {
 		allURL, err := m.golangProj.GetGoLangURLByPurl(purl, purlName, purlReq) // Search a separate table for golang dependencies
-		// If no golang package is found, but it's a GitHub component, search GitHub for it
-		if err == nil && allURL.Component == "" && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
-			m.s.Debugf("Didn't find golang component in projects table for %v. Checking all urls...", purlString)
+		// If no golang package/license is found, but it's a GitHub component, search GitHub for it
+		if err == nil && (len(allURL.Component) == 0 || len(allURL.License) == 0) && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
+			if len(allURL.Component) == 0 {
+				m.s.Debugf("Didn't find component in golang projects table for %v. Checking all urls...", purlString)
+			} else if len(allURL.License) == 0 {
+				m.s.Debugf("Didn't find license in golang projects table for %v. Checking all urls...", purlString)
+			}
 			purlString = purlutils.ConvertGoPurlStringToGithub(purlString) // Convert to GitHub purl
 			purl, err = purlutils.PurlFromString(purlString)
 			if err != nil {
@@ -124,17 +131,11 @@ func (m *AllUrlsModel) GetURLsByPurlNameType(purlName, purlType, purlReq string)
 		m.s.Errorf("Please specify a valid Purl Type to query: %v", purlName)
 		return AllURL{}, errors.New("please specify a valid Purl Type to query")
 	}
+	query := purlSQLQuerySelect + licSpdxSQLQuery + " purl_name, mine_id FROM all_urls u" +
+		mineLeftJoinSQL + licLeftJoinSQL + verLeftJoinSQL +
+		" WHERE m.purl_type = $1 AND u.purl_name = $2 ORDER BY date DESC"
 	var allUrls []AllURL
-	err := m.conn.SelectContext(m.ctx, &allUrls,
-		purlSQLQuerySelect+
-			licSpdxSQLQuery+
-			" purl_name, mine_id FROM all_urls u"+
-			mineLeftJoinSQL+
-			licLeftJoinSQL+
-			verLeftJoinSQL+
-			" WHERE m.purl_type = $1 AND u.purl_name = $2"+
-			" ORDER BY date DESC",
-		purlType, purlName)
+	err := m.q.SelectContext(m.ctx, &allUrls, query, purlType, purlName)
 	if err != nil {
 		m.s.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
 		return AllURL{}, fmt.Errorf("failed to query the all urls table: %v", err)
@@ -158,17 +159,11 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 		m.s.Error("Please specify a valid Purl Version to query")
 		return AllURL{}, errors.New("please specify a valid Purl Version to query")
 	}
+	query := purlSQLQuerySelect + licSpdxSQLQuery + " purl_name, mine_id FROM all_urls u" +
+		mineLeftJoinSQL + licLeftJoinSQL + verLeftJoinSQL +
+		" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3 ORDER BY date DESC"
 	var allUrls []AllURL
-	err := m.conn.SelectContext(m.ctx, &allUrls,
-		purlSQLQuerySelect+
-			licSpdxSQLQuery+
-			" purl_name, mine_id FROM all_urls u"+
-			mineLeftJoinSQL+
-			licLeftJoinSQL+
-			verLeftJoinSQL+
-			" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3"+
-			" ORDER BY date DESC",
-		purlType, purlName, purlVersion)
+	err := m.q.SelectContext(m.ctx, &allUrls, query, purlType, purlName, purlVersion)
 	if err != nil {
 		m.s.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
 		return AllURL{}, fmt.Errorf("failed to query the all urls table: %v", err)

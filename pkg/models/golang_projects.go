@@ -21,7 +21,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"regexp"
+
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 
 	pkggodevclient "github.com/guseggert/pkggodev-client"
 	"github.com/jmoiron/sqlx"
@@ -32,21 +33,23 @@ import (
 )
 
 type GolangProjects struct {
-	ctx    context.Context
-	s      *zap.SugaredLogger
-	conn   *sqlx.Conn
-	config *myconfig.ServerConfig
-	ver    *VersionModel
-	lic    *LicenseModel
-	mine   *MineModel
+	ctx     context.Context
+	s       *zap.SugaredLogger
+	conn    *sqlx.Conn
+	config  *myconfig.ServerConfig
+	q       *database.DBQueryContext
+	ver     *VersionModel
+	lic     *LicenseModel
+	mine    *MineModel
+	project *ProjectModel // TODO Do we add golang component to the projects table?
 }
-
-var vRegex = regexp.MustCompile(`^v\d+\.\d+\.\d+-\d+-\w+$`) // regex to check for commit based version
 
 // NewGolangProjectModel creates a new instance of Golang Project Model.
 func NewGolangProjectModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, config *myconfig.ServerConfig) *GolangProjects {
 	return &GolangProjects{ctx: ctx, s: s, conn: conn, config: config,
+		q:   database.NewDBSelectContext(s, conn, config.Database.Trace),
 		ver: NewVersionModel(ctx, s, conn), lic: NewLicenseModel(ctx, s, conn), mine: NewMineModel(ctx, s, conn),
+		project: NewProjectModel(ctx, s, conn),
 	}
 }
 
@@ -100,17 +103,26 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameType(purlName, purlType, purlReq
 		" LEFT JOIN versions v ON u.version_id = v.id" +
 		" WHERE m.purl_type = $1 AND u.purl_name = $2 AND is_indexed = True" +
 		" ORDER BY version_date DESC"
-	sqlQueryTrace(m.config.Database.Trace, m.s, query, purlType, purlName)
-	var allUrls []AllURL
-	err := m.conn.SelectContext(m.ctx, &allUrls, query, purlType, purlName)
+	var allURLs []AllURL
+	err := m.q.SelectContext(m.ctx, &allURLs, query, purlType, purlName)
 	if err != nil {
 		m.s.Errorf("Failed to query golang projects table for %v - %v: %v", purlType, purlName, err)
 		return AllURL{}, fmt.Errorf("failed to query the golang projects table: %v", err)
 	}
-	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
-	sqlResultsTrace(m.config.Database.Trace, m.s, allUrls)
+	m.s.Debugf("Found %v results for %v, %v.", len(allURLs), purlType, purlName)
+	if len(allURLs) == 0 { // Check pkg.go.dev for the latest data
+		m.s.Debugf("Checking PkgGoDev for live info...")
+		allURL, err := m.getLatestPkgGoDev(purlName, purlType, "")
+		if err == nil {
+			m.s.Debugf("Retrieved golang data from pkg.go.dev: %#v", allURL)
+			allURLs = append(allURLs, allURL)
+		} else {
+			m.s.Infof("Ran into an issue looking up pkg.go.dev for: %v. Ignoring", purlName)
+		}
+	}
+
 	// Pick the most appropriate version to return
-	return pickOneUrl(m.s, nil, allUrls, purlName, purlType, purlReq)
+	return pickOneUrl(m.s, m.project, allURLs, purlName, purlType, purlReq)
 }
 
 // GetGolangUrlsByPurlNameTypeVersion searches Golang Projects for specified Purl, Type and Version.
@@ -135,14 +147,22 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 		" LEFT JOIN versions v ON u.version_id = v.id" +
 		" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3 AND is_indexed = True" +
 		" ORDER BY version_date DESC"
-	sqlQueryTrace(m.config.Database.Trace, m.s, query, purlType, purlName, purlVersion)
 	var allURLs []AllURL
-	err := m.conn.SelectContext(m.ctx, &allURLs, query, purlType, purlName, purlVersion)
+	err := m.q.SelectContext(m.ctx, &allURLs, query, purlType, purlName, purlVersion)
 	if err != nil {
 		m.s.Errorf("Failed to query golang projects table for %v - %v: %v", purlType, purlName, err)
 		return AllURL{}, fmt.Errorf("failed to query the golang projects table: %v", err)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allURLs), purlType, purlName)
+	if len(allURLs) > 0 { // We found an entry. Let's check if it has license data
+		allURL, err2 := pickOneUrl(m.s, m.project, allURLs, purlName, purlType, "")
+		if len(allURL.License) == 0 { // No license data found. Need to search for live info
+			m.s.Debugf("Couldn't find license data for component. Need to search live data")
+			allURLs = allURLs[:0]
+		} else {
+			return allURL, err2 // Return the component details
+		}
+	}
 	if len(allURLs) == 0 { // Check pkg.go.dev for the latest data
 		m.s.Debugf("Checking PkgGoDev for live info...")
 		allURL, err := m.getLatestPkgGoDev(purlName, purlType, purlVersion)
@@ -153,9 +173,8 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 			m.s.Infof("Ran into an issue looking up pkg.go.dev for: %v - %v. Ignoring", purlName, purlVersion)
 		}
 	}
-	sqlResultsTrace(m.config.Database.Trace, m.s, allURLs)
 	// Pick the most appropriate version to return
-	return pickOneUrl(m.s, nil, allURLs, purlName, purlType, "")
+	return pickOneUrl(m.s, m.project, allURLs, purlName, purlType, "")
 }
 
 // savePkg writes the given package details to the Golang Projects table.
@@ -286,7 +305,7 @@ func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllURL, *p
 	latest := false
 	m.s.Debugf("Checking pkg.go.dev for the latest info: %v", pkg)
 	comp, err := client.DescribePackage(pkggodevclient.DescribePackageRequest{Package: pkg})
-	if err != nil && len(purlVersion) > 0 && vRegex.MatchString(purlVersion) {
+	if err != nil && len(purlVersion) > 0 {
 		// We have a version zero search, so look for the latest one
 		m.s.Debugf("Failed to query pkg.go.dev for %v: %v. Trying without version...", pkg, err)
 		comp, err = client.DescribePackage(pkggodevclient.DescribePackageRequest{Package: purlName})

@@ -117,11 +117,11 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 	defer CloseConn(conn)
 	err = LoadTestSQLData(db, ctx, conn)
 	if err != nil {
-		t.Fatalf("failed to load SQL test data: %v", err)
+		t.Fatalf("FAILED: failed to load SQL test data: %v", err)
 	}
 	myConfig, err := myconfig.NewServerConfig(nil)
 	if err != nil {
-		t.Fatalf("failed to load Config: %v", err)
+		t.Fatalf("FAILED: failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
@@ -165,9 +165,6 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 	if err != nil {
 		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = failed to find purl by version string")
 	}
-	if len(url.PurlName) > 0 {
-		t.Errorf("golang_projects.GetGoLangURLByPurlString() error = Found match, when we shouldn't: %v", url)
-	}
 	url, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "=v1.19.0")
 	if err != nil {
 		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = %v", err)
@@ -182,6 +179,15 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 	}
 	if len(url.PurlName) == 0 {
 		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() No URLs returned from query")
+	}
+	fmt.Printf("Golang URL: %v\n", url)
+
+	url, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc@1.7.0", "") // Should be missing license
+	if err != nil {
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() error = %v", err)
+	}
+	if len(url.License) == 0 {
+		t.Errorf("FAILED: golang_projects.GetGoLangURLByPurlString() No URL License returned from query")
 	}
 	fmt.Printf("Golang URL: %v\n", url)
 }
@@ -360,7 +366,7 @@ func TestGolangProjectsSearchBadSql(t *testing.T) {
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = golangProjModel.getLatestPkgGoDev("github.com/scanoss/papi", "golang", "v0.0.99")
+	_, err = golangProjModel.getLatestPkgGoDev("github.com/scanoss/does-not-exist", "golang", "v0.0.99")
 	if err == nil {
 		t.Errorf("FAILED: golang_projects.getLatestPkgGoDev() error = did not get an error: %v", err)
 	} else {

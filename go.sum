@@ -641,8 +641,8 @@ github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/f
 github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDNXVBh4M=
 github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca h1:NugYot0LIVPxTvN8n+Kvkn6TrbMyxQiuvKdEwFdR9vI=
 github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca/go.mod h1:uugorj2VCxiV1x+LzaIdVa9b4S4qGAcH6cbhh4qVxOU=
-github.com/scanoss/go-grpc-helper v0.2.0 h1:Dy5tTU2T/7cti65m8UJNN5xIB+VXl8KXFQhg4ILe31I=
-github.com/scanoss/go-grpc-helper v0.2.0/go.mod h1:bUkHdBfMhZnkYXTbELr0FUe7GntzcDIWM5Q7b9kuFaQ=
+github.com/scanoss/go-grpc-helper v0.3.0 h1:4FeNOUX1X1uxZCd8pWz0iYwoPsH7cm4jK0yM3Mbuuvk=
+github.com/scanoss/go-grpc-helper v0.3.0/go.mod h1:bUkHdBfMhZnkYXTbELr0FUe7GntzcDIWM5Q7b9kuFaQ=
 github.com/scanoss/go-purl-helper v0.2.0 h1:kJBVv3euNhKQunoVFxiHxZLNHgSPAwTbz823oa3wcgw=
 github.com/scanoss/go-purl-helper v0.2.0/go.mod h1:lAtt1KcKIUylaj8YW7Qn/jq5Vvwh8fV2huqfvT9SKLM=
 github.com/scanoss/ipfilter/v2 v2.0.2 h1:GaB9i8kVJg9JQZm5XGStYkEpiaCVdsrj7ezI2wV/oh8=

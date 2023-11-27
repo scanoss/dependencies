@@ -22,10 +22,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
 	"testing"
-
-	"go.uber.org/zap"
 
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
@@ -114,21 +111,5 @@ func CloseRows(rows *sqlx.Rows) {
 		if err != nil {
 			zlog.S.Warnf("Problem closing Rows: %v", err)
 		}
-	}
-}
-
-var sqlRegex = regexp.MustCompile(`\$\d+`) // regex to check for SQL parameters
-
-// sqlQueryTrace logs the given SQL query if trace and debug are enabled.
-func sqlQueryTrace(trace bool, s *zap.SugaredLogger, query string, args ...interface{}) {
-	if trace {
-		s.Debugf("SQL Query: "+sqlRegex.ReplaceAllString(query, "%v"), args...)
-	}
-}
-
-// sqlResultsTrace logs the given SQL result if trace and debug are enabled.
-func sqlResultsTrace(trace bool, s *zap.SugaredLogger, results interface{}) {
-	if trace {
-		s.Debugf("SQL Results: %#v", results)
 	}
 }

@@ -7,7 +7,7 @@ require (
 	github.com/golobby/config/v3 v3.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/guseggert/pkggodev-client v0.0.0-20211029144512-2df8afe3ebe4
-	github.com/jmoiron/sqlx v1.3.5
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/package-url/packageurl-go v0.1.2

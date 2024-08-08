@@ -34,7 +34,7 @@ import (
 type AllUrlsModel struct {
 	ctx        context.Context
 	s          *zap.SugaredLogger
-	conn       *sqlx.Conn
+	conn       *sqlx.Conn // TODO remove?
 	project    *ProjectModel
 	golangProj *GolangProjects
 	q          *database.DBQueryContext

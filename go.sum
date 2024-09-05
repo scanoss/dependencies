@@ -622,8 +622,8 @@ github.com/lyft/protoc-gen-star v0.6.1/go.mod h1:TGAoBVkt8w7MPG72TrKIu85MIdXwDuz
 github.com/mattn/go-sqlite3 v1.14.22 h1:2gZY6PC6kBnID23Tichd1K+Z0oS6nE/XwU+Vz/5o4kU=
 github.com/mattn/go-sqlite3 v1.14.22/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
-github.com/package-url/packageurl-go v0.1.2 h1:0H2DQt6DHd/NeRlVwW4EZ4oEI6Bn40XlNPRqegcxuo4=
-github.com/package-url/packageurl-go v0.1.2/go.mod h1:uQd4a7Rh3ZsVg5j0lNyAfyxIeGde9yrlhjF78GzeW0c=
+github.com/package-url/packageurl-go v0.1.3 h1:4juMED3hHiz0set3Vq3KeQ75KD1avthoXLtmE3I0PLs=
+github.com/package-url/packageurl-go v0.1.3/go.mod h1:nKAWB8E6uk1MHqiS/lQb9pYBGH2+mdJ2PJc2s50dQY0=
 github.com/phuslu/iploc v1.0.20230201 h1:AMhy7j8z0N5iI0jaqh514KTDEB7wVdQJ4Y4DJPCvKBU=
 github.com/phuslu/iploc v1.0.20230201/go.mod h1:gsgExGWldwv1AEzZm+Ki9/vGfyjkL33pbSr9HGpt2Xg=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
@@ -643,8 +643,8 @@ github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca h1:NugYot0LIVPxT
 github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca/go.mod h1:uugorj2VCxiV1x+LzaIdVa9b4S4qGAcH6cbhh4qVxOU=
 github.com/scanoss/go-grpc-helper v0.3.0 h1:4FeNOUX1X1uxZCd8pWz0iYwoPsH7cm4jK0yM3Mbuuvk=
 github.com/scanoss/go-grpc-helper v0.3.0/go.mod h1:bUkHdBfMhZnkYXTbELr0FUe7GntzcDIWM5Q7b9kuFaQ=
-github.com/scanoss/go-purl-helper v0.2.0 h1:kJBVv3euNhKQunoVFxiHxZLNHgSPAwTbz823oa3wcgw=
-github.com/scanoss/go-purl-helper v0.2.0/go.mod h1:lAtt1KcKIUylaj8YW7Qn/jq5Vvwh8fV2huqfvT9SKLM=
+github.com/scanoss/go-purl-helper v0.2.1 h1:jp960a585ycyJSlqZky1NatMJBIQi/JGITDfNSu/9As=
+github.com/scanoss/go-purl-helper v0.2.1/go.mod h1:v20/bKD8G+vGrILdiq6r0hyRD2bO8frCJlu9drEcQ38=
 github.com/scanoss/ipfilter/v2 v2.0.2 h1:GaB9i8kVJg9JQZm5XGStYkEpiaCVdsrj7ezI2wV/oh8=
 github.com/scanoss/ipfilter/v2 v2.0.2/go.mod h1:AwrpX4XGbZ7EKISMi1d6E5csBk1nWB8+ugpvXHFcTpA=
 github.com/scanoss/papi v0.2.0 h1:+mvfiZd7/nx2OdpctfKsqYi2FyGLBnSm4NlVDsc5ncc=

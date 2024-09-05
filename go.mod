@@ -10,7 +10,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.22
-	github.com/package-url/packageurl-go v0.1.2
+	github.com/package-url/packageurl-go v0.1.3
 	github.com/scanoss/go-grpc-helper v0.3.0
 	github.com/scanoss/go-purl-helper v0.2.0
 	github.com/scanoss/papi v0.2.0

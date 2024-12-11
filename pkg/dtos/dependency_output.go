@@ -28,6 +28,12 @@ type DependencyOutput struct {
 	Files []DependencyFileOutput `json:"files"`
 }
 
+type Dependency struct {
+	Purl     string        `json:"purl"`
+	Version  string        `json:"version"`
+	Children []*Dependency `json:"children"`
+}
+
 type DependencyFileOutput struct {
 	File         string               `json:"file"`
 	ID           string               `json:"id"`
@@ -36,12 +42,13 @@ type DependencyFileOutput struct {
 }
 
 type DependenciesOutput struct {
-	Component string              `json:"component"`
-	Purl      string              `json:"purl"`
-	Version   string              `json:"version"`
-	URL       string              `json:"url"`
-	Comment   string              `json:"comment"`
-	Licenses  []DependencyLicense `json:"licenses"`
+	Component             string              `json:"component"`
+	Purl                  string              `json:"purl"`
+	Version               string              `json:"version"`
+	URL                   string              `json:"url"`
+	Comment               string              `json:"comment"`
+	Licenses              []DependencyLicense `json:"licenses"`
+	TransientDependencies []DependencyOutput  `json:"transient_dependencies"`
 }
 
 type DependencyLicense struct {

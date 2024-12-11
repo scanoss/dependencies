@@ -18,8 +18,14 @@
 package service
 
 import (
+	"bufio"
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"scanoss.com/dependencies/pkg/dtos"
+	"strings"
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -50,6 +56,76 @@ func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest)
 	return &common.EchoResponse{Message: request.GetMessage()}, nil
 }
 
+// For a basic print of a single node and its children
+func PrintFromNode(tree map[string]*dtos.Dependency, startNode string) {
+	if dep, exists := tree[startNode]; exists {
+		fmt.Printf("Tree from node %s:\n", startNode)
+		printNode(dep, 0)
+	} else {
+		fmt.Printf("Node %s not found in tree\n", startNode)
+	}
+}
+
+func printNode(dep *dtos.Dependency, level int) {
+	if dep == nil {
+		return
+	}
+
+	indent := strings.Repeat("  ", level)
+	fmt.Printf("%s%s@%s\n", indent, dep.Purl, dep.Version)
+
+	for _, child := range dep.Children {
+		printNode(child, level+1)
+	}
+}
+
+func SaveDependencyTreeToFile(dep *dtos.Dependency, filename string) error {
+	// Create directory if it doesn't exist
+	dir := filepath.Dir(filename)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %v", err)
+	}
+
+	// Open file for writing
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %v", err)
+	}
+	defer file.Close()
+
+	// Create a buffered writer for better performance
+	writer := bufio.NewWriter(file)
+
+	// Write the tree structure recursively
+	writeTreeNode(dep, 0, writer)
+
+	// Flush the buffer to ensure all data is written
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("failed to flush writer: %v", err)
+	}
+
+	return nil
+}
+
+func writeTreeNode(dep *dtos.Dependency, level int, writer *bufio.Writer) {
+	if dep == nil {
+		return
+	}
+
+	// Write current node with indentation
+	indent := strings.Repeat("  ", level)
+	_, err := writer.WriteString(fmt.Sprintf("%s%s@%s\n", indent, dep.Purl, dep.Version))
+	if err != nil {
+		fmt.Printf("Error writing to file: %v\n", err)
+		return
+	}
+
+	// Recursively write all children
+	for _, child := range dep.Children {
+		writeTreeNode(child, level+1, writer)
+	}
+}
+
 // GetDependencies searches for information about the supplied dependencies.
 func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.DependencyRequest) (*pb.DependencyResponse, error) {
 	requestStartTime := time.Now() // Capture the scan start time
@@ -77,7 +153,24 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	defer gd.CloseSQLConnection(conn)
 	// Search the KB for information about each dependency
 	depUc := usecase.NewDependencies(ctx, s, conn, d.config)
-	dtoDependencies, warn, err := depUc.GetDependencies(dtoRequest)
+	var purls []string
+	var versions []string
+	for _, file := range request.Files {
+
+		for _, purl := range file.Purls {
+			purls = append(purls, purl.Purl)
+			versions = append(versions, purl.Requirement)
+			continue
+		}
+	}
+
+	fmt.Println("DTO", dtoRequest)
+	visitedNodes := make(map[string]bool)
+	tree := make(map[string]*dtos.Dependency)
+	dtoDependencies, warn, err := depUc.GetTransientDependencies(purls, versions, visitedNodes, tree, 4)
+	purlVersion := fmt.Sprintf("%s@%s", purls[0], versions[0])
+	//printNode(tree[purlVersion], 0)
+	SaveDependencyTreeToFile(tree[purlVersion], "/Users/agus/Public/tree.json")
 	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
 	if err != nil {
 		if !warn { // Definitely an error, and not a warning

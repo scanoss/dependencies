@@ -3,4 +3,10 @@ updates:
   - package-ecosystem: gomod
     directory: "/"
     schedule:
-      interval: monthly
+      interval: "monthly"
+      time: "08:00"
+      timezone: "UTC"
+    reviewers:
+      - "@isasmendiagus"
+      - "@dragonscan"
+      - "@ortizjeronimo"

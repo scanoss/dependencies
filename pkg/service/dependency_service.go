@@ -130,9 +130,11 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 
 	s.Infof("Transitive dependencies %v", purls)
 
+	output, err := convertToTransitiveDependencyOutput(s, purls)
+
 	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
 
-	return &pb.TransitiveDependencyResponse{}, nil
+	return output, nil
 }
 
 // telemetryRequestTime records the request time to telemetry.

@@ -56,7 +56,7 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input trasitive_d
 
 	transitiveDependencyCollector := trasitive_dependencies.NewDependencyCollector(adaptDependencyToGraph,
 		trasitive_dependencies.DependencyCollectorCfg{
-			MaxWorkers:    3,     // this should be taken from config
+			MaxWorkers:    20,    // this should be taken from config
 			MaxQueueLimit: 10000, // this should be taken from config
 		}, models.NewDependencyModel(d.ctx, d.logger, d.db))
 

@@ -1,4 +1,4 @@
-package trasitive_dependencies
+package transitive_dependencies
 
 import (
 	"fmt"
@@ -7,12 +7,6 @@ import (
 )
 
 type Status string
-
-const (
-	NOT_VISITED Status = "NOT_VISITED"
-	VISITED     Status = "VISITED"
-	FINISHED    Status = "FINISHED"
-)
 
 // Node represents a node in the dependency graph
 type Dependency struct {

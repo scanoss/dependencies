@@ -19,9 +19,9 @@ package service
 import (
 	"encoding/json"
 	"errors"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
 
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.uber.org/zap"
@@ -75,4 +75,23 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 		return &pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
 	}
 	return &depResp, nil
+}
+
+func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *TransitiveDependencyRequest) (trasitive_dependencies.TransitiveDependencyInput, error) {
+	data, err := json.Marshal(request.purls.Purls)
+	if err != nil {
+		s.Errorf("Problem marshalling dependency request input: %v", err)
+		return trasitive_dependencies.TransitiveDependencyInput{}, errors.New("problem marshalling dependency input")
+	}
+	s.Debugf("Parsed data: %v", data)
+	components, err := dtos.ParseComponentsInput(s, data)
+	if err != nil {
+		s.Errorf("Problem parsing dependency request input: %v", err)
+		return trasitive_dependencies.TransitiveDependencyInput{}, errors.New("problem parsing dependency input")
+	}
+	return trasitive_dependencies.TransitiveDependencyInput{
+		Components: components,
+		Ecosystem:  request.ecosystem,
+		Depth:      int(request.depth),
+	}, nil
 }

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"regexp"
 	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
 
 	pb "github.com/scanoss/papi/api/dependenciesv2"
@@ -77,8 +78,8 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 	return &depResp, nil
 }
 
-func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *TransitiveDependencyRequest) (trasitive_dependencies.TransitiveDependencyInput, error) {
-	data, err := json.Marshal(request.purls.Purls)
+func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.TransitiveDependencyRequest) (trasitive_dependencies.TransitiveDependencyInput, error) {
+	data, err := json.Marshal(request.Purls)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request input: %v", err)
 		return trasitive_dependencies.TransitiveDependencyInput{}, errors.New("problem marshalling dependency input")
@@ -91,7 +92,36 @@ func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *Transitiv
 	}
 	return trasitive_dependencies.TransitiveDependencyInput{
 		Components: components,
-		Ecosystem:  request.ecosystem,
-		Depth:      int(request.depth),
+		Ecosystem:  request.Ecosystem,
+		Depth:      int(request.Depth),
 	}, nil
+}
+
+func convertToTransitiveDependencyOutput(s *zap.SugaredLogger, purls []trasitive_dependencies.Purl) (*pb.TransitiveDependencyResponse, error) {
+
+	splitPurlVersionRegEx, _ := regexp.Compile(`(?P<purl>.*?)@(?P<version>.*)`)
+	var tdr pb.TransitiveDependencyResponse
+
+	for _, purl := range purls {
+		matches := splitPurlVersionRegEx.FindStringSubmatch(string(purl))
+		if len(matches) == 0 {
+			continue
+		}
+
+		// Get the indices of the named groups
+		purlIndex := splitPurlVersionRegEx.SubexpIndex("purl")
+		versionIndex := splitPurlVersionRegEx.SubexpIndex("version")
+
+		// Check if there's a match and enough capture groups
+		if len(matches) < 2 {
+			continue
+		}
+
+		tdr.Dependencies = append(tdr.Dependencies, &pb.TransitiveDependencyResponse_Dependencies{
+			Purl:    matches[purlIndex],
+			Version: matches[versionIndex],
+		})
+	}
+
+	return &tdr, nil
 }

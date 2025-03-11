@@ -1,16 +1,10 @@
-package trasitive_dependencies
+package transitive_dependencies
 
 import (
 	"fmt"
 	"scanoss.com/dependencies/pkg/models"
 	"sync"
 )
-
-var purlDependencies = map[string][]string{
-	"A": {"B", "C", "D"},
-	"B": {"E", "F"},
-	"F": {"Z", "Z"},
-}
 
 type Job struct {
 	Purl      string
@@ -95,7 +89,7 @@ func (dc *DependencyCollector) Start() {
 
 	// Send initial jobs
 	for _, job := range dc.jobs {
-		fmt.Printf("Main: Sending job %d with depth %d\n", job.Purl, job.Depth)
+		fmt.Printf("Main: Sending job %s with depth %d\n", job.Purl, job.Depth)
 		jobsChannel <- job
 	}
 
@@ -142,7 +136,7 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 		// Mark as active
 		mu.Lock()
 		(*activeWorkers)++
-		fmt.Printf("Worker %d: Started job %d at depth %d (Active workers: %d)\n",
+		fmt.Printf("Worker %d: Started job %s at depth %d (Active workers: %d)\n",
 			id, job.Purl, job.Depth, *activeWorkers)
 		mu.Unlock()
 
@@ -153,11 +147,16 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 		}
 
 		// sanitize versions
-
-		transitiveDependenciesPurls := make([]string, len(transitiveDependencies))
-		for _, dependency := range transitiveDependencies {
-			transitiveDependenciesPurls = append(transitiveDependenciesPurls, dependency.Purl+"@"+dependency.Requirement)
+		var transitiveDependenciesPurls []string
+		for _, ud := range transitiveDependencies {
+			fixedVersion, err := PickFirstVersionFromNpmJsRange(ud.Requirement)
+			fmt.Printf("Resolving requirement %s, to %s\n", ud.Requirement, fixedVersion)
+			if err != nil {
+				continue
+			}
+			transitiveDependenciesPurls = append(transitiveDependenciesPurls, ud.Purl+"@"+fixedVersion)
 		}
+
 		// Generate new jobs with depth-1
 		newJobDepth := job.Depth - 1
 
@@ -169,12 +168,12 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 		// Only add new jobs if depth would be > 0
 		if newJobDepth > 0 {
 			for _, transitive := range transitiveDependencies {
-				fmt.Printf("Worker %d: Generated new job %d at depth %d\n", id, transitive.Purl, newJobDepth)
+				fmt.Printf("Worker %d: Generated new job %s at depth %d\n", id, transitive.Purl, newJobDepth)
 				jobs <- Job{Purl: transitive.Purl, Version: transitive.Requirement, Ecosystem: job.Ecosystem, Depth: newJobDepth}
 			}
 		}
 
-		fmt.Printf("Worker %d: Completed job %d at depth %d\n", id, job.Purl, newJobDepth)
+		fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)
 
 		// Mark as idle and signal
 		mu.Lock()

@@ -11,6 +11,7 @@ import (
 // Grammar for the range version is defined on npmjs https://docs.npmjs.com/cli/v6/using-npm/semver#range-grammar
 
 // PickFirstVersionFromNpmJsRange extracts the first version from a version range string
+// TODO: Use https://www.npmjs.com/package/@npmcli/arborist ?
 func PickFirstVersionFromNpmJsRange(requirement string) (string, error) {
 	if requirement == "" {
 		return "", fmt.Errorf("empty version requirement")

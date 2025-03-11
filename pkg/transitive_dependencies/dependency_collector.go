@@ -28,6 +28,8 @@ type DependencyCollector struct {
 	Config          DependencyCollectorCfg
 	jobs            []Job
 	dependencyModel *models.DependencyModel
+	mapMutex        sync.RWMutex
+	cache           map[string][]models.UnresolvedDependency
 }
 
 type Component struct {
@@ -46,6 +48,8 @@ func NewDependencyCollector(c func(result Result), config DependencyCollectorCfg
 		Callback:        c,
 		Config:          config,
 		dependencyModel: model,
+		mapMutex:        sync.RWMutex{},
+		cache:           make(map[string][]models.UnresolvedDependency),
 	}
 }
 
@@ -66,7 +70,6 @@ func (dc *DependencyCollector) InitJobs(metadata TransitiveDependencyInput) {
 }
 
 func (dc *DependencyCollector) Start() {
-
 	// Create a buffered job channel
 	jobsChannel := make(chan Job, dc.Config.MaxQueueLimit)
 	resultsChannel := make(chan Result, dc.Config.MaxQueueLimit)
@@ -131,7 +134,6 @@ func (dc *DependencyCollector) Start() {
 
 func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup, mu *sync.Mutex, cond *sync.Cond, activeWorkers *int, results chan Result) {
 	defer wg.Done()
-
 	for job := range jobs {
 		// Mark as active
 		mu.Lock()
@@ -140,20 +142,33 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 			id, job.Purl, job.Depth, *activeWorkers)
 		mu.Unlock()
 
-		// Remove carets and operators from version before calling GetDependencies
-		transitiveDependencies, err := dc.dependencyModel.GetDependencies(job.Purl, job.Version, job.Ecosystem)
-		if err != nil {
-			fmt.Printf("Worker %d: Failed to get dependencies for %s: %s\n", id, job.Purl, err)
-		}
+		cacheKey := job.Purl + "@" + job.Version
+		// First try with a read lock only
+		dc.mapMutex.RLock()
+		transitiveDependencies, exists := dc.cache[cacheKey]
+		dc.mapMutex.RUnlock()
 
+		if !exists {
+			transitiveDependencies, _ = dc.dependencyModel.GetDependencies(job.Purl, job.Version, job.Ecosystem)
+			if len(transitiveDependencies) > 0 {
+				dc.mapMutex.Lock()
+				dc.cache[cacheKey] = transitiveDependencies
+				dc.mapMutex.Unlock()
+			}
+		}
 		// sanitize versions
 		var transitiveDependenciesPurls []string
+		var sanitizedDependencies []models.UnresolvedDependency
 		for _, ud := range transitiveDependencies {
 			fixedVersion, err := PickFirstVersionFromNpmJsRange(ud.Requirement)
 			fmt.Printf("Resolving requirement %s, to %s\n", ud.Requirement, fixedVersion)
 			if err != nil {
 				continue
 			}
+			sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{
+				Purl:        ud.Purl,
+				Requirement: fixedVersion,
+			})
 			transitiveDependenciesPurls = append(transitiveDependenciesPurls, ud.Purl+"@"+fixedVersion)
 		}
 
@@ -167,8 +182,9 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 
 		// Only add new jobs if depth would be > 0
 		if newJobDepth > 0 {
-			for _, transitive := range transitiveDependencies {
+			for _, transitive := range sanitizedDependencies {
 				fmt.Printf("Worker %d: Generated new job %s at depth %d\n", id, transitive.Purl, newJobDepth)
+
 				jobs <- Job{Purl: transitive.Purl, Version: transitive.Requirement, Ecosystem: job.Ecosystem, Depth: newJobDepth}
 			}
 		}

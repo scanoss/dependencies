@@ -33,3 +33,5 @@ local-build-commands.txt
 *.tar
 *.gz
 *.zip
+
+.DS_Store

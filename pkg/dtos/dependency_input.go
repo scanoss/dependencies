@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
 
 	"go.uber.org/zap"
 )
@@ -51,4 +52,27 @@ func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, 
 		return DependencyInput{}, fmt.Errorf("failed to parse dependency input data: %v", err)
 	}
 	return data, nil
+}
+
+// ParseTransitiveDependencyInput converts the input byte array to a []string structure.
+func ParseComponentsInput(s *zap.SugaredLogger, input []byte) ([]trasitive_dependencies.Component, error) {
+	if len(input) == 0 {
+		return []trasitive_dependencies.Component{}, errors.New("no input dependency data supplied to parse")
+	}
+	var data []DepPurlInput
+
+	err := json.Unmarshal(input, &data)
+	if err != nil {
+		s.Errorf("Parse failure: %v", err)
+		return []trasitive_dependencies.Component{}, fmt.Errorf("failed to parse dependency input data: %v", err)
+	}
+
+	components := []trasitive_dependencies.Component{}
+	for _, entry := range data {
+		components = append(components, trasitive_dependencies.Component{
+			Purl:    entry.Purl,
+			Version: entry.Requirement,
+		})
+	}
+	return components, nil
 }

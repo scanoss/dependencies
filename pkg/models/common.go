@@ -49,8 +49,9 @@ func loadSQLData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, filename str
 // LoadTestSQLData loads all the required test SQL files.
 func LoadTestSQLData(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn) error {
 	files := []string{"../models/tests/mines.sql", "../models/tests/all_urls.sql", "../models/tests/projects.sql",
-		"../models/tests/licenses.sql", "../models/tests/versions.sql", "../models/tests/golang_projects.sql",
-		"../models/tests/npmjs_dependencies.sql"}
+		"../models/tests/licenses.sql", "../models/tests/versions.sql", "../models/tests/npmjs_dependencies.sql",
+		"../models/tests/golang_projects.sql",
+	}
 	return loadTestSQLDataFiles(db, ctx, conn, files)
 }
 
@@ -67,7 +68,7 @@ func loadTestSQLDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, fil
 
 // sqliteSetup sets up an in-memory SQL Lite DB for testing.
 func sqliteSetup(t *testing.T) *sqlx.DB {
-	db, err := sqlx.Connect("sqlite3", ":memory:")
+	db, err := sqlx.Connect("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}

@@ -3,9 +3,11 @@ package transitive_dependencies
 import (
 	"fmt"
 	"regexp"
+	"scanoss.com/dependencies/pkg/shared"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	packageurl "github.com/package-url/packageurl-go"
 )
 
 // Grammar for the range version is defined on npmjs https://docs.npmjs.com/cli/v6/using-npm/semver#range-grammar
@@ -93,4 +95,41 @@ func normalizeVersion(versionStr string) (string, error) {
 	}
 
 	return version.String(), nil
+}
+
+// GetPurlFromPackageName convert purl@version to PackageURL
+func GetPurlFromPackageName(purl string, ecosystem string) *packageurl.PackageURL {
+	p := strings.Split(purl, "@")
+	// Example with a specific version
+	var versionedPurl = packageurl.NewPackageURL(
+		shared.SupportedEcosystems[ecosystem], // type
+		"",                                    // namespace
+		p[0],                                  // name
+		p[1],                                  // version
+		nil,                                   // qualifiers
+		"",                                    // subpath
+	)
+	return versionedPurl
+}
+
+// GetPackageNameFromPurl convert purl to package name
+func GetPackageNameFromPurl(purl string) (string, error) {
+	// Parse the purl string into a PackageURL object
+	p, err := packageurl.FromString(purl)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse package URL: %w", err)
+	}
+
+	// For Maven packages, combine namespace (groupId) and name (artifactId)
+	if p.Type == "maven" && p.Namespace != "" {
+		return fmt.Sprintf("%s/%s", p.Namespace, p.Name), nil
+	}
+
+	// Return just the name component
+	return p.Name, nil
+}
+
+// GetPurlWithoutVersion convert PackageURL to purl without version
+func GetPurlWithoutVersion(p *packageurl.PackageURL) string {
+	return strings.Split(p.String(), "@")[0]
 }

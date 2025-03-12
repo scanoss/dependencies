@@ -10,7 +10,8 @@ type Status string
 
 // Node represents a node in the dependency graph
 type Dependency struct {
-	Purl Purl
+	Purl    string
+	Version string
 }
 
 type Purl string
@@ -32,18 +33,20 @@ func NewDepGraph() *DepGraph {
 	}
 }
 
-func (dp *DepGraph) getOrCreateDependencyByPurl(purl Purl) *Dependency {
-	if dp.index[purl] == nil {
-		dp.index[purl] = &Dependency{
-			Purl: purl,
+func (dp *DepGraph) getOrCreateDependencyByPurl(d Dependency) *Dependency {
+	key := Purl(d.Purl + "@" + d.Version)
+	if dp.index[key] == nil {
+		dp.index[key] = &Dependency{
+			Purl:    d.Purl,
+			Version: d.Version,
 		}
 	}
 
-	return dp.index[purl]
+	return dp.index[key]
 }
 
 // parent -> children
-func (dp *DepGraph) Insert(dep Purl, transitive Purl) {
+func (dp *DepGraph) Insert(dep Dependency, transitive Dependency) {
 
 	parent := dp.getOrCreateDependencyByPurl(dep)       // scanoss
 	child := dp.getOrCreateDependencyByPurl(transitive) // eslinter
@@ -64,28 +67,23 @@ func (dp *DepGraph) String() string {
 
 	result.WriteString("Dependency Graph:\n")
 
-	// Crear un slice de dependencias para ordenarlas (opcional)
 	deps := make([]*Dependency, 0, len(dp.graph))
 	for dep := range dp.graph {
 		deps = append(deps, dep)
 	}
 
-	// Opcional: ordenar las dependencias por Purl para una salida consistente
 	sort.Slice(deps, func(i, j int) bool {
 		return string(deps[i].Purl) < string(deps[j].Purl)
 	})
 
-	// Iterar sobre cada nodo en el grafo
 	for key, value := range dp.graph {
 		children := value
 
-		// Saltar nodos sin dependencias si se desea
 		if len(children) == 0 {
 			result.WriteString(fmt.Sprintf("%s (Without dependencies)\n", key.Purl))
 			continue
 		}
 
-		// Para cada nodo, imprimir sus dependencias
 		for _, child := range children {
 			result.WriteString(fmt.Sprintf("%s --> %s\n", key.Purl, child.Purl))
 		}
@@ -94,10 +92,10 @@ func (dp *DepGraph) String() string {
 	return result.String()
 }
 
-func (dp *DepGraph) Flatten() []Purl {
-	purls := make([]Purl, 0, len(dp.graph))
+func (dp *DepGraph) Flatten() []Dependency {
+	purls := make([]Dependency, 0, len(dp.graph))
 	for key, _ := range dp.graph {
-		purls = append(purls, key.Purl)
+		purls = append(purls, Dependency{Purl: key.Purl, Version: key.Version})
 	}
 	return purls
 }

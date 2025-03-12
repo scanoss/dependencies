@@ -104,28 +104,28 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 
 func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request *pb.TransitiveDependencyRequest) (*pb.TransitiveDependencyResponse, error) {
 	requestStartTime := time.Now() // Capture the scan start time
-	s := ctxzap.Extract(ctx).Sugar()
-	s.Info("Processing dependency request...")
+	logger := ctxzap.Extract(ctx).Sugar()
+	logger.Info("Processing dependency request...")
 	conn, err := d.db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
-		s.Errorf("Failed to get a database connection from the pool: %v", err)
+		logger.Errorf("Failed to get a database connection from the pool: %v", err)
 		// Return error response...
 		return nil, errors.New("problem getting database pool connection")
 	}
-	defer conn.Close()                                                               // Move this here, after error check
-	transitiveDependencyInput, err := convertToTransitiveDependencyInput(s, request) // Convert to internal DTO for processing
+	defer conn.Close()                                                                    // Move this here, after error check
+	transitiveDependencyInput, err := convertToTransitiveDependencyInput(logger, request) // Convert to internal DTO for processing
 	if err != nil {
-		s.Errorf("Failed to get a database connection from the pool: %v", err)
+		logger.Errorf("Failed to get a database connection from the pool: %v", err)
 		// Return error response...
 		return nil, errors.New("problem getting database pool connection")
 	}
-	s.Infof("Transitive dependencies input: %v", transitiveDependencyInput)
-	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, s, d.db, d.config)
+	logger.Infof("Transitive dependencies input: %v", transitiveDependencyInput)
+	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, logger, d.db, d.config)
 	transitiveDependencies, err := transitiveDependenciesUc.GetTransitiveDependencies(transitiveDependencyInput)
 
-	s.Infof("Transitive dependencies %v", transitiveDependencies)
+	logger.Infof("Transitive dependencies %v", transitiveDependencies)
 
-	output, err := convertToTransitiveDependencyOutput(s, transitiveDependencies)
+	output, err := convertToTransitiveDependencyOutput(logger, transitiveDependencies)
 
 	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
 

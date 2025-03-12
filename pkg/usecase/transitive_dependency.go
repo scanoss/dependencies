@@ -50,25 +50,30 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveD
 	// callback
 	adaptDependencyToGraph := func(result transitiveDep.Result) {
 		for _, purl := range result.Purls {
+			// Get purls for parent and transitive dependency
 			dep, errD := transitiveDep.GetPurlFromPackageName(result.Parent, input.Ecosystem)
 			transitive, errT := transitiveDep.GetPurlFromPackageName(purl, input.Ecosystem)
 
 			if errD != nil || errT != nil {
-				d.logger.Errorf("Error adding transitive dependency: %v", purl)
+				d.logger.Errorf("Error converting package names to purls: parent=%v, transitive=%v, errors: [%v, %v]",
+					result.Parent, purl, errD, errT)
 				continue
 			}
 
+			// Extract base purls without versions
 			depPurl, err := transitiveDep.GetPurlWithoutVersion(dep)
 			if err != nil {
-				d.logger.Errorf("Error adding transitive dependency: %v", purl)
-				continue
-			}
-			tPurl, err := transitiveDep.GetPurlWithoutVersion(transitive)
-			if err != nil {
-				d.logger.Errorf("Error adding transitive dependency: %v", purl)
+				d.logger.Errorf("Error extracting base purl from %v: %v", dep, err)
 				continue
 			}
 
+			tPurl, err := transitiveDep.GetPurlWithoutVersion(transitive)
+			if err != nil {
+				d.logger.Errorf("Error extracting base purl from %v: %v", transitive, err)
+				continue
+			}
+
+			// Insert relationship into dependency graph
 			depGraph.Insert(
 				transitiveDep.Dependency{Purl: depPurl, Version: dep.Version},
 				transitiveDep.Dependency{Purl: tPurl, Version: transitive.Version})

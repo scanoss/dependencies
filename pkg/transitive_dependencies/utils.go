@@ -98,8 +98,20 @@ func normalizeVersion(versionStr string) (string, error) {
 }
 
 // GetPurlFromPackageName convert purl@version to PackageURL
-func GetPurlFromPackageName(purl string, ecosystem string) *packageurl.PackageURL {
-	p := strings.Split(purl, "@")
+func GetPurlFromPackageName(packageName string, ecosystem string) (*packageurl.PackageURL, error) {
+	if ecosystem == "" {
+		return nil, fmt.Errorf("empty ecosystem")
+	}
+
+	_, ok := shared.SupportedEcosystems[ecosystem]
+	if !ok {
+		return nil, fmt.Errorf("invalid ecosystem: %s", ecosystem)
+	}
+
+	if !strings.Contains(packageName, "@") {
+		return nil, fmt.Errorf("no version separator for: %s", packageName)
+	}
+	p := strings.Split(packageName, "@")
 	// Example with a specific version
 	var versionedPurl = packageurl.NewPackageURL(
 		shared.SupportedEcosystems[ecosystem], // type
@@ -109,11 +121,11 @@ func GetPurlFromPackageName(purl string, ecosystem string) *packageurl.PackageUR
 		nil,                                   // qualifiers
 		"",                                    // subpath
 	)
-	return versionedPurl
+	return versionedPurl, nil
 }
 
 // GetPackageNameFromPurl convert purl to package name
-func GetPackageNameFromPurl(purl string) (string, error) {
+func ExtractPackageIdentifierFromPurl(purl string) (string, error) {
 	// Parse the purl string into a PackageURL object
 	p, err := packageurl.FromString(purl)
 	if err != nil {
@@ -130,6 +142,10 @@ func GetPackageNameFromPurl(purl string) (string, error) {
 }
 
 // GetPurlWithoutVersion convert PackageURL to purl without version
-func GetPurlWithoutVersion(p *packageurl.PackageURL) string {
-	return strings.Split(p.String(), "@")[0]
+func GetPurlWithoutVersion(p *packageurl.PackageURL) (string, error) {
+	purl := p.String()
+	if !strings.Contains(purl, "@") {
+		return "", fmt.Errorf("package URL missing version information: %q", purl)
+	}
+	return strings.Split(purl, "@")[0], nil
 }

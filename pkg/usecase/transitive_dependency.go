@@ -50,11 +50,28 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveD
 	// callback
 	adaptDependencyToGraph := func(result transitiveDep.Result) {
 		for _, purl := range result.Purls {
-			dep := transitiveDep.GetPurlFromPackageName(result.Parent, input.Ecosystem)
-			transitive := transitiveDep.GetPurlFromPackageName(purl, input.Ecosystem)
+			dep, errD := transitiveDep.GetPurlFromPackageName(result.Parent, input.Ecosystem)
+			transitive, errT := transitiveDep.GetPurlFromPackageName(purl, input.Ecosystem)
+
+			if errD != nil || errT != nil {
+				d.logger.Errorf("Error adding transitive dependency: %v", purl)
+				continue
+			}
+
+			depPurl, err := transitiveDep.GetPurlWithoutVersion(dep)
+			if err != nil {
+				d.logger.Errorf("Error adding transitive dependency: %v", purl)
+				continue
+			}
+			tPurl, err := transitiveDep.GetPurlWithoutVersion(transitive)
+			if err != nil {
+				d.logger.Errorf("Error adding transitive dependency: %v", purl)
+				continue
+			}
+
 			depGraph.Insert(
-				transitiveDep.Dependency{Purl: transitiveDep.GetPurlWithoutVersion(dep), Version: dep.Version},
-				transitiveDep.Dependency{Purl: transitiveDep.GetPurlWithoutVersion(transitive), Version: transitive.Version})
+				transitiveDep.Dependency{Purl: depPurl, Version: dep.Version},
+				transitiveDep.Dependency{Purl: tPurl, Version: transitive.Version})
 		}
 	}
 

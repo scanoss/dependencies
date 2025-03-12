@@ -67,9 +67,9 @@ func ParseComponentsInput(s *zap.SugaredLogger, input []byte) ([]transitiveDp.Co
 	}
 	packageNames := []transitiveDp.Component{}
 	for _, entry := range data {
-		pName, pError := transitiveDp.GetPackageNameFromPurl(entry.Purl)
+		pName, pError := transitiveDp.ExtractPackageIdentifierFromPurl(entry.Purl)
 		if pError != nil {
-			s.Warnf("Failed to get package name for package %s: %s", entry.Purl, err)
+			s.Warnf("Failed to get package identifier  %s: %s", entry.Purl, err)
 			continue
 		}
 		packageNames = append(packageNames, transitiveDp.Component{

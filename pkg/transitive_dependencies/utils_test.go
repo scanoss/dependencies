@@ -1,6 +1,7 @@
 package transitive_dependencies
 
 import (
+	"github.com/package-url/packageurl-go"
 	"testing"
 )
 
@@ -307,6 +308,185 @@ func TestPickFirstVersionFromNpmJsRange(t *testing.T) {
 				}
 				if version != tt.expected {
 					t.Errorf("got %q, want %q", version, tt.expected)
+				}
+			}
+		})
+	}
+}
+func TestGetPurlFromPackageName(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		ecosystem string
+		expected  string
+		wantErr   bool
+	}{
+		{
+			name:      "npmjs ecosystem",
+			input:     "scanoss@1.2.0",
+			ecosystem: "npmjs",
+			expected:  "pkg:npm/scanoss@1.2.0",
+			wantErr:   false,
+		},
+		{
+			name:      "maven ecosystem",
+			input:     "ai.databand/dbnd-api-deequ@1.2.0",
+			ecosystem: "maven",
+			expected:  "pkg:maven/ai.databand%2Fdbnd-api-deequ@1.2.0",
+			wantErr:   false,
+		},
+		{
+			name:      "ruby ecosystem",
+			input:     "spree_repeat_order@2.1.4",
+			ecosystem: "ruby",
+			expected:  "pkg:gem/spree_repeat_order@2.1.4",
+			wantErr:   false,
+		},
+		{
+			name:      "crates ecosystem",
+			input:     "tecla_client@1.0.1",
+			ecosystem: "crates",
+			expected:  "pkg:crates/tecla_client@1.0.1",
+			wantErr:   false,
+		},
+		{
+			name:      "composer ecosystem",
+			input:     "tecla_client@1.0.1",
+			ecosystem: "composer",
+			expected:  "pkg:composer/tecla_client@1.0.1",
+			wantErr:   false,
+		},
+		{
+			name:      "composer ecosystem",
+			input:     "php-extended/php-checksum-interface@8.0.5",
+			ecosystem: "composer",
+			expected:  "pkg:composer/php-extended%2Fphp-checksum-interface@8.0.5",
+			wantErr:   false,
+		},
+		{
+			name:      "empty ecosystem",
+			input:     "scanoss@1.0.0",
+			ecosystem: "",
+			expected:  "pkg:npm/scanoss@1.2.0",
+			wantErr:   true,
+		},
+		{
+			name:      "invalid ecosystem",
+			input:     "scanoss@1.0.0",
+			ecosystem: "npn",
+			expected:  "pkg:npm/scanoss@1.2.0",
+			wantErr:   true,
+		},
+		{
+			name:      "Invalid package name",
+			input:     "scanoss",
+			ecosystem: "npmjs",
+			expected:  "pkg:npm/scanoss@1.2.0",
+			wantErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			purl, err := GetPurlFromPackageName(tt.input, tt.ecosystem)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error for %s, got nil\n", tt.name)
+				}
+				return
+			}
+			if purl.String() != tt.expected {
+				t.Errorf("got %q, want %q", purl.String(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestExtractPackageIdentifierFromPurl(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "valid package identifier",
+			input:    "pkg:npm/scanoss",
+			expected: "scanoss",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid package identifier",
+			input:    "p:npm/scanoss",
+			expected: "pkg:maven/ai.databand%2Fdbnd-api-deequ@1.2.0",
+			wantErr:  true,
+		},
+		{
+			name:     "get package identifier for maven",
+			input:    "pkg:maven/ai.databand%2Fdbnd-api-deequ",
+			expected: "ai.databand/dbnd-api-deequ",
+			wantErr:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			packageIdentifier, err := ExtractPackageIdentifierFromPurl(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error for %s, got nil\n", tt.name)
+				}
+				return
+			}
+			if packageIdentifier != tt.expected {
+				t.Errorf("got %q, want %q", packageIdentifier, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetPurlWithoutVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *packageurl.PackageURL
+		expected string
+		wantErr  bool
+	}{
+		{
+			name: "",
+			input: packageurl.NewPackageURL(
+				"npm",     // type
+				"",        // namespace
+				"scanoss", // name
+				"1.2.0",   // version
+				nil,       // qualifiers
+				"",        // subpath
+			),
+			expected: "pkg:npm/scanoss",
+			wantErr:  false,
+		},
+		{
+			name: "",
+			input: packageurl.NewPackageURL(
+				"npm",     // type
+				"",        // namespace
+				"scanoss", // name
+				"",        // version
+				nil,       // qualifiers
+				"",        // subpath
+			),
+			expected: "pkg:npm/scanoss",
+			wantErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			purl, err := GetPurlWithoutVersion(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error for %s, got nil\n", tt.name)
+				}
+			} else {
+				if purl != tt.expected {
+					t.Errorf("got %q, want %q", purl, tt.expected)
 				}
 			}
 		})

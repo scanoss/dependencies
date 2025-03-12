@@ -125,3 +125,14 @@ func convertToTransitiveDependencyOutput(s *zap.SugaredLogger, purls []trasitive
 
 	return &tdr, nil
 }
+
+func convertToTransitiveDependencyOutput2(s *zap.SugaredLogger, dependencies []trasitive_dependencies.Dependency) (*pb.TransitiveDependencyResponse, error) {
+	var tdr pb.TransitiveDependencyResponse
+	for _, d := range dependencies {
+		tdr.Dependencies = append(tdr.Dependencies, &pb.TransitiveDependencyResponse_Dependencies{
+			Purl:    d.Purl,
+			Version: d.Version,
+		})
+	}
+	return &tdr, nil
+}

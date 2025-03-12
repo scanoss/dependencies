@@ -23,7 +23,7 @@ import (
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/models"
-	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
+	transitiveDep "scanoss.com/dependencies/pkg/transitive_dependencies"
 )
 
 type TransitiveDependencyUseCase struct {
@@ -44,20 +44,24 @@ func NewTransitiveDependencies(ctx context.Context, logger *zap.SugaredLogger, d
 }
 
 // GetDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
-func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input trasitive_dependencies.TransitiveDependencyInput) ([]trasitive_dependencies.Purl, error) {
-	depGraph := trasitive_dependencies.NewDepGraph()
+func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveDep.TransitiveDependencyInput) ([]transitiveDep.Dependency, error) {
+	depGraph := transitiveDep.NewDepGraph()
 
 	// callback
-	adaptDependencyToGraph := func(result trasitive_dependencies.Result) {
+	adaptDependencyToGraph := func(result transitiveDep.Result) {
 		for _, purl := range result.Purls {
-			depGraph.Insert(trasitive_dependencies.Purl(result.Parent), trasitive_dependencies.Purl(purl))
+			dep := transitiveDep.GetPurlFromPackageName(result.Parent, input.Ecosystem)
+			transitive := transitiveDep.GetPurlFromPackageName(purl, input.Ecosystem)
+			depGraph.Insert(
+				transitiveDep.Dependency{Purl: transitiveDep.GetPurlWithoutVersion(dep), Version: dep.Version},
+				transitiveDep.Dependency{Purl: transitiveDep.GetPurlWithoutVersion(transitive), Version: transitive.Version})
 		}
 	}
 
-	transitiveDependencyCollector := trasitive_dependencies.NewDependencyCollector(adaptDependencyToGraph,
-		trasitive_dependencies.DependencyCollectorCfg{
+	transitiveDependencyCollector := transitiveDep.NewDependencyCollector(adaptDependencyToGraph,
+		transitiveDep.DependencyCollectorCfg{
 			MaxWorkers:    20,    // this should be taken from config
-			MaxQueueLimit: 10000, // this should be taken from config
+			MaxQueueLimit: 20000, // this should be taken from config
 		}, models.NewDependencyModel(d.ctx, d.logger, d.db))
 
 	transitiveDependencyCollector.InitJobs(input)

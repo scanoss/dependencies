@@ -126,11 +126,11 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 	}
 	s.Infof("Transitive dependencies input: %v", transitiveDependencyInput)
 	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, s, d.db, d.config)
-	purls, err := transitiveDependenciesUc.GetTransitiveDependencies(transitiveDependencyInput)
+	transitiveDependencies, err := transitiveDependenciesUc.GetTransitiveDependencies(transitiveDependencyInput)
 
-	s.Infof("Transitive dependencies %v", purls)
+	s.Infof("Transitive dependencies %v", transitiveDependencies)
 
-	output, err := convertToTransitiveDependencyOutput(s, purls)
+	output, err := convertToTransitiveDependencyOutput2(s, transitiveDependencies)
 
 	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
 

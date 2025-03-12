@@ -26,15 +26,8 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
+	"scanoss.com/dependencies/pkg/shared"
 )
-
-var SupportedEcosystems = map[string]struct{}{
-	"composer": {},
-	"crates":   {},
-	"maven":    {},
-	"npmjs":    {},
-	"ruby":     {},
-}
 
 type DependencyModel struct {
 	ctx context.Context
@@ -55,7 +48,7 @@ func NewDependencyModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB) 
 func (m *DependencyModel) GetDependencies(purl string, version string, ecosystem string) ([]UnresolvedDependency, error) {
 	// Check if ecosystem is supported
 	// (already verified in the constructor but there is no harm to check it again and avoid SQL injection)
-	if _, isEcosystemSupported := SupportedEcosystems[ecosystem]; !isEcosystemSupported {
+	if _, isEcosystemSupported := shared.SupportedEcosystems[ecosystem]; !isEcosystemSupported {
 		return nil, errors.New("ecosystem not supported")
 	}
 
@@ -63,6 +56,7 @@ func (m *DependencyModel) GetDependencies(purl string, version string, ecosystem
 	conn, err := m.db.Connx(m.ctx)
 	if err != nil {
 		m.s.Errorf("Failed to get database connection: %v", err)
+
 		return nil, fmt.Errorf("database connection error: %v", err)
 	}
 	defer conn.Close() // Return the connection to the pool when done

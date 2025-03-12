@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
+	transitiveDp "scanoss.com/dependencies/pkg/transitive_dependencies"
 
 	"go.uber.org/zap"
 )
@@ -55,24 +55,27 @@ func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, 
 }
 
 // ParseTransitiveDependencyInput converts the input byte array to a []string structure.
-func ParseComponentsInput(s *zap.SugaredLogger, input []byte) ([]trasitive_dependencies.Component, error) {
+func ParseComponentsInput(s *zap.SugaredLogger, input []byte) ([]transitiveDp.Component, error) {
 	if len(input) == 0 {
-		return []trasitive_dependencies.Component{}, errors.New("no input dependency data supplied to parse")
+		return []transitiveDp.Component{}, errors.New("no input dependency data supplied to parse")
 	}
 	var data []DepPurlInput
-
 	err := json.Unmarshal(input, &data)
 	if err != nil {
 		s.Errorf("Parse failure: %v", err)
-		return []trasitive_dependencies.Component{}, fmt.Errorf("failed to parse dependency input data: %v", err)
+		return []transitiveDp.Component{}, fmt.Errorf("failed to parse dependency input data: %v", err)
 	}
-
-	components := []trasitive_dependencies.Component{}
+	packageNames := []transitiveDp.Component{}
 	for _, entry := range data {
-		components = append(components, trasitive_dependencies.Component{
-			Purl:    entry.Purl,
-			Version: entry.Requirement,
+		pName, pError := transitiveDp.GetPackageNameFromPurl(entry.Purl)
+		if pError != nil {
+			s.Warnf("Failed to get package name for package %s: %s", entry.Purl, err)
+			continue
+		}
+		packageNames = append(packageNames, transitiveDp.Component{
+			PackageName: pName,
+			Version:     entry.Requirement,
 		})
 	}
-	return components, nil
+	return packageNames, nil
 }

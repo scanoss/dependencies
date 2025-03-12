@@ -33,8 +33,8 @@ type DependencyCollector struct {
 }
 
 type Component struct {
-	Purl    string
-	Version string
+	PackageName string
+	Version     string
 }
 
 type TransitiveDependencyInput struct {
@@ -61,7 +61,7 @@ func (dc *DependencyCollector) InitJobs(metadata TransitiveDependencyInput) {
 	dc.jobs = make([]Job, len(metadata.Components))
 	for i, component := range metadata.Components {
 		dc.jobs[i] = Job{
-			Purl:      component.Purl,
+			Purl:      component.PackageName,
 			Version:   component.Version,
 			Depth:     metadata.Depth,
 			Ecosystem: metadata.Ecosystem,

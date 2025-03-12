@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	_ "errors"
-	"fmt"
 	_ "fmt"
 	_ "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
@@ -104,13 +103,9 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 }
 
 func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request *pb.TransitiveDependencyRequest) (*pb.TransitiveDependencyResponse, error) {
-	r := request
-	fmt.Println("%v", r)
-
 	requestStartTime := time.Now() // Capture the scan start time
 	s := ctxzap.Extract(ctx).Sugar()
 	s.Info("Processing dependency request...")
-	s.Debugf("REQ: %v", request)
 	conn, err := d.db.Connx(ctx) // Get a connection from the pool
 	if err != nil {
 		s.Errorf("Failed to get a database connection from the pool: %v", err)
@@ -130,7 +125,7 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 
 	s.Infof("Transitive dependencies %v", transitiveDependencies)
 
-	output, err := convertToTransitiveDependencyOutput2(s, transitiveDependencies)
+	output, err := convertToTransitiveDependencyOutput(s, transitiveDependencies)
 
 	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
 

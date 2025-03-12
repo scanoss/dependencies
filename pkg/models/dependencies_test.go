@@ -18,14 +18,11 @@ func TestGolangDependencies(t *testing.T) {
 	defer zlog.SyncZap()
 	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db := sqliteSetup(t) // Setup SQL Lite DB
-	defer CloseDB(db)
+	db := sqliteSetup(t)           // Setup SQL Lite DB
 	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
-	defer CloseConn(conn)
 	err = LoadTestSQLData(db, ctx, conn)
-	if err != nil {
-		t.Fatalf("failed to load SQL test data: %v", err)
-	}
+	defer db.Close()
+	defer CloseConn(conn)
 	myConfig, err := myconfig.NewServerConfig(nil)
 	if err != nil {
 		t.Fatalf("failed to load Config: %v", err)
@@ -36,14 +33,13 @@ func TestGolangDependencies(t *testing.T) {
 	var dependenciesModel *DependencyModel
 
 	// Invalid ecosystem
-	dependenciesModel = NewDependencyModel(ctx, s, conn)
+	dependenciesModel = NewDependencyModel(ctx, s, db)
 	unresolvedDependencies, err := dependenciesModel.GetDependencies("vue-phone", "1.0.8", "notExists")
 	if err == nil {
 		t.Errorf("FAILED: Expected an error when passing an invalid ecosystem, got err = nil")
 	}
 
-	unresolvedDependencies, err = dependenciesModel.GetDependencies("vue-phone", "1.0.8", "npmjs")
-
+	unresolvedDependencies, err = dependenciesModel.GetDependencies("vue-phone", "1.0.9", "npmjs")
 	if err != nil {
 		t.Errorf("FAILED: Expected no errors, got err = %v", err)
 	}

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	"regexp"
 	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
 
 	pb "github.com/scanoss/papi/api/dependenciesv2"
@@ -97,36 +96,7 @@ func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.Transi
 	}, nil
 }
 
-func convertToTransitiveDependencyOutput(s *zap.SugaredLogger, purls []trasitive_dependencies.Purl) (*pb.TransitiveDependencyResponse, error) {
-
-	splitPurlVersionRegEx, _ := regexp.Compile(`(?P<purl>.*?)@(?P<version>.*)`)
-	var tdr pb.TransitiveDependencyResponse
-
-	for _, purl := range purls {
-		matches := splitPurlVersionRegEx.FindStringSubmatch(string(purl))
-		if len(matches) == 0 {
-			continue
-		}
-
-		// Get the indices of the named groups
-		purlIndex := splitPurlVersionRegEx.SubexpIndex("purl")
-		versionIndex := splitPurlVersionRegEx.SubexpIndex("version")
-
-		// Check if there's a match and enough capture groups
-		if len(matches) < 2 {
-			continue
-		}
-
-		tdr.Dependencies = append(tdr.Dependencies, &pb.TransitiveDependencyResponse_Dependencies{
-			Purl:    matches[purlIndex],
-			Version: matches[versionIndex],
-		})
-	}
-
-	return &tdr, nil
-}
-
-func convertToTransitiveDependencyOutput2(s *zap.SugaredLogger, dependencies []trasitive_dependencies.Dependency) (*pb.TransitiveDependencyResponse, error) {
+func convertToTransitiveDependencyOutput(s *zap.SugaredLogger, dependencies []trasitive_dependencies.Dependency) (*pb.TransitiveDependencyResponse, error) {
 	var tdr pb.TransitiveDependencyResponse
 	for _, d := range dependencies {
 		tdr.Dependencies = append(tdr.Dependencies, &pb.TransitiveDependencyResponse_Dependencies{

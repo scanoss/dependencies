@@ -97,7 +97,7 @@ func normalizeVersion(versionStr string) (string, error) {
 	return version.String(), nil
 }
 
-// GetPurlFromPackageName convert purl@version to PackageURL
+// GetPurlFromPackageName convert packageName@version to PackageURL
 func GetPurlFromPackageName(packageName string, ecosystem string) (*packageurl.PackageURL, error) {
 	if ecosystem == "" {
 		return nil, fmt.Errorf("empty ecosystem")
@@ -148,4 +148,20 @@ func GetPurlWithoutVersion(p *packageurl.PackageURL) (string, error) {
 		return "", fmt.Errorf("package URL missing version information: %q", purl)
 	}
 	return strings.Split(purl, "@")[0], nil
+}
+
+func ConvertResultToDependency(packageName string, ecosystem string) (Dependency, error) {
+	packageUrl, err := GetPurlFromPackageName(packageName, ecosystem)
+	if err != nil {
+		return Dependency{}, err
+	}
+	// Extract base purls without versions for parent dependency
+	purl, err := GetPurlWithoutVersion(packageUrl)
+	if err != nil {
+		return Dependency{}, fmt.Errorf("error extracting base purl from %v: %v", purl, err)
+	}
+	return Dependency{
+		Purl:    purl,
+		Version: packageUrl.Version,
+	}, nil
 }

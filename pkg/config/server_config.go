@@ -68,6 +68,13 @@ type ServerConfig struct {
 		BlockByDefault bool   `env:"DEPS_BLOCK_BY_DEFAULT"` // Block request by default if they are not in the allow list
 		TrustProxy     bool   `env:"DEPS_TRUST_PROXY"`      // Trust the interim proxy or not (causes the source IP to be validated instead of the proxy)
 	}
+	TransitiveResources struct {
+		// MaxWorkers specifies the maximum number of concurrent workers. Used by dependency_collector.go
+		MaxWorkers int `env:"TRANSITIVE_RESOURCES_MAX_WORKERS"`
+
+		// MaxQueueSize specifies the maximum buffer capacity for the queue. Used by dependency_collector.go
+		MaxQueueSize int `env:"TRANSITIVE_RESOURCES_MAX_QUEUE_SIZE"`
+	}
 }
 
 // NewServerConfig loads all config options and return a struct for use.
@@ -105,4 +112,6 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Logging.DynamicPort = "localhost:60051"
 	cfg.Telemetry.Enabled = false
 	cfg.Telemetry.OltpExporter = "0.0.0.0:4317" // Default OTEL OLTP gRPC Exporter endpoint
+	cfg.TransitiveResources.MaxWorkers = 10
+	cfg.TransitiveResources.MaxQueueSize = 20000
 }

@@ -18,7 +18,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
@@ -31,65 +30,55 @@ type TransitiveDependencyUseCase struct {
 	logger          *zap.SugaredLogger
 	db              *sqlx.DB
 	dependencyModel *models.DependencyModel
+	config          *myconfig.ServerConfig
 }
 
-// NewDependencies creates a new instance of the Dependency Use Case.
+// NewTransitiveDependencies creates a new instance of the Dependency Use Case.
 func NewTransitiveDependencies(ctx context.Context, logger *zap.SugaredLogger, db *sqlx.DB, config *myconfig.ServerConfig) *TransitiveDependencyUseCase {
 	return &TransitiveDependencyUseCase{
 		ctx:             ctx,
 		logger:          logger,
 		db:              db,
 		dependencyModel: models.NewDependencyModel(ctx, logger, db),
+		config:          config,
 	}
 }
 
-// GetDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
+// GetTransitiveDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
 func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveDep.TransitiveDependencyInput) ([]transitiveDep.Dependency, error) {
+	// creates new dependency graph struct
 	depGraph := transitiveDep.NewDepGraph()
 
-	// callback
+	// callback to handle dependency collector results
 	adaptDependencyToGraph := func(result transitiveDep.Result) {
+		parentDep, err := transitiveDep.ConvertResultToDependency(result.Parent, input.Ecosystem)
+		if err != nil {
+			d.logger.Errorf("failed to convert dependency:%v, %v", result.Parent, err)
+			return
+		}
 		for _, purl := range result.Purls {
+			var tDep = transitiveDep.Dependency{}
 			// Get purls for parent and transitive dependency
-			dep, errD := transitiveDep.GetPurlFromPackageName(result.Parent, input.Ecosystem)
-			transitive, errT := transitiveDep.GetPurlFromPackageName(purl, input.Ecosystem)
-
-			if errD != nil || errT != nil {
-				d.logger.Errorf("Error converting package names to purls: parent=%v, transitive=%v, errors: [%v, %v]",
-					result.Parent, purl, errD, errT)
-				continue
-			}
-
-			// Extract base purls without versions
-			depPurl, err := transitiveDep.GetPurlWithoutVersion(dep)
+			tDep, err = transitiveDep.ConvertResultToDependency(purl, input.Ecosystem)
 			if err != nil {
-				d.logger.Errorf("Error extracting base purl from %v: %v", dep, err)
+				d.logger.Errorf("failed to convert transitive dependency:%v, %v", purl, err)
 				continue
 			}
-
-			tPurl, err := transitiveDep.GetPurlWithoutVersion(transitive)
-			if err != nil {
-				d.logger.Errorf("Error extracting base purl from %v: %v", transitive, err)
-				continue
-			}
-
 			// Insert relationship into dependency graph
-			depGraph.Insert(
-				transitiveDep.Dependency{Purl: depPurl, Version: dep.Version},
-				transitiveDep.Dependency{Purl: tPurl, Version: transitive.Version})
+			depGraph.Insert(parentDep, tDep)
 		}
 	}
 
-	transitiveDependencyCollector := transitiveDep.NewDependencyCollector(adaptDependencyToGraph,
-		transitiveDep.DependencyCollectorCfg{
-			MaxWorkers:    20,    // this should be taken from config
-			MaxQueueLimit: 20000, // this should be taken from config
-		}, models.NewDependencyModel(d.ctx, d.logger, d.db))
-
+	dependencyCollectorCfg := transitiveDep.DependencyCollectorCfg{
+		MaxWorkers:    d.config.TransitiveResources.MaxWorkers,
+		MaxQueueLimit: d.config.TransitiveResources.MaxQueueSize,
+	}
+	transitiveDependencyCollector := transitiveDep.NewDependencyCollector(
+		adaptDependencyToGraph,
+		dependencyCollectorCfg,
+		models.NewDependencyModel(d.ctx, d.logger, d.db))
 	transitiveDependencyCollector.InitJobs(input)
 	transitiveDependencyCollector.Start()
-
-	fmt.Print(depGraph.String())
 
 	return depGraph.Flatten(), nil
 }

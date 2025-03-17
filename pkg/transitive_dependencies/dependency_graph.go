@@ -10,7 +10,7 @@ type Status string
 
 // Node represents a node in the dependency graph
 type Dependency struct {
-	Purl    string
+	Purl    string //pkg:npm/isEven
 	Version string
 }
 
@@ -48,8 +48,8 @@ func (dp *DepGraph) getOrCreateDependencyByPurl(d Dependency) *Dependency {
 // parent -> children
 func (dp *DepGraph) Insert(dep Dependency, transitive Dependency) {
 
-	parent := dp.getOrCreateDependencyByPurl(dep)       // scanoss
-	child := dp.getOrCreateDependencyByPurl(transitive) // eslinter
+	parent := dp.getOrCreateDependencyByPurl(dep)
+	child := dp.getOrCreateDependencyByPurl(transitive)
 
 	if dp.graph[child] == nil {
 		dp.graph[child] = []*Dependency{}

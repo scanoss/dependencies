@@ -84,7 +84,7 @@ func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.Transi
 		return trasitive_dependencies.TransitiveDependencyInput{}, errors.New("problem marshalling dependency input")
 	}
 	s.Debugf("Parsed data: %v", data)
-	components, err := dtos.ParseComponentsInput(s, data)
+	components, err := dtos.ParseComponentsInput(s, data) //TODO: rethink function name
 	if err != nil {
 		s.Errorf("Problem parsing dependency request input: %v", err)
 		return trasitive_dependencies.TransitiveDependencyInput{}, errors.New("problem parsing dependency input")

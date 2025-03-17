@@ -36,7 +36,7 @@ type DependencyModel struct {
 }
 
 type UnresolvedDependency struct {
-	Purl        string `json:"dep_purl_name"`
+	Purl        string `json:"dep_purl_name"` //TODO: rename to package_name. Ask Claudio why he call it purl_name
 	Requirement string `json:"dep_ver"`
 }
 
@@ -45,6 +45,7 @@ func NewDependencyModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB) 
 	return &DependencyModel{ctx: ctx, s: s, db: db}
 }
 
+// TODO: change purl -> package_name
 func (m *DependencyModel) GetDependencies(purl string, version string, ecosystem string) ([]UnresolvedDependency, error) {
 	// Check if ecosystem is supported
 	// (already verified in the constructor but there is no harm to check it again and avoid SQL injection)
@@ -56,7 +57,6 @@ func (m *DependencyModel) GetDependencies(purl string, version string, ecosystem
 	conn, err := m.db.Connx(m.ctx)
 	if err != nil {
 		m.s.Errorf("Failed to get database connection: %v", err)
-
 		return nil, fmt.Errorf("database connection error: %v", err)
 	}
 	defer conn.Close() // Return the connection to the pool when done

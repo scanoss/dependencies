@@ -1,0 +1,38 @@
+{
+  "App": {
+    "Name": "Dependency Service",
+    "Debug": true,
+    "Mode":  "dev",
+    "GRPCPort": "50051",
+    "RESTPort": "40051"
+  },
+  "Telemetry": {
+    "Enabled": false,
+    "OltpExporter": "0.0.0.0:4317"
+  },
+  "Database": {
+    "Driver": "postgres",
+    "Host":   "65.109.26.241:5432",
+    "User":   "metaquery",
+    "Passwd": "dKA5tLM5y6eb",
+    "Schema": "components",
+    "Trace": false
+  },
+  "Components": {
+    "CommitMissing": false
+  },
+  "TLS": {
+    "CertFile": "",
+    "KeyFile": ""
+  },
+  "Filtering": {
+    "AllowListFile": "",
+    "DenyListFile": "",
+    "BlockByDefault": false,
+    "TrustProxy": false
+  },
+  "TransitiveResources": {
+    "MaxWorkers": 3,
+    "MaxQueueSize": 10
+  }
+}

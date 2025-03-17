@@ -3,6 +3,7 @@ package transitive_dependencies
 import (
 	"fmt"
 	"scanoss.com/dependencies/pkg/models"
+	"strings"
 	"sync"
 )
 
@@ -14,8 +15,10 @@ type Job struct {
 }
 
 type Result struct {
-	Parent string
-	Purls  []string
+	Parent    string
+	Purls     []string
+	Depth     int
+	Ecosystem string
 }
 
 type DependencyCollectorCfg struct {
@@ -29,6 +32,7 @@ type DependencyCollector struct {
 	jobs            []Job
 	dependencyModel *models.DependencyModel
 	mapMutex        sync.RWMutex
+	jobMutex        sync.RWMutex
 	cache           map[string][]models.UnresolvedDependency
 }
 
@@ -74,20 +78,17 @@ func (dc *DependencyCollector) Start() {
 	jobsChannel := make(chan Job, dc.Config.MaxQueueLimit)
 	resultsChannel := make(chan Result, dc.Config.MaxQueueLimit)
 
+	var mu sync.Mutex
+
+	pendingJobs := len(dc.jobs)
+
 	maxWorkers := dc.Config.MaxWorkers
 	var wg sync.WaitGroup
-
-	// Mutex and condition variable for synchronization
-	var mu sync.Mutex
-	cond := sync.NewCond(&mu)
-
-	// Counter for active workers
-	activeWorkers := 0
 
 	// Start workers
 	for i := 1; i <= maxWorkers; i++ {
 		wg.Add(1)
-		go dc.worker(i, jobsChannel, &wg, &mu, cond, &activeWorkers, resultsChannel)
+		go dc.worker(i, jobsChannel, resultsChannel, &wg)
 	}
 
 	// Send initial jobs
@@ -96,31 +97,44 @@ func (dc *DependencyCollector) Start() {
 		jobsChannel <- job
 	}
 
-	// Start the completion monitor
+	wg.Add(1)
 	go func() {
-		mu.Lock()
-		for {
-			if activeWorkers == 0 && len(jobsChannel) == 0 {
-				fmt.Println("All workers idle and queue empty. Closing jobs channel.")
-				close(jobsChannel)
-				mu.Unlock()
-				return
+		for result := range resultsChannel {
+
+			dc.Callback(result)
+
+			count := 0
+			if result.Depth > 0 {
+				count = len(result.Purls)
 			}
 
-			// Wait until there might be a completion condition
-			cond.Wait() //
-			fmt.Printf("Checking condition to close jobs channel. Workers %d, Jobs: %d", activeWorkers, len(jobsChannel))
-			// Check if we're done
-		}
-	}()
+			mu.Lock()
+			pendingJobs += count
+			mu.Unlock()
 
-	// Start a goroutine to collect results
-	var resultWg sync.WaitGroup
-	resultWg.Add(1)
-	go func() {
-		defer resultWg.Done()
-		for result := range resultsChannel {
-			dc.Callback(result)
+			for _, purl := range result.Purls {
+				key := strings.Split(purl, "@")
+				if result.Depth > 0 {
+					newJob := Job{Purl: key[0], Version: key[1], Depth: result.Depth, Ecosystem: result.Ecosystem}
+					select {
+					case jobsChannel <- newJob:
+						fmt.Printf("✅ Elemento enviado al canal\n")
+					default:
+						fmt.Println("Explode")
+					}
+
+				}
+			}
+
+			//Only decrement one because we finished only one purl
+			mu.Lock()
+			pendingJobs--
+			mu.Unlock()
+
+			if pendingJobs == 0 {
+				wg.Done()
+				close(jobsChannel)
+			}
 		}
 	}()
 
@@ -128,19 +142,11 @@ func (dc *DependencyCollector) Start() {
 	fmt.Println("All workers have exited. Processing completed.")
 
 	close(resultsChannel)
-	// Wait for all workers to exit
-	resultWg.Wait()
 }
 
-func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup, mu *sync.Mutex, cond *sync.Cond, activeWorkers *int, results chan Result) {
+func (dc *DependencyCollector) worker(id int, jobs chan Job, results chan Result, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for job := range jobs {
-		// Mark as active
-		mu.Lock()
-		(*activeWorkers)++
-		fmt.Printf("Worker %d: Started job %s at depth %d (Active workers: %d)\n",
-			id, job.Purl, job.Depth, *activeWorkers)
-		mu.Unlock()
 
 		cacheKey := job.Purl + "@" + job.Version
 		// First try with a read lock only
@@ -174,30 +180,13 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 
 		// Generate new jobs with depth-1
 		newJobDepth := job.Depth - 1
-
 		results <- Result{
-			Parent: job.Purl + "@" + job.Version, //parent purl
-			Purls:  transitiveDependenciesPurls,  //transitives dependencies
+			Parent:    job.Purl + "@" + job.Version, //parent purl
+			Purls:     transitiveDependenciesPurls,  //transitives dependencies
+			Depth:     newJobDepth,
+			Ecosystem: job.Ecosystem,
 		}
 
-		// Only add new jobs if depth would be > 0
-		if newJobDepth > 0 {
-			for _, transitive := range sanitizedDependencies {
-				fmt.Printf("Worker %d: Generated new job %s at depth %d\n", id, transitive.Purl, newJobDepth)
-
-				jobs <- Job{Purl: transitive.Purl, Version: transitive.Requirement, Ecosystem: job.Ecosystem, Depth: newJobDepth}
-			}
-		}
-
-		fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)
-
-		// Mark as idle and signal
-		mu.Lock()
-		(*activeWorkers)--
-		fmt.Printf("Worker %d: Became idle (Active workers: %d)\n", id, *activeWorkers)
-		// Signal that status has changed
-		cond.Signal()
-		mu.Unlock()
 	}
 
 	fmt.Printf("Worker %d: Exiting\n", id)

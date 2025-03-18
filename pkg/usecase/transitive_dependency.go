@@ -74,6 +74,7 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveD
 		MaxQueueLimit: d.config.TransitiveResources.MaxQueueSize,
 	}
 	transitiveDependencyCollector := transitiveDep.NewDependencyCollector(
+		d.ctx,
 		adaptDependencyToGraph,
 		dependencyCollectorCfg,
 		models.NewDependencyModel(d.ctx, d.logger, d.db))

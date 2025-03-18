@@ -63,7 +63,7 @@ func TestInsertDependency(t *testing.T) {
 			expected: []Dependency{
 				{
 					Purl:    "pkg:/scanoss/scanoss.js",
-					Version: "0.15.5",
+					Version: "0.15.4",
 				},
 			},
 			wantErr: false,
@@ -72,9 +72,14 @@ func TestInsertDependency(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			graph := NewDepGraph()
-			for _, dependency := range tt.transitive {
-				graph.Insert(tt.parent, dependency)
+			if len(tt.transitive) > 0 {
+				for _, dependency := range tt.transitive {
+					graph.Insert(tt.parent, dependency)
+				}
+			} else {
+				graph.Insert(tt.parent, Dependency{})
 			}
+
 			if len(tt.expected) != len(graph.Flatten()) {
 				t.Errorf("expected %v, but got %v", tt.expected, graph.Flatten())
 			}

@@ -315,78 +315,80 @@ func TestPickFirstVersionFromRange(t *testing.T) {
 func TestGetPurlFromPackageName(t *testing.T) {
 	tests := []struct {
 		name      string
-		input     string
+		purlName  string
+		version   string
 		ecosystem string
 		expected  string
 		wantErr   bool
 	}{
 		{
 			name:      "npmjs ecosystem",
-			input:     "scanoss@1.2.0",
+			purlName:  "scanoss",
+			version:   "1.2.0",
 			ecosystem: "npmjs",
 			expected:  "pkg:npm/scanoss@1.2.0",
 			wantErr:   false,
 		},
 		{
 			name:      "maven ecosystem",
-			input:     "ai.databand/dbnd-api-deequ@1.2.0",
+			purlName:  "ai.databand/dbnd-api-deequ",
+			version:   "1.2.0",
 			ecosystem: "maven",
 			expected:  "pkg:maven/ai.databand%2Fdbnd-api-deequ@1.2.0",
 			wantErr:   false,
 		},
 		{
 			name:      "ruby ecosystem",
-			input:     "spree_repeat_order@2.1.4",
+			purlName:  "spree_repeat_order",
+			version:   "2.1.4",
 			ecosystem: "ruby",
 			expected:  "pkg:gem/spree_repeat_order@2.1.4",
 			wantErr:   false,
 		},
 		{
 			name:      "crates ecosystem",
-			input:     "tecla_client@1.0.1",
+			purlName:  "tecla_client",
+			version:   "1.0.1",
 			ecosystem: "crates",
 			expected:  "pkg:crates/tecla_client@1.0.1",
 			wantErr:   false,
 		},
 		{
 			name:      "composer ecosystem",
-			input:     "tecla_client@1.0.1",
+			purlName:  "tecla_client",
+			version:   "1.0.1",
 			ecosystem: "composer",
 			expected:  "pkg:composer/tecla_client@1.0.1",
 			wantErr:   false,
 		},
 		{
 			name:      "composer ecosystem",
-			input:     "php-extended/php-checksum-interface@8.0.5",
+			purlName:  "php-extended/php-checksum-interface",
+			version:   "8.0.5",
 			ecosystem: "composer",
 			expected:  "pkg:composer/php-extended%2Fphp-checksum-interface@8.0.5",
 			wantErr:   false,
 		},
 		{
 			name:      "empty ecosystem",
-			input:     "scanoss@1.0.0",
+			purlName:  "scanoss",
+			version:   "1.2.0",
 			ecosystem: "",
 			expected:  "pkg:npm/scanoss@1.2.0",
 			wantErr:   true,
 		},
 		{
 			name:      "invalid ecosystem",
-			input:     "scanoss@1.0.0",
+			purlName:  "scanoss",
+			version:   "1.2.0",
 			ecosystem: "npn",
-			expected:  "pkg:npm/scanoss@1.2.0",
-			wantErr:   true,
-		},
-		{
-			name:      "Invalid package name",
-			input:     "scanoss",
-			ecosystem: "npmjs",
 			expected:  "pkg:npm/scanoss@1.2.0",
 			wantErr:   true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			purl, err := GetPurlFromPackageName(tt.input, tt.ecosystem)
+			purl, err := GetPurlFromPurlName(tt.purlName, tt.version, tt.ecosystem)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error for %s, got nil\n", tt.name)

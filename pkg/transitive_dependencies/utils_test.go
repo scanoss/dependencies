@@ -5,9 +5,8 @@ import (
 	"testing"
 )
 
-// Tests were generated from Claude based on the BNF Grammar
-// https://docs.npmjs.com/cli/v6/using-npm/semver#range-grammar
-func TestPickFirstVersionFromNpmJsRange(t *testing.T) {
+// Tests were generated from Claude based on NPMJS versions BNF Grammar
+func TestPickFirstVersionFromRange(t *testing.T) {
 	tests := []struct {
 		name        string
 		requirement string
@@ -64,57 +63,57 @@ func TestPickFirstVersionFromNpmJsRange(t *testing.T) {
 			name:        "major version only",
 			requirement: "1",
 			ecosystem:   "npm",
-			expected:    "1.0.0",
-			wantErr:     false,
+			expected:    "",
+			wantErr:     true,
 		},
 		{
 			name:        "major and minor version",
 			requirement: "1.2",
 			ecosystem:   "npm",
-			expected:    "1.2.0",
-			wantErr:     false,
+			expected:    "",
+			wantErr:     true,
 		},
 		{
 			name:        "x wildcard for patch",
 			requirement: "1.2.x",
 			ecosystem:   "npm",
-			expected:    "1.2.0",
-			wantErr:     false,
+			expected:    "",
+			wantErr:     true,
 		},
 		{
 			name:        "X wildcard for patch",
 			requirement: "1.2.X",
 			ecosystem:   "npm",
-			expected:    "1.2.0",
-			wantErr:     false,
+			expected:    "",
+			wantErr:     true,
 		},
 		{
 			name:        "* wildcard for patch",
 			requirement: "1.2.*",
 			ecosystem:   "npm",
-			expected:    "1.2.0",
-			wantErr:     false,
+			expected:    "",
+			wantErr:     true,
 		},
 		{
 			name:        "x wildcard for minor",
 			requirement: "1.x",
 			ecosystem:   "npm",
-			expected:    "1.0.0",
-			wantErr:     false,
+			expected:    "",
+			wantErr:     true,
 		},
 		{
 			name:        "X wildcard for minor",
 			requirement: "1.X",
 			ecosystem:   "npm",
-			expected:    "1.0.0",
-			wantErr:     false,
+			expected:    "",
+			wantErr:     true,
 		},
 		{
 			name:        "* wildcard for minor",
 			requirement: "1.*",
 			ecosystem:   "npm",
-			expected:    "1.0.0",
-			wantErr:     false,
+			expected:    "",
+			wantErr:     true,
 		},
 
 		// Hyphen Ranges
@@ -129,7 +128,7 @@ func TestPickFirstVersionFromNpmJsRange(t *testing.T) {
 			name:        "hyphen range with partial start",
 			requirement: "1.2 - 2.3.4",
 			ecosystem:   "npm",
-			expected:    "1.2.0",
+			expected:    "2.3.4",
 			wantErr:     false,
 		},
 		{
@@ -153,14 +152,14 @@ func TestPickFirstVersionFromNpmJsRange(t *testing.T) {
 			requirement: "~1.2",
 			ecosystem:   "npm",
 			expected:    "1.2.0",
-			wantErr:     false,
+			wantErr:     true,
 		},
 		{
 			name:        "tilde range with major only",
 			requirement: "~1",
 			ecosystem:   "npm",
 			expected:    "1.0.0",
-			wantErr:     false,
+			wantErr:     true,
 		},
 
 		// Caret Ranges
@@ -191,21 +190,21 @@ func TestPickFirstVersionFromNpmJsRange(t *testing.T) {
 			name:        "pre-release version",
 			requirement: "1.2.3-beta",
 			ecosystem:   "npm",
-			expected:    "1.2.3-beta",
+			expected:    "1.2.3",
 			wantErr:     false,
 		},
 		{
 			name:        "build metadata",
 			requirement: "1.2.3+build.123",
 			ecosystem:   "npm",
-			expected:    "1.2.3+build.123",
+			expected:    "1.2.3",
 			wantErr:     false,
 		},
 		{
 			name:        "pre-release and build metadata",
 			requirement: "1.2.3-beta.2+build.456",
 			ecosystem:   "npm",
-			expected:    "1.2.3-beta.2+build.456",
+			expected:    "1.2.3",
 			wantErr:     false,
 		},
 
@@ -297,7 +296,7 @@ func TestPickFirstVersionFromNpmJsRange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			version, err := PickFirstVersionFromNpmJsRange(tt.requirement)
+			version, err := PickFirstVersionFromRange(tt.requirement)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error, got nil")

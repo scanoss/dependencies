@@ -132,7 +132,7 @@ func (dc *DependencyCollector) Start() {
 
 			// Wait until there might be a completion condition
 			cond.Wait() //
-			fmt.Printf("Checking condition to close jobs channel. Workers %d, Jobs: %d", activeWorkers, len(jobsChannel))
+
 			// Check if we're done
 		}
 	}()
@@ -217,9 +217,9 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 			var transitiveDependenciesPurls []string
 			var sanitizedDependencies []models.UnresolvedDependency
 			for _, ud := range transitiveDependencies {
-				fixedVersion, err := PickFirstVersionFromNpmJsRange(ud.Requirement)
-				fmt.Printf("Resolving requirement %s, to %s\n", ud.Requirement, fixedVersion)
+				fixedVersion, err := PickFirstVersionFromRange(ud.Requirement)
 				if err != nil {
+					fmt.Printf("Cannot resolve requirement %s\n", ud.Requirement)
 					continue
 				}
 				sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{

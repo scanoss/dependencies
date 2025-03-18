@@ -1,6 +1,7 @@
 package transitive_dependencies
 
 import (
+	"context"
 	"fmt"
 	"scanoss.com/dependencies/pkg/models"
 	"sync"
@@ -30,6 +31,8 @@ type DependencyCollector struct {
 	dependencyModel *models.DependencyModel
 	mapMutex        sync.RWMutex
 	cache           map[string][]models.UnresolvedDependency
+	ctx             context.Context
+	resultChannel   chan Result
 }
 
 type Component struct {
@@ -43,13 +46,15 @@ type TransitiveDependencyInput struct {
 	Ecosystem  string      `json:"ecosystem"`
 }
 
-func NewDependencyCollector(c func(result Result), config DependencyCollectorCfg, model *models.DependencyModel) *DependencyCollector {
+func NewDependencyCollector(ctx context.Context, c func(result Result), config DependencyCollectorCfg, model *models.DependencyModel) *DependencyCollector {
 	return &DependencyCollector{
+		ctx:             ctx,
 		Callback:        c,
 		Config:          config,
 		dependencyModel: model,
 		mapMutex:        sync.RWMutex{},
 		cache:           make(map[string][]models.UnresolvedDependency),
+		resultChannel:   make(chan Result, config.MaxQueueLimit),
 	}
 }
 
@@ -72,8 +77,8 @@ func (dc *DependencyCollector) InitJobs(metadata TransitiveDependencyInput) {
 func (dc *DependencyCollector) Start() {
 	// Create a buffered job channel
 	jobsChannel := make(chan Job, dc.Config.MaxQueueLimit)
-	resultsChannel := make(chan Result, dc.Config.MaxQueueLimit)
-
+	_, cancel := context.WithCancel(dc.ctx)
+	defer cancel() // Ensure resources are cleaned up if we panic
 	maxWorkers := dc.Config.MaxWorkers
 	var wg sync.WaitGroup
 
@@ -87,7 +92,7 @@ func (dc *DependencyCollector) Start() {
 	// Start workers
 	for i := 1; i <= maxWorkers; i++ {
 		wg.Add(1)
-		go dc.worker(i, jobsChannel, &wg, &mu, cond, &activeWorkers, resultsChannel)
+		go dc.worker(i, jobsChannel, &wg, &mu, cond, &activeWorkers, dc.resultChannel, dc.ctx)
 	}
 
 	// Send initial jobs
@@ -100,11 +105,21 @@ func (dc *DependencyCollector) Start() {
 	go func() {
 		mu.Lock()
 		for {
-			if activeWorkers == 0 && len(jobsChannel) == 0 {
-				fmt.Println("All workers idle and queue empty. Closing jobs channel.")
+
+			select {
+			case <-dc.ctx.Done():
+				fmt.Println("Context cancelled. Closing jobs channel.")
 				close(jobsChannel)
 				mu.Unlock()
 				return
+			default:
+				if activeWorkers == 0 && len(jobsChannel) == 0 {
+					fmt.Println("All workers idle and queue empty. Closing jobs channel.")
+					close(jobsChannel)
+					mu.Unlock()
+					cancel() // Signal all goroutines to stop via context
+					return
+				}
 			}
 
 			// Wait until there might be a completion condition
@@ -117,88 +132,124 @@ func (dc *DependencyCollector) Start() {
 	// Start a goroutine to collect results
 	var resultWg sync.WaitGroup
 	resultWg.Add(1)
-	go func() {
-		defer resultWg.Done()
-		for result := range resultsChannel {
-			dc.Callback(result)
-		}
-	}()
+	dc.processResult(&resultWg)
 
 	wg.Wait()
 	fmt.Println("All workers have exited. Processing completed.")
 
-	close(resultsChannel)
+	close(dc.resultChannel)
 	// Wait for all workers to exit
 	resultWg.Wait()
 }
 
-func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup, mu *sync.Mutex, cond *sync.Cond, activeWorkers *int, results chan Result) {
+func (dc *DependencyCollector) processResult(wg *sync.WaitGroup) {
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-dc.ctx.Done():
+				// Context was cancelled, stop processing results
+				fmt.Println("Results processor stopping due to context cancellation")
+				return
+
+			case result, ok := <-dc.resultChannel:
+				if !ok {
+					// Channel was closed, all results processed
+					fmt.Println("Results processor: channel closed, exiting")
+					return
+				}
+
+				// Process the result
+				dc.Callback(result)
+			}
+		}
+	}()
+}
+
+func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup, mu *sync.Mutex, cond *sync.Cond, activeWorkers *int, results chan Result, ctx context.Context) {
 	defer wg.Done()
-	for job := range jobs {
-		// Mark as active
-		mu.Lock()
-		(*activeWorkers)++
-		fmt.Printf("Worker %d: Started job %s at depth %d (Active workers: %d)\n",
-			id, job.Purl, job.Depth, *activeWorkers)
-		mu.Unlock()
+	for {
+		select {
+		case <-ctx.Done():
+			// Context was cancelled, stop the worker
+			fmt.Printf("Worker %d stopping due to context cancellation\n", id)
+			mu.Lock()
+			*activeWorkers--
+			cond.Signal() // Signal the completion monitor
+			mu.Unlock()
+			return
 
-		cacheKey := job.Purl + "@" + job.Version
-		// First try with a read lock only
-		dc.mapMutex.RLock()
-		transitiveDependencies, exists := dc.cache[cacheKey]
-		dc.mapMutex.RUnlock()
-
-		if !exists {
-			transitiveDependencies, _ = dc.dependencyModel.GetDependencies(job.Purl, job.Version, job.Ecosystem)
-			if len(transitiveDependencies) > 0 {
-				dc.mapMutex.Lock()
-				dc.cache[cacheKey] = transitiveDependencies
-				dc.mapMutex.Unlock()
+		case job, ok := <-jobs:
+			if !ok {
+				// Channel was closed
+				fmt.Printf("Worker %d stopping due to closed jobs channel\n", id)
+				return
 			}
-		}
-		// sanitize versions
-		var transitiveDependenciesPurls []string
-		var sanitizedDependencies []models.UnresolvedDependency
-		for _, ud := range transitiveDependencies {
-			fixedVersion, err := PickFirstVersionFromNpmJsRange(ud.Requirement)
-			fmt.Printf("Resolving requirement %s, to %s\n", ud.Requirement, fixedVersion)
-			if err != nil {
-				continue
+			// Mark as active
+			mu.Lock()
+			(*activeWorkers)++
+			fmt.Printf("Worker %d: Started job %s at depth %d (Active workers: %d)\n",
+				id, job.Purl, job.Depth, *activeWorkers)
+			mu.Unlock()
+
+			cacheKey := job.Purl + "@" + job.Version
+			// First try with a read lock only
+			dc.mapMutex.RLock()
+			transitiveDependencies, exists := dc.cache[cacheKey]
+			dc.mapMutex.RUnlock()
+
+			if !exists {
+				transitiveDependencies, _ = dc.dependencyModel.GetDependencies(job.Purl, job.Version, job.Ecosystem)
+				if len(transitiveDependencies) > 0 {
+					dc.mapMutex.Lock()
+					dc.cache[cacheKey] = transitiveDependencies
+					dc.mapMutex.Unlock()
+				}
 			}
-			sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{
-				Purl:        ud.Purl,
-				Requirement: fixedVersion,
-			})
-			transitiveDependenciesPurls = append(transitiveDependenciesPurls, ud.Purl+"@"+fixedVersion)
-		}
-
-		// Generate new jobs with depth-1
-		newJobDepth := job.Depth - 1
-
-		results <- Result{
-			Parent: job.Purl + "@" + job.Version, //parent purl
-			Purls:  transitiveDependenciesPurls,  //transitives dependencies
-		}
-
-		// Only add new jobs if depth would be > 0
-		if newJobDepth > 0 {
-			for _, transitive := range sanitizedDependencies {
-				fmt.Printf("Worker %d: Generated new job %s at depth %d\n", id, transitive.Purl, newJobDepth)
-
-				jobs <- Job{Purl: transitive.Purl, Version: transitive.Requirement, Ecosystem: job.Ecosystem, Depth: newJobDepth}
+			// sanitize versions
+			var transitiveDependenciesPurls []string
+			var sanitizedDependencies []models.UnresolvedDependency
+			for _, ud := range transitiveDependencies {
+				fixedVersion, err := PickFirstVersionFromNpmJsRange(ud.Requirement)
+				fmt.Printf("Resolving requirement %s, to %s\n", ud.Requirement, fixedVersion)
+				if err != nil {
+					continue
+				}
+				sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{
+					Purl:        ud.Purl,
+					Requirement: fixedVersion,
+				})
+				transitiveDependenciesPurls = append(transitiveDependenciesPurls, ud.Purl+"@"+fixedVersion)
 			}
+
+			// Generate new jobs with depth-1
+			newJobDepth := job.Depth - 1
+
+			results <- Result{
+				Parent: job.Purl + "@" + job.Version, //parent purl
+				Purls:  transitiveDependenciesPurls,  //transitives dependencies
+			}
+
+			// Only add new jobs if depth would be > 0
+			if newJobDepth > 0 {
+				for _, transitive := range sanitizedDependencies {
+					fmt.Printf("Worker %d: Generated new job %s at depth %d\n", id, transitive.Purl, newJobDepth)
+
+					jobs <- Job{Purl: transitive.Purl, Version: transitive.Requirement, Ecosystem: job.Ecosystem, Depth: newJobDepth}
+				}
+			}
+
+			fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)
+
+			// Mark as idle and signal
+			mu.Lock()
+			(*activeWorkers)--
+			fmt.Printf("Worker %d: Became idle (Active workers: %d)\n", id, *activeWorkers)
+			// Signal that status has changed
+			cond.Signal()
+			mu.Unlock()
+
 		}
-
-		fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)
-
-		// Mark as idle and signal
-		mu.Lock()
-		(*activeWorkers)--
-		fmt.Printf("Worker %d: Became idle (Active workers: %d)\n", id, *activeWorkers)
-		// Signal that status has changed
-		cond.Signal()
-		mu.Unlock()
 	}
-
 	fmt.Printf("Worker %d: Exiting\n", id)
 }

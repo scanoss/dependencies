@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"scanoss.com/dependencies/pkg/models"
 	"sync"
+	"time"
 )
 
 type Job struct {
@@ -77,8 +78,14 @@ func (dc *DependencyCollector) InitJobs(metadata TransitiveDependencyInput) {
 func (dc *DependencyCollector) Start() {
 	// Create a buffered job channel
 	jobsChannel := make(chan Job, dc.Config.MaxQueueLimit)
-	_, cancel := context.WithCancel(dc.ctx)
-	defer cancel() // Ensure resources are cleaned up if we panic
+	// First create a context with cancel
+	ctx, cancel := context.WithCancel(dc.ctx)
+
+	// Then create a timeout context derived from the cancel context
+	ctxTimeout, timeoutCancel := context.WithTimeout(ctx, 10*time.Minute) // 5-minute timeout
+	// Make sure to defer both cancels (in reverse order)
+	defer timeoutCancel()
+	defer cancel()
 	maxWorkers := dc.Config.MaxWorkers
 	var wg sync.WaitGroup
 
@@ -92,7 +99,7 @@ func (dc *DependencyCollector) Start() {
 	// Start workers
 	for i := 1; i <= maxWorkers; i++ {
 		wg.Add(1)
-		go dc.worker(i, jobsChannel, &wg, &mu, cond, &activeWorkers, dc.resultChannel, dc.ctx)
+		go dc.worker(i, jobsChannel, &wg, &mu, cond, &activeWorkers, dc.resultChannel, ctxTimeout)
 	}
 
 	// Send initial jobs
@@ -107,12 +114,13 @@ func (dc *DependencyCollector) Start() {
 		for {
 
 			select {
-			case <-dc.ctx.Done():
+			case <-ctxTimeout.Done():
 				fmt.Println("Context cancelled. Closing jobs channel.")
 				close(jobsChannel)
 				mu.Unlock()
 				return
 			default:
+				dc.processResult(&wg, ctxTimeout)
 				if activeWorkers == 0 && len(jobsChannel) == 0 {
 					fmt.Println("All workers idle and queue empty. Closing jobs channel.")
 					close(jobsChannel)
@@ -132,7 +140,7 @@ func (dc *DependencyCollector) Start() {
 	// Start a goroutine to collect results
 	var resultWg sync.WaitGroup
 	resultWg.Add(1)
-	dc.processResult(&resultWg)
+	dc.processResult(&resultWg, ctxTimeout)
 
 	wg.Wait()
 	fmt.Println("All workers have exited. Processing completed.")
@@ -142,12 +150,12 @@ func (dc *DependencyCollector) Start() {
 	resultWg.Wait()
 }
 
-func (dc *DependencyCollector) processResult(wg *sync.WaitGroup) {
+func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Context) {
 	go func() {
 		defer wg.Done()
 		for {
 			select {
-			case <-dc.ctx.Done():
+			case <-ctx.Done():
 				// Context was cancelled, stop processing results
 				fmt.Println("Results processor stopping due to context cancellation")
 				return
@@ -158,7 +166,6 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup) {
 					fmt.Println("Results processor: channel closed, exiting")
 					return
 				}
-
 				// Process the result
 				dc.Callback(result)
 			}

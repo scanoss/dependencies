@@ -45,7 +45,6 @@ func (dp *DepGraph) getOrCreateDependencyByPurl(d Dependency) *Dependency {
 	return dp.index[key]
 }
 
-// parent -> children
 func (dp *DepGraph) Insert(dep Dependency, transitive Dependency) {
 
 	parent := dp.getOrCreateDependencyByPurl(dep)       // scanoss

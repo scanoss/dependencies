@@ -25,8 +25,8 @@ func PickFirstVersionFromRange(requirement string) (string, error) {
 	return version, nil
 }
 
-// GetPurlFromPackageName convert packageName@version to PackageURL
-func GetPurlFromPackageName(packageName string, ecosystem string) (*packageurl.PackageURL, error) {
+// GetPurlFromPurlName convert packageName@version to PackageURL
+func GetPurlFromPurlName(packageName string, version string, ecosystem string) (*packageurl.PackageURL, error) {
 	if ecosystem == "" {
 		return nil, fmt.Errorf("empty ecosystem")
 	}
@@ -36,16 +36,12 @@ func GetPurlFromPackageName(packageName string, ecosystem string) (*packageurl.P
 		return nil, fmt.Errorf("invalid ecosystem: %s", ecosystem)
 	}
 
-	if !strings.Contains(packageName, "@") {
-		return nil, fmt.Errorf("no version separator for: %s", packageName)
-	}
-	p := strings.Split(packageName, "@")
 	// Example with a specific version
 	var versionedPurl = packageurl.NewPackageURL(
 		shared.SupportedEcosystems[ecosystem], // type
 		"",                                    // namespace
-		p[0],                                  // name
-		p[1],                                  // version
+		packageName,                           // name
+		version,                               // version
 		nil,                                   // qualifiers
 		"",                                    // subpath
 	)
@@ -78,8 +74,8 @@ func GetPurlWithoutVersion(p *packageurl.PackageURL) (string, error) {
 	return strings.Split(purl, "@")[0], nil
 }
 
-func ConvertResultToDependency(packageName string, ecosystem string) (Dependency, error) {
-	packageUrl, err := GetPurlFromPackageName(packageName, ecosystem)
+func ExtractDependencyFromJob(job DependencyJob) (Dependency, error) {
+	packageUrl, err := GetPurlFromPurlName(job.PurlName, job.Version, job.Ecosystem)
 	if err != nil {
 		return Dependency{}, err
 	}

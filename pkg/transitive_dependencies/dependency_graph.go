@@ -46,21 +46,32 @@ func (dp *DepGraph) getOrCreateDependencyByPurl(d Dependency) *Dependency {
 }
 
 func (dp *DepGraph) Insert(dep Dependency, transitive Dependency) {
+	// Get or create the parent dependency node
+	parent := dp.getOrCreateDependencyByPurl(dep)
 
-	parent := dp.getOrCreateDependencyByPurl(dep)       // scanoss
-	child := dp.getOrCreateDependencyByPurl(transitive) // eslinter
+	// Check if transitive dependency is empty
+	isEmptyTransitive := transitive == Dependency{}
+
+	// Initialize parent's adjacency list if needed
+	if dp.graph[parent] == nil {
+		dp.graph[parent] = []*Dependency{}
+	}
+
+	// If transitive is empty, we're just ensuring parent exists in the graph
+	if isEmptyTransitive {
+		return
+	}
+
+	// Get or create the child dependency node
+	child := dp.getOrCreateDependencyByPurl(transitive)
 
 	if dp.graph[child] == nil {
 		dp.graph[child] = []*Dependency{}
 	}
-
-	if dp.graph[parent] == nil {
-		dp.graph[parent] = []*Dependency{child}
-	} else {
-		dp.graph[parent] = append(dp.graph[parent], child)
-	}
-
+	// Add child to parent's adjacency list
+	dp.graph[parent] = append(dp.graph[parent], child)
 }
+
 func (dp *DepGraph) String() string {
 	var result strings.Builder
 	deps := make([]*Dependency, 0, len(dp.graph))

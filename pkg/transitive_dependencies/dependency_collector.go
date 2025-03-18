@@ -79,6 +79,7 @@ func (dc *DependencyCollector) Start() {
 	resultsChannel := make(chan Result, dc.Config.MaxQueueLimit)
 
 	var mu sync.Mutex
+	channelCond := sync.NewCond(&mu)
 
 	pendingJobs := len(dc.jobs)
 
@@ -88,7 +89,7 @@ func (dc *DependencyCollector) Start() {
 	// Start workers
 	for i := 1; i <= maxWorkers; i++ {
 		wg.Add(1)
-		go dc.worker(i, jobsChannel, resultsChannel, &wg)
+		go dc.worker(i, &jobsChannel, resultsChannel, &wg, channelCond, &mu)
 	}
 
 	// Send initial jobs
@@ -98,96 +99,156 @@ func (dc *DependencyCollector) Start() {
 	}
 
 	wg.Add(1)
-	go func() {
+
+	go func(jc *chan Job) {
 		for result := range resultsChannel {
-
 			dc.Callback(result)
-
-			count := 0
+			// Increment result counter
 			if result.Depth > 0 {
-				count = len(result.Purls)
+				pendingJobs += len(result.Purls)
 			}
-
-			mu.Lock()
-			pendingJobs += count
-			mu.Unlock()
-
-			for _, purl := range result.Purls {
-				key := strings.Split(purl, "@")
+			for _, p := range result.Purls {
 				if result.Depth > 0 {
+					key := strings.Split(p, "@")
 					newJob := Job{Purl: key[0], Version: key[1], Depth: result.Depth, Ecosystem: result.Ecosystem}
 					select {
-					case jobsChannel <- newJob:
-						fmt.Printf("✅ Elemento enviado al canal\n")
+					case *jc <- newJob:
+						fmt.Printf("Main: Sent job %s\n", newJob.Purl)
 					default:
-						fmt.Println("Explode")
-					}
+						fmt.Printf("❌Cannot add more job to process:%s\n", newJob.Purl)
+						oldCapacity := cap(*jc)
+						newCapacity := oldCapacity * 2
+						newChannel := make(chan Job, newCapacity)
 
+						// First add the new job
+						newChannel <- newJob
+
+						// Then transfer as many existing jobs as possible from the old channel
+						// without blocking
+						drainJobs := func() {
+							for {
+								select {
+								case job, ok := <-*jc:
+									if !ok {
+										return // Channel closed
+									}
+									newChannel <- job
+								default:
+									return // No more items without blocking
+								}
+							}
+						}
+						drainJobs()
+
+						// Replace the old channel with the new one
+						*jc = newChannel
+
+					}
 				}
 			}
 
-			//Only decrement one because we finished only one purl
-			mu.Lock()
 			pendingJobs--
+			fmt.Printf("Pending jobs: %d\n", pendingJobs)
+			mu.Lock()
+			channelCond.Broadcast()
 			mu.Unlock()
 
 			if pendingJobs == 0 {
-				wg.Done()
+				fmt.Printf("Pending results 0...")
+				fmt.Printf("Bradcasting new jobs...: %d\n", pendingJobs)
+				mu.Lock()
+				channelCond.Broadcast()
+				mu.Unlock()
 				close(jobsChannel)
+				wg.Done()
+
 			}
 		}
-	}()
+
+	}(&jobsChannel)
 
 	wg.Wait()
 	fmt.Println("All workers have exited. Processing completed.")
 
 	close(resultsChannel)
 }
-
-func (dc *DependencyCollector) worker(id int, jobs chan Job, results chan Result, wg *sync.WaitGroup) {
+func (dc *DependencyCollector) worker(id int, jobsPtr *chan Job, results chan Result, wg *sync.WaitGroup, cond *sync.Cond, mu *sync.Mutex) {
+	fmt.Printf("Worker %d: Starting\n", id)
 	defer wg.Done()
-	for job := range jobs {
+	for {
+		// Try to get a job from the current channel
+		var job Job
+		var ok bool
 
-		cacheKey := job.Purl + "@" + job.Version
-		// First try with a read lock only
-		dc.mapMutex.RLock()
-		transitiveDependencies, exists := dc.cache[cacheKey]
-		dc.mapMutex.RUnlock()
-
-		if !exists {
-			transitiveDependencies, _ = dc.dependencyModel.GetDependencies(job.Purl, job.Version, job.Ecosystem)
-			if len(transitiveDependencies) > 0 {
-				dc.mapMutex.Lock()
-				dc.cache[cacheKey] = transitiveDependencies
-				dc.mapMutex.Unlock()
+		select {
+		case job, ok = <-*jobsPtr:
+			// Got a job or channel closed
+			if !ok {
+				// Channel was closed, exit worker
+				fmt.Printf("Worker %d: Channel closed, exiting\n", id)
+				return
 			}
-		}
-		// sanitize versions
-		var transitiveDependenciesPurls []string
-		var sanitizedDependencies []models.UnresolvedDependency
-		for _, ud := range transitiveDependencies {
-			fixedVersion, err := PickFirstVersionFromNpmJsRange(ud.Requirement)
-			fmt.Printf("Resolving requirement %s, to %s\n", ud.Requirement, fixedVersion)
-			if err != nil {
+
+			// Process the job
+			cacheKey := job.Purl + "@" + job.Version
+
+			// First try with a read lock only
+			dc.mapMutex.RLock()
+			transitiveDependencies, exists := dc.cache[cacheKey]
+			dc.mapMutex.RUnlock()
+
+			if !exists {
+				transitiveDependencies, _ = dc.dependencyModel.GetDependencies(job.Purl, job.Version, job.Ecosystem)
+				if len(transitiveDependencies) > 0 {
+					dc.mapMutex.Lock()
+					dc.cache[cacheKey] = transitiveDependencies
+					dc.mapMutex.Unlock()
+				}
+			}
+
+			// Sanitize versions
+			var transitiveDependenciesPurls []string
+			var sanitizedDependencies []models.UnresolvedDependency
+			for _, ud := range transitiveDependencies {
+				fixedVersion, err := PickFirstVersionFromNpmJsRange(ud.Requirement)
+				fmt.Printf("Resolving requirement %s, to %s\n", ud.Requirement, fixedVersion)
+				if err != nil {
+					continue
+				}
+				sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{
+					Purl:        ud.Purl,
+					Requirement: fixedVersion,
+				})
+				transitiveDependenciesPurls = append(transitiveDependenciesPurls, ud.Purl+"@"+fixedVersion)
+			}
+
+			// Generate new jobs with depth-1
+			newJobDepth := job.Depth - 1
+			fmt.Printf("Worker %d: Adding new result with depth %d\n", id, newJobDepth)
+			fmt.Printf("Result size: %d\n", len(results))
+
+			newResult := Result{
+				Parent:    job.Purl + "@" + job.Version, // parent purl
+				Purls:     transitiveDependenciesPurls,  // transitives dependencies
+				Depth:     newJobDepth,
+				Ecosystem: job.Ecosystem,
+			}
+
+			select {
+			case results <- newResult:
+				fmt.Printf("✅ Worker %d: New Result added\n", id)
+			default:
+				fmt.Printf("❌ Worker %d: Cannot add result - results channel full\n", id)
 				continue
 			}
-			sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{
-				Purl:        ud.Purl,
-				Requirement: fixedVersion,
-			})
-			transitiveDependenciesPurls = append(transitiveDependenciesPurls, ud.Purl+"@"+fixedVersion)
-		}
 
-		// Generate new jobs with depth-1
-		newJobDepth := job.Depth - 1
-		results <- Result{
-			Parent:    job.Purl + "@" + job.Version, //parent purl
-			Purls:     transitiveDependenciesPurls,  //transitives dependencies
-			Depth:     newJobDepth,
-			Ecosystem: job.Ecosystem,
+		default:
+			// No job available right now, wait on condition
+			fmt.Printf("Worker %d: No jobs available, waiting...\n", id)
+			mu.Lock()
+			cond.Wait() // Will release lock and wait until signaled
+			mu.Unlock()
+			fmt.Printf("Worker %d: Woke up to check for new jobs\n", id)
 		}
-
 	}
-
-	fmt.Printf("Worker %d: Exiting\n", id)
 }

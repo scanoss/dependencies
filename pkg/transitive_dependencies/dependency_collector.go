@@ -4,23 +4,20 @@ import (
 	"context"
 	"fmt"
 	"scanoss.com/dependencies/pkg/models"
-	"strings"
 	"sync"
 	"time"
 )
 
-type Job struct {
-	Purl      string
+type DependencyJob struct {
+	PurlName  string
 	Version   string
 	Depth     int
 	Ecosystem string
 }
 
 type Result struct {
-	Parent    string
-	Purls     []string
-	depth     int
-	ecosystem string
+	Parent                 DependencyJob
+	TransitiveDependencies []DependencyJob
 }
 
 type DependencyCollectorCfg struct {
@@ -31,13 +28,13 @@ type DependencyCollectorCfg struct {
 type DependencyCollector struct {
 	Callback        func(Result)
 	Config          DependencyCollectorCfg
-	jobs            []Job
+	jobs            []DependencyJob
 	dependencyModel *models.DependencyModel
 	mapMutex        sync.RWMutex
 	cache           map[string][]models.UnresolvedDependency
 	ctx             context.Context
 	resultChannel   chan Result
-	jobChannel      chan Job
+	jobChannel      chan DependencyJob
 	pendingJobs     int
 }
 
@@ -61,7 +58,7 @@ func NewDependencyCollector(ctx context.Context, c func(result Result), config D
 		mapMutex:        sync.RWMutex{},
 		cache:           make(map[string][]models.UnresolvedDependency),
 		resultChannel:   make(chan Result, config.MaxQueueLimit),
-		jobChannel:      make(chan Job, config.MaxQueueLimit),
+		jobChannel:      make(chan DependencyJob, config.MaxQueueLimit),
 		pendingJobs:     0,
 	}
 }
@@ -71,10 +68,10 @@ func (dc *DependencyCollector) SetResultCallback(c func(Result)) {
 }
 
 func (dc *DependencyCollector) InitJobs(metadata TransitiveDependencyInput) {
-	dc.jobs = make([]Job, len(metadata.Components))
+	dc.jobs = make([]DependencyJob, len(metadata.Components))
 	for i, component := range metadata.Components {
-		dc.jobs[i] = Job{
-			Purl:      component.PackageName,
+		dc.jobs[i] = DependencyJob{
+			PurlName:  component.PackageName,
 			Version:   component.Version,
 			Depth:     metadata.Depth,
 			Ecosystem: metadata.Ecosystem,
@@ -101,7 +98,7 @@ func (dc *DependencyCollector) Start() {
 
 	// Send initial jobs
 	for _, job := range dc.jobs {
-		fmt.Printf("Main: Sending job %s with depth %d\n", job.Purl, job.Depth)
+		fmt.Printf("Main: Sending job %s with depth %d\n", job.PurlName, job.Depth)
 		dc.jobChannel <- job
 	}
 
@@ -135,19 +132,16 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 			// Process the result
 			dc.Callback(result)
 
-			if result.depth > 0 {
-				dc.pendingJobs += len(result.Purls)
+			if len(result.TransitiveDependencies) > 0 && result.TransitiveDependencies[0].Depth > 0 {
+				dc.pendingJobs += len(result.TransitiveDependencies)
 			}
 			fmt.Printf("Pending jobs after adding: %d\n", dc.pendingJobs)
 
 			// Queue up new jobs
-			for _, purl := range result.Purls {
-				if result.depth > 0 {
-					key := strings.Split(purl, "@")
-					newJob := Job{Purl: key[0], Version: key[1], Ecosystem: result.ecosystem, Depth: result.depth}
-
+			for _, job := range result.TransitiveDependencies {
+				if job.Depth > 0 {
 					select {
-					case dc.jobChannel <- newJob:
+					case dc.jobChannel <- job:
 						// Job was added successfully
 					case <-ctx.Done():
 						// Context cancelled while trying to add job
@@ -171,7 +165,7 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 	}
 }
 
-func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup, results chan Result, ctx context.Context) {
+func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.WaitGroup, results chan Result, ctx context.Context) {
 	defer wg.Done()
 	for {
 		select {
@@ -187,22 +181,26 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 				return
 			}
 
-			cacheKey := job.Purl + "@" + job.Version
+			cacheKey := job.PurlName + "@" + job.Version
 			// First try with a read lock only
 			dc.mapMutex.RLock()
 			transitiveDependencies, exists := dc.cache[cacheKey]
 			dc.mapMutex.RUnlock()
 
 			if !exists {
-				transitiveDependencies, _ = dc.dependencyModel.GetDependencies(job.Purl, job.Version, job.Ecosystem)
+				transitiveDependencies, _ = dc.dependencyModel.GetDependencies(job.PurlName, job.Version, job.Ecosystem)
 				if len(transitiveDependencies) > 0 {
 					dc.mapMutex.Lock()
 					dc.cache[cacheKey] = transitiveDependencies
 					dc.mapMutex.Unlock()
 				}
 			}
+
+			// Generate new jobs with depth-1
+			newJobDepth := job.Depth - 1
+
 			// sanitize versions
-			var transitiveDependenciesPurls []string
+			var transitiveDependenciesJobs []DependencyJob
 			var sanitizedDependencies []models.UnresolvedDependency
 			for _, ud := range transitiveDependencies {
 				fixedVersion, err := PickFirstVersionFromRange(ud.Requirement)
@@ -214,27 +212,22 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 					Purl:        ud.Purl,
 					Requirement: fixedVersion,
 				})
-				transitiveDependenciesPurls = append(transitiveDependenciesPurls, ud.Purl+"@"+fixedVersion)
+				transitiveDependenciesJobs = append(transitiveDependenciesJobs, DependencyJob{PurlName: ud.Purl, Version: fixedVersion, Ecosystem: job.Ecosystem, Depth: newJobDepth})
 			}
-
-			// Generate new jobs with depth-1
-			newJobDepth := job.Depth - 1
 
 			// Send result, but also handle context cancellation
 			select {
 			case results <- Result{
-				Parent:    job.Purl + "@" + job.Version,
-				Purls:     transitiveDependenciesPurls,
-				depth:     newJobDepth,
-				ecosystem: job.Ecosystem,
+				Parent:                 job,
+				TransitiveDependencies: transitiveDependenciesJobs,
 			}:
-				fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)
+				fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
 			case <-ctx.Done():
 				fmt.Printf("Worker %d: Context cancelled while sending results\n", id)
 				return
 			}
 
-			fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)
+			fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
 		}
 	}
 	fmt.Printf("Worker %d: Exiting\n", id)

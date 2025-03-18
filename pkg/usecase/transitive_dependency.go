@@ -51,17 +51,17 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveD
 
 	// callback to handle dependency collector results
 	adaptDependencyToGraph := func(result transitiveDep.Result) {
-		parentDep, err := transitiveDep.ConvertResultToDependency(result.Parent, input.Ecosystem)
+		parentDep, err := transitiveDep.ExtractDependencyFromJob(result.Parent)
 		if err != nil {
 			d.logger.Errorf("failed to convert dependency:%v, %v", result.Parent, err)
 			return
 		}
-		for _, purl := range result.Purls {
+		for _, td := range result.TransitiveDependencies {
 			var tDep = transitiveDep.Dependency{}
 			// Get purls for parent and transitive dependency
-			tDep, err = transitiveDep.ConvertResultToDependency(purl, input.Ecosystem)
+			tDep, err = transitiveDep.ExtractDependencyFromJob(td)
 			if err != nil {
-				d.logger.Errorf("failed to convert transitive dependency:%v, %v", purl, err)
+				d.logger.Errorf("failed to convert transitive dependency:%v, %v", td.PurlName, err)
 				continue
 			}
 			// Insert relationship into dependency graph

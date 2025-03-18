@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"scanoss.com/dependencies/pkg/models"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,8 +17,10 @@ type Job struct {
 }
 
 type Result struct {
-	Parent string
-	Purls  []string
+	Parent    string
+	Purls     []string
+	depth     int
+	ecosystem string
 }
 
 type DependencyCollectorCfg struct {
@@ -34,6 +37,8 @@ type DependencyCollector struct {
 	cache           map[string][]models.UnresolvedDependency
 	ctx             context.Context
 	resultChannel   chan Result
+	jobChannel      chan Job
+	pendingJobs     int
 }
 
 type Component struct {
@@ -56,6 +61,8 @@ func NewDependencyCollector(ctx context.Context, c func(result Result), config D
 		mapMutex:        sync.RWMutex{},
 		cache:           make(map[string][]models.UnresolvedDependency),
 		resultChannel:   make(chan Result, config.MaxQueueLimit),
+		jobChannel:      make(chan Job, config.MaxQueueLimit),
+		pendingJobs:     0,
 	}
 }
 
@@ -73,117 +80,99 @@ func (dc *DependencyCollector) InitJobs(metadata TransitiveDependencyInput) {
 			Ecosystem: metadata.Ecosystem,
 		}
 	}
+	dc.pendingJobs = len(dc.jobs)
 }
 
 func (dc *DependencyCollector) Start() {
-	// Create a buffered job channel
-	jobsChannel := make(chan Job, dc.Config.MaxQueueLimit)
+
 	// First create a context with cancel
 	ctx, cancel := context.WithCancel(dc.ctx)
 
 	// Then create a timeout context derived from the cancel context
-	ctxTimeout, timeoutCancel := context.WithTimeout(ctx, 10*time.Minute) // 5-minute timeout
+	ctxTimeout, timeoutCancel := context.WithTimeout(ctx, 30*time.Minute) // 5-minute timeout
 	// Make sure to defer both cancels (in reverse order)
 	defer timeoutCancel()
 	defer cancel()
 	maxWorkers := dc.Config.MaxWorkers
 	var wg sync.WaitGroup
 
-	// Mutex and condition variable for synchronization
-	var mu sync.Mutex
-	cond := sync.NewCond(&mu)
-
-	// Counter for active workers
-	activeWorkers := 0
-
 	// Start workers
 	for i := 1; i <= maxWorkers; i++ {
 		wg.Add(1)
-		go dc.worker(i, jobsChannel, &wg, &mu, cond, &activeWorkers, dc.resultChannel, ctxTimeout)
+		go dc.worker(i, dc.jobChannel, &wg, dc.resultChannel, ctxTimeout)
 	}
 
 	// Send initial jobs
 	for _, job := range dc.jobs {
 		fmt.Printf("Main: Sending job %s with depth %d\n", job.Purl, job.Depth)
-		jobsChannel <- job
+		dc.jobChannel <- job
 	}
 
 	// Start the completion monitor
+	wg.Add(1)
 	go func() {
-		mu.Lock()
 		for {
-
 			select {
 			case <-ctxTimeout.Done():
 				fmt.Println("Context cancelled. Closing jobs channel.")
-				close(jobsChannel)
-				mu.Unlock()
 				return
 			default:
-				dc.processResult(&wg, ctxTimeout)
-				if activeWorkers == 0 && len(jobsChannel) == 0 {
-					fmt.Println("All workers idle and queue empty. Closing jobs channel.")
-					close(jobsChannel)
-					mu.Unlock()
-					cancel() // Signal all goroutines to stop via context
-					return
-				}
+				dc.processResult(&wg, ctxTimeout, cancel)
 			}
-
-			// Wait until there might be a completion condition
-			cond.Wait() //
-
-			// Check if we're done
 		}
 	}()
-
-	// Start a goroutine to collect results
-	var resultWg sync.WaitGroup
-	resultWg.Add(1)
-	dc.processResult(&resultWg, ctxTimeout)
 
 	wg.Wait()
 	fmt.Println("All workers have exited. Processing completed.")
 
 	close(dc.resultChannel)
-	// Wait for all workers to exit
-	resultWg.Wait()
+
 }
 
-func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Context) {
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-ctx.Done():
-				// Context was cancelled, stop processing results
-				fmt.Println("Results processor stopping due to context cancellation")
-				return
+func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Context, cancel context.CancelFunc) {
+	for {
+		select {
+		case <-ctx.Done():
+			// Context was cancelled, stop processing results
+			fmt.Println("Results processor stopping due to context cancellation")
+			return
 
-			case result, ok := <-dc.resultChannel:
-				if !ok {
-					// Channel was closed, all results processed
-					fmt.Println("Results processor: channel closed, exiting")
-					return
+		case result, ok := <-dc.resultChannel:
+			if !ok {
+				// Channel was closed, all results processed
+				fmt.Println("Results processor: channel closed, exiting")
+				return
+			}
+			// Process the result
+			dc.Callback(result)
+			if result.depth > 0 {
+				dc.pendingJobs += len(result.Purls)
+			}
+			fmt.Printf("Pending jobs: %d\n", dc.pendingJobs)
+			for _, purl := range result.Purls {
+				if result.depth > 0 {
+					key := strings.Split(purl, "@")
+					newJob := Job{Purl: key[0], Version: key[1], Ecosystem: result.ecosystem, Depth: result.depth}
+					dc.jobChannel <- newJob
 				}
-				// Process the result
-				dc.Callback(result)
+			}
+			dc.pendingJobs--
+			fmt.Printf("Pending jobs: %d\n", dc.pendingJobs)
+			if dc.pendingJobs == 0 {
+				wg.Done()
+				close(dc.jobChannel)
 			}
 		}
-	}()
+	}
 }
 
-func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup, mu *sync.Mutex, cond *sync.Cond, activeWorkers *int, results chan Result, ctx context.Context) {
+func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup, results chan Result, ctx context.Context) {
 	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
 			// Context was cancelled, stop the worker
 			fmt.Printf("Worker %d stopping due to context cancellation\n", id)
-			mu.Lock()
-			*activeWorkers--
-			cond.Signal() // Signal the completion monitor
-			mu.Unlock()
 			return
 
 		case job, ok := <-jobs:
@@ -192,12 +181,6 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 				fmt.Printf("Worker %d stopping due to closed jobs channel\n", id)
 				return
 			}
-			// Mark as active
-			mu.Lock()
-			(*activeWorkers)++
-			fmt.Printf("Worker %d: Started job %s at depth %d (Active workers: %d)\n",
-				id, job.Purl, job.Depth, *activeWorkers)
-			mu.Unlock()
 
 			cacheKey := job.Purl + "@" + job.Version
 			// First try with a read lock only
@@ -233,29 +216,13 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 			newJobDepth := job.Depth - 1
 
 			results <- Result{
-				Parent: job.Purl + "@" + job.Version, //parent purl
-				Purls:  transitiveDependenciesPurls,  //transitives dependencies
-			}
-
-			// Only add new jobs if depth would be > 0
-			if newJobDepth > 0 {
-				for _, transitive := range sanitizedDependencies {
-					fmt.Printf("Worker %d: Generated new job %s at depth %d\n", id, transitive.Purl, newJobDepth)
-
-					jobs <- Job{Purl: transitive.Purl, Version: transitive.Requirement, Ecosystem: job.Ecosystem, Depth: newJobDepth}
-				}
+				Parent:    job.Purl + "@" + job.Version, //parent purl
+				Purls:     transitiveDependenciesPurls,
+				depth:     newJobDepth,
+				ecosystem: job.Ecosystem,
 			}
 
 			fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)
-
-			// Mark as idle and signal
-			mu.Lock()
-			(*activeWorkers)--
-			fmt.Printf("Worker %d: Became idle (Active workers: %d)\n", id, *activeWorkers)
-			// Signal that status has changed
-			cond.Signal()
-			mu.Unlock()
-
 		}
 	}
 	fmt.Printf("Worker %d: Exiting\n", id)

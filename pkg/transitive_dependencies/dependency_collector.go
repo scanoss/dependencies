@@ -1,6 +1,7 @@
 package transitive_dependencies
 
 import (
+	"container/list"
 	"fmt"
 	"scanoss.com/dependencies/pkg/models"
 	"strings"
@@ -78,10 +79,6 @@ func (dc *DependencyCollector) Start() {
 	jobsChannel := make(chan Job, dc.Config.MaxQueueLimit)
 	resultsChannel := make(chan Result, dc.Config.MaxQueueLimit)
 
-	var mu sync.Mutex
-
-	pendingJobs := len(dc.jobs)
-
 	maxWorkers := dc.Config.MaxWorkers
 	var wg sync.WaitGroup
 
@@ -99,41 +96,49 @@ func (dc *DependencyCollector) Start() {
 
 	wg.Add(1)
 	go func() {
-		for result := range resultsChannel {
+		backlog := list.New()
+		pendingJobs := len(dc.jobs)
 
-			dc.Callback(result)
+		processResult := func(r Result) {
+			dc.Callback(r)
 
 			count := 0
-			if result.Depth > 0 {
-				count = len(result.Purls)
+			if r.Depth > 0 {
+				count = len(r.Purls)
 			}
 
-			mu.Lock()
 			pendingJobs += count
-			mu.Unlock()
 
-			for _, purl := range result.Purls {
+			for _, purl := range r.Purls {
 				key := strings.Split(purl, "@")
-				if result.Depth > 0 {
-					newJob := Job{Purl: key[0], Version: key[1], Depth: result.Depth, Ecosystem: result.Ecosystem}
-					select {
-					case jobsChannel <- newJob:
-						fmt.Printf("✅ Elemento enviado al canal\n")
-					default:
-						fmt.Println("Explode")
-					}
-
+				if r.Depth > 0 {
+					newJob := Job{Purl: key[0], Version: key[1], Depth: r.Depth, Ecosystem: r.Ecosystem}
+					backlog.PushBack(newJob)
 				}
 			}
 
-			//Only decrement one because we finished only one purl
-			mu.Lock()
+			// Only decrement one because we processed only one purl
 			pendingJobs--
-			mu.Unlock()
+		}
+
+		for {
+			if element := backlog.Front(); element != nil {
+				select {
+				case jobsChannel <- element.Value.(Job):
+					backlog.Remove(element)
+
+				case r := <-resultsChannel:
+					processResult(r)
+				}
+			} else {
+				r := <-resultsChannel //Block until a result is ready to be consumed
+				processResult(r)
+			}
 
 			if pendingJobs == 0 {
 				wg.Done()
 				close(jobsChannel)
+				break
 			}
 		}
 	}()

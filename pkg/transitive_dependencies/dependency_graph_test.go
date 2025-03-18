@@ -1,6 +1,7 @@
 package transitive_dependencies
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -87,7 +88,7 @@ func TestGetFlattenGraph(t *testing.T) {
 		Dependency{Purl: "pkg:/scanoss/scanoss.js", Version: "0.15.4"},
 		Dependency{Purl: "pkg:npm/typescript", Version: "0.10.0"},
 	)
-	
+
 	t.Run("Graph contains expected number of dependencies", func(t *testing.T) {
 		if len(graph.Flatten()) != 2 {
 			t.Errorf("expected 2 dependencies, but got %v", graph.Flatten())
@@ -106,4 +107,23 @@ func TestGetFlattenGraph(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestGetGraphString(t *testing.T) {
+	// Initialize the dependency graph
+	graph := NewDepGraph()
+
+	// Insert dependencies
+	parent := Dependency{Purl: "pkg:/scanoss/scanoss.js", Version: "0.15.4"}
+	child := Dependency{Purl: "pkg:npm/typescript", Version: "0.10.0"}
+	graph.Insert(parent, child)
+	result := graph.String()
+	// Check that both expected lines appear somewhere in the result
+	if !strings.Contains(result, "pkg:npm/typescript --> null") {
+		t.Errorf("Result missing 'pkg:npm/typescript --> null'")
+	}
+
+	if !strings.Contains(result, "pkg:/scanoss/scanoss.js --> pkg:npm/typescript") {
+		t.Errorf("Result missing 'pkg:/scanoss/scanoss.js --> pkg:npm/typescript'")
+	}
 }

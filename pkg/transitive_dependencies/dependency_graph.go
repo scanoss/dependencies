@@ -63,9 +63,6 @@ func (dp *DepGraph) Insert(dep Dependency, transitive Dependency) {
 }
 func (dp *DepGraph) String() string {
 	var result strings.Builder
-
-	result.WriteString("Dependency Graph:\n")
-
 	deps := make([]*Dependency, 0, len(dp.graph))
 	for dep := range dp.graph {
 		deps = append(deps, dep)
@@ -79,7 +76,7 @@ func (dp *DepGraph) String() string {
 		children := value
 
 		if len(children) == 0 {
-			result.WriteString(fmt.Sprintf("%s (Without dependencies)\n", key.Purl))
+			result.WriteString(fmt.Sprintf("%s --> null\n", key.Purl))
 			continue
 		}
 

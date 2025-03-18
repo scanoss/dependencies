@@ -84,12 +84,9 @@ func (dc *DependencyCollector) InitJobs(metadata TransitiveDependencyInput) {
 }
 
 func (dc *DependencyCollector) Start() {
-
-	// First create a context with cancel
+	// Create context with cancel
 	ctx, cancel := context.WithCancel(dc.ctx)
-
-	// Then create a timeout context derived from the cancel context
-	ctxTimeout, timeoutCancel := context.WithTimeout(ctx, 30*time.Minute) // 5-minute timeout
+	ctxTimeout, timeoutCancel := context.WithTimeout(ctx, 10*time.Minute)
 	// Make sure to defer both cancels (in reverse order)
 	defer timeoutCancel()
 	defer cancel()
@@ -110,17 +107,7 @@ func (dc *DependencyCollector) Start() {
 
 	// Start the completion monitor
 	wg.Add(1)
-	go func() {
-		for {
-			select {
-			case <-ctxTimeout.Done():
-				fmt.Println("Context cancelled. Closing jobs channel.")
-				return
-			default:
-				dc.processResult(&wg, ctxTimeout, cancel)
-			}
-		}
-	}()
+	dc.processResult(&wg, ctxTimeout, cancel)
 
 	wg.Wait()
 	fmt.Println("All workers have exited. Processing completed.")
@@ -130,6 +117,7 @@ func (dc *DependencyCollector) Start() {
 }
 
 func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Context, cancel context.CancelFunc) {
+	defer wg.Done() // Ensure we signal completion even if we exit early
 	for {
 		select {
 		case <-ctx.Done():
@@ -143,24 +131,41 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 				fmt.Println("Results processor: channel closed, exiting")
 				return
 			}
+
 			// Process the result
 			dc.Callback(result)
+
 			if result.depth > 0 {
 				dc.pendingJobs += len(result.Purls)
 			}
-			fmt.Printf("Pending jobs: %d\n", dc.pendingJobs)
+			fmt.Printf("Pending jobs after adding: %d\n", dc.pendingJobs)
+
+			// Queue up new jobs
 			for _, purl := range result.Purls {
 				if result.depth > 0 {
 					key := strings.Split(purl, "@")
 					newJob := Job{Purl: key[0], Version: key[1], Ecosystem: result.ecosystem, Depth: result.depth}
-					dc.jobChannel <- newJob
+
+					select {
+					case dc.jobChannel <- newJob:
+						// Job was added successfully
+					case <-ctx.Done():
+						// Context cancelled while trying to add job
+						dc.mapMutex.Unlock()
+						return
+					}
 				}
 			}
+
+			// Decrement counter after adding all new jobs
 			dc.pendingJobs--
-			fmt.Printf("Pending jobs: %d\n", dc.pendingJobs)
+			fmt.Printf("Pending jobs after decrementing: %d\n", dc.pendingJobs)
+
+			// Check if we're done with all jobs
 			if dc.pendingJobs == 0 {
-				wg.Done()
-				close(dc.jobChannel)
+				fmt.Println("No more pending jobs, signaling completion")
+				cancel() // Cancel the context to signal all workers to stop
+				return
 			}
 		}
 	}
@@ -215,11 +220,18 @@ func (dc *DependencyCollector) worker(id int, jobs chan Job, wg *sync.WaitGroup,
 			// Generate new jobs with depth-1
 			newJobDepth := job.Depth - 1
 
-			results <- Result{
-				Parent:    job.Purl + "@" + job.Version, //parent purl
+			// Send result, but also handle context cancellation
+			select {
+			case results <- Result{
+				Parent:    job.Purl + "@" + job.Version,
 				Purls:     transitiveDependenciesPurls,
 				depth:     newJobDepth,
 				ecosystem: job.Ecosystem,
+			}:
+				fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)
+			case <-ctx.Done():
+				fmt.Printf("Worker %d: Context cancelled while sending results\n", id)
+				return
 			}
 
 			fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.Purl, newJobDepth)

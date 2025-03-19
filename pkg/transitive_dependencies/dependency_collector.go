@@ -39,17 +39,6 @@ type DependencyCollector struct {
 	logger          *zap.SugaredLogger
 }
 
-type Component struct {
-	PackageName string
-	Version     string
-}
-
-type TransitiveDependencyInput struct {
-	Components []Component `json:"components"`
-	Depth      int         `json:"depth"`
-	Ecosystem  string      `json:"ecosystem"`
-}
-
 func NewDependencyCollector(ctx context.Context,
 	c func(result Result),
 	config DependencyCollectorCfg,
@@ -73,16 +62,8 @@ func (dc *DependencyCollector) SetResultCallback(c func(Result)) {
 	dc.Callback = c
 }
 
-func (dc *DependencyCollector) InitJobs(metadata TransitiveDependencyInput) {
-	dc.jobs = make([]DependencyJob, len(metadata.Components))
-	for i, component := range metadata.Components {
-		dc.jobs[i] = DependencyJob{
-			PurlName:  component.PackageName,
-			Version:   component.Version,
-			Depth:     metadata.Depth,
-			Ecosystem: metadata.Ecosystem,
-		}
-	}
+func (dc *DependencyCollector) InitJobs(inputJobs []DependencyJob) {
+	dc.jobs = inputJobs
 	dc.pendingJobs = len(dc.jobs)
 }
 

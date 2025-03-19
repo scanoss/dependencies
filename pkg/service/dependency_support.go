@@ -19,13 +19,13 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
-
-	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.uber.org/zap"
 	"scanoss.com/dependencies/pkg/dtos"
+	"scanoss.com/dependencies/pkg/shared"
+	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
 )
 
 // Structure for storing OTEL metrics.
@@ -77,23 +77,38 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 	return &depResp, nil
 }
 
-func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.TransitiveDependencyRequest) (trasitive_dependencies.TransitiveDependencyInput, error) {
-	data, err := json.Marshal(request.Purls)
+func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.TransitiveDependencyRequest) ([]trasitive_dependencies.DependencyJob, error) {
+	data, err := json.Marshal(request)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request input: %v", err)
-		return trasitive_dependencies.TransitiveDependencyInput{}, errors.New("problem marshalling dependency input")
+		return []trasitive_dependencies.DependencyJob{}, errors.New("problem marshalling dependency input")
 	}
 	s.Debugf("Parsed data: %v", data)
-	components, err := dtos.ParseComponentsInput(s, data)
+	transitiveDepDTO, err := dtos.ParseTransitiveReqDTOS(s, data)
 	if err != nil {
 		s.Errorf("Problem parsing dependency request input: %v", err)
-		return trasitive_dependencies.TransitiveDependencyInput{}, errors.New("problem parsing dependency input")
+		return []trasitive_dependencies.DependencyJob{}, errors.New("problem parsing dependency input")
 	}
-	return trasitive_dependencies.TransitiveDependencyInput{
-		Components: components,
-		Ecosystem:  request.Ecosystem,
-		Depth:      int(request.Depth),
-	}, nil
+	var dependencyJobs []trasitive_dependencies.DependencyJob
+	if _, ok := shared.SupportedEcosystems[transitiveDepDTO.Ecosystem]; !ok {
+		s.Errorf("unsupported ecosystem: %s", transitiveDepDTO.Ecosystem)
+		return nil, errors.New("unsupported ecosystem")
+	}
+	for _, dto := range transitiveDepDTO.Purls {
+		purlName, errPackage := trasitive_dependencies.ExtractPackageIdentifierFromPurl(dto.Purl)
+		if errPackage != nil {
+			s.Errorf("Problem extracting package identifier for: %s", dto.Purl)
+			continue
+		}
+
+		dependencyJobs = append(dependencyJobs, trasitive_dependencies.DependencyJob{
+			PurlName:  purlName,
+			Version:   dto.Requirement,
+			Ecosystem: transitiveDepDTO.Ecosystem,
+			Depth:     transitiveDepDTO.Depth,
+		})
+	}
+	return dependencyJobs, nil
 }
 
 func convertToTransitiveDependencyOutput(s *zap.SugaredLogger, dependencies []trasitive_dependencies.Dependency) (*pb.TransitiveDependencyResponse, error) {

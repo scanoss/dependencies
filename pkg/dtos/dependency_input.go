@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	transitiveDp "scanoss.com/dependencies/pkg/transitive_dependencies"
-
 	"go.uber.org/zap"
 )
 
@@ -40,6 +38,12 @@ type DepPurlInput struct {
 	Requirement string `json:"requirement,omitempty"`
 }
 
+type TransitiveDependencyDTO struct {
+	Depth     int            `json:"depth"`
+	Ecosystem string         `json:"ecosystem"`
+	Purls     []DepPurlInput `json:"purls"`
+}
+
 // ParseDependencyInput converts the input byte array to a DependencyInput structure.
 func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, error) {
 	if len(input) == 0 {
@@ -54,28 +58,16 @@ func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, 
 	return data, nil
 }
 
-// ParseTransitiveDependencyInput converts the input byte array to a []string structure.
-func ParseComponentsInput(s *zap.SugaredLogger, input []byte) ([]transitiveDp.Component, error) {
+// ParseTransitiveReqDTOS converts the input byte array to a TransitiveDependencyDTO structure.
+func ParseTransitiveReqDTOS(s *zap.SugaredLogger, input []byte) (TransitiveDependencyDTO, error) {
 	if len(input) == 0 {
-		return []transitiveDp.Component{}, errors.New("no input dependency data supplied to parse")
+		return TransitiveDependencyDTO{}, errors.New("no input dependency data supplied to parse")
 	}
-	var data []DepPurlInput
+	var data TransitiveDependencyDTO
 	err := json.Unmarshal(input, &data)
 	if err != nil {
 		s.Errorf("Parse failure: %v", err)
-		return []transitiveDp.Component{}, fmt.Errorf("failed to parse dependency input data: %v", err)
+		return TransitiveDependencyDTO{}, fmt.Errorf("failed to parse dependency input data: %v", err)
 	}
-	packageNames := []transitiveDp.Component{}
-	for _, entry := range data {
-		pName, pError := transitiveDp.ExtractPackageIdentifierFromPurl(entry.Purl)
-		if pError != nil {
-			s.Warnf("Failed to get package identifier  %s: %s", entry.Purl, err)
-			continue
-		}
-		packageNames = append(packageNames, transitiveDp.Component{
-			PackageName: pName,
-			Version:     entry.Requirement,
-		})
-	}
-	return packageNames, nil
+	return data, nil
 }

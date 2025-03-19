@@ -45,7 +45,7 @@ func NewTransitiveDependencies(ctx context.Context, logger *zap.SugaredLogger, d
 }
 
 // GetTransitiveDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
-func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveDep.TransitiveDependencyInput) ([]transitiveDep.Dependency, error) {
+func (d TransitiveDependencyUseCase) GetTransitiveDependencies(dependencyJobs []transitiveDep.DependencyJob) ([]transitiveDep.Dependency, error) {
 	// creates new dependency graph struct
 	depGraph := transitiveDep.NewDepGraph()
 
@@ -79,7 +79,7 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveD
 		dependencyCollectorCfg,
 		models.NewDependencyModel(d.ctx, d.logger, d.db),
 		d.logger)
-	transitiveDependencyCollector.InitJobs(input)
+	transitiveDependencyCollector.InitJobs(dependencyJobs)
 	transitiveDependencyCollector.Start()
 
 	return depGraph.Flatten(), nil

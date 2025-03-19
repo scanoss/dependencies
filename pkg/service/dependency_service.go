@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	_ "errors"
+	"fmt"
 	_ "fmt"
 	_ "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
@@ -115,9 +116,11 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 	defer conn.Close()                                                                    // Move this here, after error check
 	transitiveDependencyInput, err := convertToTransitiveDependencyInput(logger, request) // Convert to internal DTO for processing
 	if err != nil {
-		logger.Errorf("Failed to get a database connection from the pool: %v", err)
-		// Return error response...
-		return nil, errors.New("problem getting database pool connection")
+		logger.Errorf("%v", err)
+		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED,
+			Message: "Problems encountered extracting dependency data"}
+		msg := fmt.Sprintf("problems parsing request: %v", err)
+		return &pb.TransitiveDependencyResponse{Status: &statusResp}, errors.New(msg)
 	}
 	logger.Infof("Transitive dependencies input: %v", transitiveDependencyInput)
 	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, logger, d.db, d.config)

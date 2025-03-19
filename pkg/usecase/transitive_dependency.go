@@ -77,7 +77,8 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(input transitiveD
 		d.ctx,
 		adaptDependencyToGraph,
 		dependencyCollectorCfg,
-		models.NewDependencyModel(d.ctx, d.logger, d.db))
+		models.NewDependencyModel(d.ctx, d.logger, d.db),
+		d.logger)
 	transitiveDependencyCollector.InitJobs(input)
 	transitiveDependencyCollector.Start()
 

@@ -2,7 +2,7 @@ package transitive_dependencies
 
 import (
 	"context"
-	"fmt"
+	"go.uber.org/zap"
 	"scanoss.com/dependencies/pkg/models"
 	"sync"
 	"time"
@@ -36,6 +36,7 @@ type DependencyCollector struct {
 	resultChannel   chan Result
 	jobChannel      chan DependencyJob
 	pendingJobs     int
+	logger          *zap.SugaredLogger
 }
 
 type Component struct {
@@ -49,7 +50,11 @@ type TransitiveDependencyInput struct {
 	Ecosystem  string      `json:"ecosystem"`
 }
 
-func NewDependencyCollector(ctx context.Context, c func(result Result), config DependencyCollectorCfg, model *models.DependencyModel) *DependencyCollector {
+func NewDependencyCollector(ctx context.Context,
+	c func(result Result),
+	config DependencyCollectorCfg,
+	model *models.DependencyModel,
+	logger *zap.SugaredLogger) *DependencyCollector {
 	return &DependencyCollector{
 		ctx:             ctx,
 		Callback:        c,
@@ -60,6 +65,7 @@ func NewDependencyCollector(ctx context.Context, c func(result Result), config D
 		resultChannel:   make(chan Result, config.MaxQueueLimit),
 		jobChannel:      make(chan DependencyJob, config.MaxQueueLimit),
 		pendingJobs:     0,
+		logger:          logger,
 	}
 }
 
@@ -98,18 +104,19 @@ func (dc *DependencyCollector) Start() {
 
 	// Send initial jobs
 	for _, job := range dc.jobs {
-		fmt.Printf("Main: Sending job %s with depth %d\n", job.PurlName, job.Depth)
+		dc.logger.Infof("Main: Sending job %s with depth %d\n", job.PurlName, job.Depth)
 		dc.jobChannel <- job
 	}
 
 	// Start the completion monitor
 	wg.Add(1)
-	dc.processResult(&wg, ctxTimeout, cancel)
-
+	go dc.processResult(&wg, ctxTimeout, cancel)
 	wg.Wait()
-	fmt.Println("All workers have exited. Processing completed.")
 
-	close(dc.resultChannel)
+	// Cancel context to signal all goroutines to exit
+	cancel()
+
+	dc.logger.Infof("All workers have exited. Processing completed.")
 
 }
 
@@ -119,13 +126,13 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 		select {
 		case <-ctx.Done():
 			// Context was cancelled, stop processing results
-			fmt.Println("Results processor stopping due to context cancellation")
+			dc.logger.Warnf("Results processor stopping due to context cancellation")
 			return
 
 		case result, ok := <-dc.resultChannel:
 			if !ok {
 				// Channel was closed, all results processed
-				fmt.Println("Results processor: channel closed, exiting")
+				dc.logger.Infof("Results processor: channel closed, exiting")
 				return
 			}
 
@@ -135,7 +142,7 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 			if len(result.TransitiveDependencies) > 0 && result.TransitiveDependencies[0].Depth > 0 {
 				dc.pendingJobs += len(result.TransitiveDependencies)
 			}
-			fmt.Printf("Pending jobs after adding: %d\n", dc.pendingJobs)
+			dc.logger.Infof("Pending jobs after adding: %d\n", dc.pendingJobs)
 
 			// Queue up new jobs
 			for _, job := range result.TransitiveDependencies {
@@ -144,8 +151,6 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 					case dc.jobChannel <- job:
 						// Job was added successfully
 					case <-ctx.Done():
-						// Context cancelled while trying to add job
-						dc.mapMutex.Unlock()
 						return
 					}
 				}
@@ -153,12 +158,12 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 
 			// Decrement counter after adding all new jobs
 			dc.pendingJobs--
-			fmt.Printf("Pending jobs after decrementing: %d\n", dc.pendingJobs)
-
 			// Check if we're done with all jobs
 			if dc.pendingJobs == 0 {
-				fmt.Println("No more pending jobs, signaling completion")
-				cancel() // Cancel the context to signal all workers to stop
+				dc.logger.Infof("No more pending jobs, signaling completion")
+				// Close channels to unblock any remaining goroutines
+				close(dc.jobChannel)
+				close(dc.resultChannel)
 				return
 			}
 		}
@@ -171,13 +176,13 @@ func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.
 		select {
 		case <-ctx.Done():
 			// Context was cancelled, stop the worker
-			fmt.Printf("Worker %d stopping due to context cancellation\n", id)
+			dc.logger.Warnf("Worker %d stopping due to context cancellation\n", id)
 			return
 
 		case job, ok := <-jobs:
 			if !ok {
 				// Channel was closed
-				fmt.Printf("Worker %d stopping due to closed jobs channel\n", id)
+				dc.logger.Infof("Worker %d stopping due to closed jobs channel\n", id)
 				return
 			}
 
@@ -205,7 +210,7 @@ func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.
 			for _, ud := range transitiveDependencies {
 				fixedVersion, err := PickFirstVersionFromRange(ud.Requirement)
 				if err != nil {
-					fmt.Printf("Cannot resolve requirement %s\n", ud.Requirement)
+					dc.logger.Warnf("Cannot resolve requirement %s\n", ud.Requirement)
 					continue
 				}
 				sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{
@@ -221,14 +226,13 @@ func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.
 				Parent:                 job,
 				TransitiveDependencies: transitiveDependenciesJobs,
 			}:
-				fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
+				dc.logger.Infof("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
 			case <-ctx.Done():
-				fmt.Printf("Worker %d: Context cancelled while sending results\n", id)
+				dc.logger.Warnf("Worker %d: Context cancelled while sending results\n", id)
 				return
 			}
 
-			fmt.Printf("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
+			dc.logger.Infof("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
 		}
 	}
-	fmt.Printf("Worker %d: Exiting\n", id)
 }

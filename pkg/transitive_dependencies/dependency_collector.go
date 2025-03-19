@@ -120,9 +120,6 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 			// Process the result
 			dc.Callback(result)
 
-			if len(result.TransitiveDependencies) > 0 && result.TransitiveDependencies[0].Depth > 0 {
-				dc.pendingJobs += len(result.TransitiveDependencies)
-			}
 			dc.logger.Infof("Pending jobs after adding: %d\n", dc.pendingJobs)
 
 			// Queue up new jobs
@@ -130,9 +127,12 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 				if job.Depth > 0 {
 					select {
 					case dc.jobChannel <- job:
+						dc.pendingJobs++
 						// Job was added successfully
 					case <-ctx.Done():
 						return
+					default:
+						dc.logger.Warnf("Skipping dependency due to max queue limit reached")
 					}
 				}
 			}

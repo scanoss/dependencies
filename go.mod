@@ -25,8 +25,7 @@ require (
 	modernc.org/sqlite v1.36.0
 )
 
-replace github.com/scanoss/papi => ../papi
-
+//replace github.com/scanoss/papi => ../papi
 //replace github.com/scanoss/go-grpc-helper => ../go-grpc-helper
 //replace github.com/scanoss/zap-logging-helper => ../zap-logging-helper
 

@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
-	_ "github.com/mattn/go-sqlite3"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
+	_ "modernc.org/sqlite"
 )
 
 func TestMines(t *testing.T) {

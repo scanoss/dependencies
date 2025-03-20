@@ -74,6 +74,9 @@ type ServerConfig struct {
 
 		// MaxQueueSize specifies the maximum buffer capacity for the queue. Used by dependency_collector.go
 		MaxQueueSize int `env:"TRANSITIVE_RESOURCES_MAX_QUEUE_SIZE"`
+
+		// MaxQueueSize specifies the maximum buffer capacity for the queue. Used by dependency_collector.go
+		MaxResponseSize int `env:"TRANSITIVE_RESOURCES_MAX_RESPONSE_SIZE"`
 	}
 }
 
@@ -114,4 +117,5 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.Telemetry.OltpExporter = "0.0.0.0:4317" // Default OTEL OLTP gRPC Exporter endpoint
 	cfg.TransitiveResources.MaxWorkers = 10
 	cfg.TransitiveResources.MaxQueueSize = 20000
+	cfg.TransitiveResources.MaxResponseSize = 10000
 }

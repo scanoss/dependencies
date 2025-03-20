@@ -21,12 +21,13 @@ type Result struct {
 }
 
 type DependencyCollectorCfg struct {
-	MaxWorkers    int
-	MaxQueueLimit int
+	MaxWorkers                 int
+	MaxQueueLimit              int
+	MaxDependencyResponseLimit int
 }
 
 type DependencyCollector struct {
-	Callback        func(Result)
+	Callback        func(Result) bool
 	Config          DependencyCollectorCfg
 	jobs            []DependencyJob
 	dependencyModel *models.DependencyModel
@@ -40,7 +41,7 @@ type DependencyCollector struct {
 }
 
 func NewDependencyCollector(ctx context.Context,
-	c func(result Result),
+	c func(result Result) bool,
 	config DependencyCollectorCfg,
 	model *models.DependencyModel,
 	logger *zap.SugaredLogger) *DependencyCollector {
@@ -58,7 +59,7 @@ func NewDependencyCollector(ctx context.Context,
 	}
 }
 
-func (dc *DependencyCollector) SetResultCallback(c func(Result)) {
+func (dc *DependencyCollector) SetResultCallback(c func(Result) bool) {
 	dc.Callback = c
 }
 
@@ -117,8 +118,11 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 				return
 			}
 
-			// Process the result
-			dc.Callback(result)
+			if dc.Callback(result) {
+				dc.logger.Infof("Callback signaled to stop processing")
+				close(dc.jobChannel)
+				return
+			}
 
 			dc.logger.Infof("Pending jobs after adding: %d\n", dc.pendingJobs)
 

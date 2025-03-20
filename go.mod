@@ -9,7 +9,6 @@ require (
 	github.com/guseggert/pkggodev-client v0.0.0-20240318140526-cdb0034504cf
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
-	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/scanoss/go-grpc-helper v0.8.0
 	github.com/scanoss/go-purl-helper v0.2.1
@@ -23,7 +22,7 @@ require (
 	modernc.org/sqlite v1.36.1
 )
 
-//replace github.com/scanoss/papi => ../papi
+replace github.com/scanoss/papi => ../papi
 //replace github.com/scanoss/go-grpc-helper => ../go-grpc-helper
 //replace github.com/scanoss/zap-logging-helper => ../zap-logging-helper
 

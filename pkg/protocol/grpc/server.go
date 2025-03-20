@@ -34,7 +34,7 @@ func RunServer(config *myconfig.ServerConfig, v2API pb.DependenciesServer, port 
 	if config.Telemetry.Enabled {
 		var err error
 		oltpShutdown, err = otel.InitTelemetryProviders(config.App.Name, "scanoss-dependencies", version,
-			config.Telemetry.OltpExporter, otel.GetTraceSampler(config.App.Mode), true)
+			config.Telemetry.OltpExporter, otel.GetTraceSampler(config.App.Mode), false)
 		if err != nil {
 			return nil, err
 		}

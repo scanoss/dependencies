@@ -21,11 +21,11 @@ package models
 import (
 	"context"
 	"fmt"
-	"os"
-	"testing"
-
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
+	_ "modernc.org/sqlite"
+	"os"
+	"testing"
 )
 
 // loadSQLData Load the specified SQL files into the supplied DB.
@@ -68,7 +68,7 @@ func loadTestSQLDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, fil
 
 // sqliteSetup sets up an in-memory SQL Lite DB for testing.
 func sqliteSetup(t *testing.T) *sqlx.DB {
-	db, err := sqlx.Connect("sqlite3", "file::memory:?cache=shared")
+	db, err := sqlx.Connect("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}

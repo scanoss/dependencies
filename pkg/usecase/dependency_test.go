@@ -23,8 +23,8 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
+	_ "modernc.org/sqlite"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/models"
@@ -39,7 +39,7 @@ func TestDependencyUseCase(t *testing.T) {
 	ctx := context.Background()
 	ctx = ctxzap.ToContext(ctx, zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db, err := sqlx.Connect("sqlite3", ":memory:")
+	db, err := sqlx.Connect("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
@@ -84,7 +84,7 @@ func TestDependencyUseCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load Config: %v", err)
 	}
-	depUc := NewDependencies(ctx, s, conn, myConfig)
+	depUc := NewDependencies(ctx, s, db, conn, myConfig)
 	requestDto, err := dtos.ParseDependencyInput(s, []byte(depRequestData))
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when parsing input json", err)

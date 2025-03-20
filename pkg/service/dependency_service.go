@@ -81,7 +81,7 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	}
 	defer gd.CloseSQLConnection(conn)
 	// Search the KB for information about each dependency
-	depUc := usecase.NewDependencies(ctx, s, conn, d.config)
+	depUc := usecase.NewDependencies(ctx, s, d.db, conn, d.config)
 	dtoDependencies, warn, err := depUc.GetDependencies(dtoRequest)
 	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
 	if err != nil {

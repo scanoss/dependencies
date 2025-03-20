@@ -42,12 +42,13 @@ type GolangProjects struct {
 	lic     *LicenseModel
 	mine    *MineModel
 	project *ProjectModel // TODO Do we add golang component to the projects table?
+	db      *sqlx.DB
 }
 
 // NewGolangProjectModel creates a new instance of Golang Project Model.
-func NewGolangProjectModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, config *myconfig.ServerConfig) *GolangProjects {
+func NewGolangProjectModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, conn *sqlx.Conn, config *myconfig.ServerConfig) *GolangProjects {
 	return &GolangProjects{ctx: ctx, s: s, conn: conn, config: config,
-		q:   database.NewDBSelectContext(s, conn, config.Database.Trace),
+		q:   database.NewDBSelectContext(s, db, conn, config.Database.Trace),
 		ver: NewVersionModel(ctx, s, conn), lic: NewLicenseModel(ctx, s, conn), mine: NewMineModel(ctx, s, conn),
 		project: NewProjectModel(ctx, s, conn),
 	}

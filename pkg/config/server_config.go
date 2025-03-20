@@ -61,6 +61,7 @@ type ServerConfig struct {
 	TLS struct {
 		CertFile string `env:"DEPS_TLS_CERT"` // TLS Certificate
 		KeyFile  string `env:"DEPS_TLS_KEY"`  // Private TLS Key
+		CN       string `env:"COMP_TLS_CN"`   // Common Name (replaces the CN on the certificate)
 	}
 	Filtering struct {
 		AllowListFile  string `env:"DEPS_ALLOW_LIST"`       // Allow list file for incoming connections

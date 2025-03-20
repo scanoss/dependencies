@@ -106,3 +106,7 @@ func (dp *DepGraph) Flatten() []Dependency {
 	}
 	return purls
 }
+
+func (dp *DepGraph) GetDependenciesCount() int {
+	return len(dp.graph)
+}

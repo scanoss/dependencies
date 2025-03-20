@@ -36,14 +36,15 @@ type DependencyUseCase struct {
 	conn    *sqlx.Conn
 	allUrls *models.AllUrlsModel
 	lic     *models.LicenseModel
+	db      *sqlx.DB
 }
 
 // NewDependencies creates a new instance of the Dependency Use Case.
-func NewDependencies(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
+func NewDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
 	return &DependencyUseCase{ctx: ctx, s: s, conn: conn,
 		allUrls: models.NewAllURLModel(ctx, s, conn, models.NewProjectModel(ctx, s, conn),
-			models.NewGolangProjectModel(ctx, s, conn, config),
-			database.NewDBSelectContext(s, conn, config.Database.Trace),
+			models.NewGolangProjectModel(ctx, s, db, conn, config),
+			database.NewDBSelectContext(s, db, conn, config.Database.Trace),
 		),
 		lic: models.NewLicenseModel(ctx, s, conn),
 	}

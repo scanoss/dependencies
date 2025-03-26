@@ -21,9 +21,8 @@ type Result struct {
 }
 
 type DependencyCollectorCfg struct {
-	MaxWorkers                 int
-	MaxQueueLimit              int
-	MaxDependencyResponseLimit int
+	MaxWorkers    int
+	MaxQueueLimit int
 }
 
 type DependencyCollector struct {

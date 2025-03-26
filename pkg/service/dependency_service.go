@@ -113,11 +113,13 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 		// Return error response...
 		return nil, errors.New("problem getting database pool connection")
 	}
-	defer conn.Close()                                                                    // Move this here, after error check
-	transitiveDependencyInput, err := convertToTransitiveDependencyInput(logger, request) // Convert to internal DTO for processing
+	defer conn.Close()
+
+	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
+	transitiveDependencyInput, err := convertToTransitiveDependencyInput(logger, request)      // Convert to internal DTO for processing
 	if err != nil {
 		logger.Errorf("%v", err)
-		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED,
+		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED,
 			Message: "Problems encountered extracting dependency data"}
 		msg := fmt.Sprintf("problems parsing request: %v", err)
 		return &pb.TransitiveDependencyResponse{Status: &statusResp}, errors.New(msg)
@@ -128,7 +130,8 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 
 	logger.Infof("Transitive dependencies %v", transitiveDependencies)
 
-	output, err := convertToTransitiveDependencyOutput(logger, transitiveDependencies)
+	output := convertToTransitiveDependencyOutput(transitiveDependencies)
+	output.Status = &statusResp
 
 	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
 

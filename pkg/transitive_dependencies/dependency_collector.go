@@ -140,9 +140,7 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 			// Check if we're done with all jobs
 			if dc.pendingJobs == 0 {
 				dc.logger.Infof("No more pending jobs, signaling completion")
-				// Close channels to unblock any remaining goroutines
-				close(dc.jobChannel)
-				close(dc.resultChannel)
+				cancel()
 				return
 			}
 		}

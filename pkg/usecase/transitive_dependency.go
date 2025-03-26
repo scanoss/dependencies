@@ -44,10 +44,26 @@ func NewTransitiveDependencies(ctx context.Context, logger *zap.SugaredLogger, d
 	}
 }
 
+func (d TransitiveDependencyUseCase) createEntryDependenciesIndex(dependencyJobs []transitiveDep.DependencyJob) map[string]struct{} {
+	inputSet := make(map[string]struct{})
+	for _, dj := range dependencyJobs {
+		dep, err := transitiveDep.ExtractDependencyFromJob(dj)
+		if err != nil {
+			d.logger.Errorf("failed to convert dependency:%v, %v", dj, err)
+			continue
+		}
+		inputSet[dep.Purl+"@"+dep.Version] = struct{}{}
+	}
+	return inputSet
+}
+
 // GetTransitiveDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
 func (d TransitiveDependencyUseCase) GetTransitiveDependencies(dependencyJobs []transitiveDep.DependencyJob) ([]transitiveDep.Dependency, error) {
 	// creates new dependency graph struct
 	depGraph := transitiveDep.NewDepGraph()
+	entryDependenciesIndex := d.createEntryDependenciesIndex(dependencyJobs)
+	// Increase the max response size to account for entry dependencies that will be filtered out later
+	maxDependencyResponseSize := d.config.TransitiveResources.MaxResponseSize + len(entryDependenciesIndex)
 
 	// callback to handle dependency collector results
 	adaptDependencyToGraph := func(result transitiveDep.Result) bool {
@@ -65,7 +81,7 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(dependencyJobs []
 				continue
 			}
 			// Stop if max limit response is reached
-			if depGraph.GetDependenciesCount() == d.config.TransitiveResources.MaxResponseSize {
+			if depGraph.GetDependenciesCount() == maxDependencyResponseSize {
 				return true
 			}
 			// Insert relationship into dependency graph
@@ -75,9 +91,8 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(dependencyJobs []
 	}
 
 	dependencyCollectorCfg := transitiveDep.DependencyCollectorCfg{
-		MaxWorkers:                 d.config.TransitiveResources.MaxWorkers,
-		MaxQueueLimit:              d.config.TransitiveResources.MaxQueueSize,
-		MaxDependencyResponseLimit: d.config.TransitiveResources.MaxResponseSize,
+		MaxWorkers:    d.config.TransitiveResources.MaxWorkers,
+		MaxQueueLimit: d.config.TransitiveResources.MaxQueueSize,
 	}
 	transitiveDependencyCollector := transitiveDep.NewDependencyCollector(
 		d.ctx,
@@ -87,5 +102,12 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(dependencyJobs []
 		d.logger)
 	transitiveDependencyCollector.InitJobs(dependencyJobs)
 	transitiveDependencyCollector.Start()
-	return depGraph.Flatten(), nil
+
+	var transitiveDependencies []transitiveDep.Dependency
+	for _, d := range depGraph.Flatten() {
+		if _, ok := entryDependenciesIndex[d.Purl+"@"+d.Version]; !ok {
+			transitiveDependencies = append(transitiveDependencies, d)
+		}
+	}
+	return transitiveDependencies, nil
 }

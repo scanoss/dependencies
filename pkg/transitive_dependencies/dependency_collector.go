@@ -111,16 +111,11 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 			dc.logger.Warnf("Results processor stopping due to context cancellation")
 			return
 
-		case result, ok := <-dc.resultChannel:
-			if !ok {
-				// Channel was closed, all results processed
-				dc.logger.Infof("Results processor: channel closed, exiting")
-				return
-			}
+		case result := <-dc.resultChannel:
 
 			if dc.Callback(result) {
 				dc.logger.Infof("Callback signaled to stop processing")
-				close(dc.jobChannel)
+				cancel()
 				return
 			}
 
@@ -164,12 +159,7 @@ func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.
 			dc.logger.Warnf("Worker %d stopping due to context cancellation\n", id)
 			return
 
-		case job, ok := <-jobs:
-			if !ok {
-				// Channel was closed
-				dc.logger.Infof("Worker %d stopping due to closed jobs channel\n", id)
-				return
-			}
+		case job := <-jobs:
 
 			cacheKey := job.PurlName + "@" + job.Version
 			// First try with a read lock only

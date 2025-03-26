@@ -121,7 +121,7 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 		logger.Errorf("%v", err)
 		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED,
 			Message: "Problems encountered extracting dependency data"}
-		msg := fmt.Sprintf("problems parsing request: %v", err)
+		msg := fmt.Sprintf("%v", err)
 		return &pb.TransitiveDependencyResponse{Status: &statusResp}, errors.New(msg)
 	}
 	logger.Infof("Transitive dependencies input: %v", transitiveDependencyInput)

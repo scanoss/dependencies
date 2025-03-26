@@ -19,6 +19,8 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/package-url/packageurl-go"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -81,7 +83,7 @@ func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.Transi
 	data, err := json.Marshal(request)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request input: %v", err)
-		return []trasitive_dependencies.DependencyJob{}, errors.New("problem marshalling dependency input")
+		return []trasitive_dependencies.DependencyJob{}, errors.New("problem extracting dependency input")
 	}
 	s.Debugf("Parsed data: %v", data)
 	transitiveDepDTO, err := dtos.ParseTransitiveReqDTOS(s, data)
@@ -95,11 +97,19 @@ func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.Transi
 		return nil, errors.New("unsupported ecosystem")
 	}
 	for _, dto := range transitiveDepDTO.Purls {
-		purlName, errPackage := trasitive_dependencies.ExtractPackageIdentifierFromPurl(dto.Purl)
-		if errPackage != nil {
-			s.Errorf("Problem extracting package identifier for: %s", dto.Purl)
+		p, purlErr := packageurl.FromString(dto.Purl)
+		if purlErr != nil {
+			s.Errorf("problem extracting package identifier from: %s", dto.Purl)
 			continue
 		}
+
+		if p.Type != shared.SupportedEcosystems[transitiveDepDTO.Ecosystem] {
+			errorMsg := fmt.Sprintf("ecosystem mismatch in PURL '%s': requested '%s' but PURL belongs to '%s' ecosystem",
+				dto.Purl, transitiveDepDTO.Ecosystem, p.Type)
+			return nil, errors.New(errorMsg)
+		}
+
+		purlName, _ := trasitive_dependencies.ExtractPackageIdentifierFromPurl(dto.Purl)
 
 		dependencyJobs = append(dependencyJobs, trasitive_dependencies.DependencyJob{
 			PurlName:  purlName,

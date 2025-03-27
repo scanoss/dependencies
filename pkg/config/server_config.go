@@ -78,6 +78,9 @@ type ServerConfig struct {
 
 		// MaxQueueSize specifies the maximum buffer capacity for the queue. Used by dependency_collector.go
 		MaxResponseSize int `env:"TRANSITIVE_RESOURCES_MAX_RESPONSE_SIZE"`
+
+		// Timeout in seconds
+		TimeOut int `env:"TRANSITIVE_RESOURCES_TIMEOUT"`
 	}
 }
 
@@ -119,4 +122,5 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.TransitiveResources.MaxWorkers = 10
 	cfg.TransitiveResources.MaxQueueSize = 20000
 	cfg.TransitiveResources.MaxResponseSize = 10000
+	cfg.TransitiveResources.TimeOut = 600
 }

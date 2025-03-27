@@ -66,7 +66,7 @@ func (dc *DependencyCollector) InitJobs(inputJobs []DependencyJob) {
 }
 
 // Start initiates dependency collection by spawning workers, sending initial jobs, and
-// monitoring results until completion or timeout (10 minutes).
+// monitoring results until completion or timeout
 func (dc *DependencyCollector) Start() {
 	// Create context with cancel
 	ctx, cancel := context.WithCancel(dc.ctx)

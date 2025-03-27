@@ -114,21 +114,18 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 		return nil, errors.New("problem getting database pool connection")
 	}
 	defer conn.Close()
-
 	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
-	transitiveDependencyInput, err := convertToTransitiveDependencyInput(logger, request)      // Convert to internal DTO for processing
+	// Convert the request to a transitive dependency collection job for processing
+	transitiveDependencyInput, err := convertToTransitiveDependencyCollection(logger, request)
 	if err != nil {
 		logger.Errorf("%v", err)
 		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED,
 			Message: fmt.Sprintf("%v", err)}
 		return &pb.TransitiveDependencyResponse{Status: &statusResp}, nil
 	}
-	logger.Infof("Transitive dependencies input: %v", transitiveDependencyInput)
 	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, logger, d.db, d.config)
+	logger.Infof("Processing dependency request...%v", transitiveDependencyInput)
 	transitiveDependencies, err := transitiveDependenciesUc.GetTransitiveDependencies(transitiveDependencyInput)
-
-	logger.Infof("Transitive dependencies %v", transitiveDependencies)
-
 	output := convertToTransitiveDependencyOutput(transitiveDependencies)
 	output.Status = &statusResp
 

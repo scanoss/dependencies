@@ -28,6 +28,7 @@ import (
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/shared"
 	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
+	"scanoss.com/dependencies/pkg/usecase"
 )
 
 // Structure for storing OTEL metrics.
@@ -79,22 +80,24 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 	return &depResp, nil
 }
 
-func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.TransitiveDependencyRequest) ([]trasitive_dependencies.DependencyJob, error) {
+func convertToTransitiveDependencyCollection(
+	s *zap.SugaredLogger,
+	request *pb.TransitiveDependencyRequest) (usecase.DependencyJobCollection, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request input: %v", err)
-		return []trasitive_dependencies.DependencyJob{}, errors.New("problem extracting dependency input")
+		return usecase.DependencyJobCollection{}, errors.New("problem extracting dependency input")
 	}
 	s.Debugf("Parsed data: %v", data)
 	transitiveDepDTO, err := dtos.ParseTransitiveReqDTOS(s, data)
 	if err != nil {
 		s.Errorf("Problem parsing dependency request input: %v", err)
-		return []trasitive_dependencies.DependencyJob{}, errors.New("problem parsing dependency input")
+		return usecase.DependencyJobCollection{}, errors.New("problem parsing dependency input")
 	}
 	var dependencyJobs []trasitive_dependencies.DependencyJob
 	if _, ok := shared.SupportedEcosystems[transitiveDepDTO.Ecosystem]; !ok {
 		s.Errorf("unsupported ecosystem: %s", transitiveDepDTO.Ecosystem)
-		return nil, errors.New("unsupported ecosystem")
+		return usecase.DependencyJobCollection{}, errors.New("unsupported ecosystem")
 	}
 	for _, dto := range transitiveDepDTO.Purls {
 		p, purlErr := packageurl.FromString(dto.Purl)
@@ -106,7 +109,7 @@ func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.Transi
 		if p.Type != shared.SupportedEcosystems[transitiveDepDTO.Ecosystem] {
 			errorMsg := fmt.Sprintf("ecosystem mismatch in PURL '%s': requested '%s' but PURL belongs to '%s' ecosystem",
 				dto.Purl, transitiveDepDTO.Ecosystem, p.Type)
-			return nil, errors.New(errorMsg)
+			return usecase.DependencyJobCollection{}, errors.New(errorMsg)
 		}
 
 		purlName, _ := trasitive_dependencies.ExtractPackageIdentifierFromPurl(dto.Purl)
@@ -118,7 +121,10 @@ func convertToTransitiveDependencyInput(s *zap.SugaredLogger, request *pb.Transi
 			Depth:     transitiveDepDTO.Depth,
 		})
 	}
-	return dependencyJobs, nil
+	return usecase.DependencyJobCollection{
+		DependencyJobs: dependencyJobs,
+		ResponseLimit:  transitiveDepDTO.Limit,
+	}, nil
 }
 
 func convertToTransitiveDependencyOutput(dependencies []trasitive_dependencies.Dependency) *pb.TransitiveDependencyResponse {

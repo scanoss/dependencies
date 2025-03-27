@@ -25,6 +25,11 @@ import (
 	transitiveDep "scanoss.com/dependencies/pkg/transitive_dependencies"
 )
 
+type DependencyJobCollection struct {
+	DependencyJobs []transitiveDep.DependencyJob
+	ResponseLimit  int
+}
+
 type TransitiveDependencyUseCase struct {
 	ctx             context.Context
 	logger          *zap.SugaredLogger
@@ -58,26 +63,25 @@ func (d TransitiveDependencyUseCase) createEntryDependenciesIndex(dependencyJobs
 }
 
 // GetTransitiveDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
-func (d TransitiveDependencyUseCase) GetTransitiveDependencies(dependencyJobs []transitiveDep.DependencyJob) ([]transitiveDep.Dependency, error) {
+func (d TransitiveDependencyUseCase) GetTransitiveDependencies(depJobCollection DependencyJobCollection) ([]transitiveDep.Dependency, error) {
 	// creates new dependency graph struct
 	depGraph := transitiveDep.NewDepGraph()
-	entryDependenciesIndex := d.createEntryDependenciesIndex(dependencyJobs)
+	entryDependenciesIndex := d.createEntryDependenciesIndex(depJobCollection.DependencyJobs)
 	// Increase the max response size to account for entry dependencies that will be filtered out later
-	maxDependencyResponseSize := d.config.TransitiveResources.MaxResponseSize + len(entryDependenciesIndex)
-
+	responseSize := transitiveDep.GetMaxResponseLimit(*d.config, &depJobCollection.ResponseLimit) + len(entryDependenciesIndex)
 	dependencyCollectorCfg := transitiveDep.DependencyCollectorCfg{
 		MaxWorkers:    d.config.TransitiveResources.MaxWorkers,
-		MaxQueueLimit: d.config.TransitiveResources.MaxQueueSize,
+		MaxQueueLimit: responseSize,
+		TimeOut:       d.config.TransitiveResources.TimeOut,
 	}
 	transitiveDependencyCollector := transitiveDep.NewDependencyCollector(
 		d.ctx,
-		transitiveDep.ProcessCollectorResult(d.logger, depGraph, maxDependencyResponseSize),
+		transitiveDep.ProcessCollectorResult(d.logger, depGraph, responseSize),
 		dependencyCollectorCfg,
 		models.NewDependencyModel(d.ctx, d.logger, d.db),
 		d.logger)
-	transitiveDependencyCollector.InitJobs(dependencyJobs)
+	transitiveDependencyCollector.InitJobs(depJobCollection.DependencyJobs)
 	transitiveDependencyCollector.Start()
-
 	var transitiveDependencies []transitiveDep.Dependency
 	for _, d := range depGraph.Flatten() {
 		if _, ok := entryDependenciesIndex[d.Purl+"@"+d.Version]; !ok {

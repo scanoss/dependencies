@@ -65,38 +65,13 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(dependencyJobs []
 	// Increase the max response size to account for entry dependencies that will be filtered out later
 	maxDependencyResponseSize := d.config.TransitiveResources.MaxResponseSize + len(entryDependenciesIndex)
 
-	// callback to handle dependency collector results
-	adaptDependencyToGraph := func(result transitiveDep.Result) bool {
-		parentDep, err := transitiveDep.ExtractDependencyFromJob(result.Parent)
-		if err != nil {
-			d.logger.Errorf("failed to convert dependency:%v, %v", result.Parent, err)
-			return false
-		}
-		for _, td := range result.TransitiveDependencies {
-			var tDep = transitiveDep.Dependency{}
-			// Get purls for parent and transitive dependency
-			tDep, err = transitiveDep.ExtractDependencyFromJob(td)
-			if err != nil {
-				d.logger.Errorf("failed to convert transitive dependency:%v, %v", td.PurlName, err)
-				continue
-			}
-			// Stop if max limit response is reached
-			if depGraph.GetDependenciesCount() == maxDependencyResponseSize {
-				return true
-			}
-			// Insert relationship into dependency graph
-			depGraph.Insert(parentDep, tDep)
-		}
-		return false
-	}
-
 	dependencyCollectorCfg := transitiveDep.DependencyCollectorCfg{
 		MaxWorkers:    d.config.TransitiveResources.MaxWorkers,
 		MaxQueueLimit: d.config.TransitiveResources.MaxQueueSize,
 	}
 	transitiveDependencyCollector := transitiveDep.NewDependencyCollector(
 		d.ctx,
-		adaptDependencyToGraph,
+		transitiveDep.ProcessCollectorResult(d.logger, depGraph, maxDependencyResponseSize),
 		dependencyCollectorCfg,
 		models.NewDependencyModel(d.ctx, d.logger, d.db),
 		d.logger)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/shared"
 	"strings"
 
@@ -88,4 +89,14 @@ func ExtractDependencyFromJob(job DependencyJob) (Dependency, error) {
 		Purl:    purl,
 		Version: packageUrl.Version,
 	}, nil
+}
+
+func GetMaxResponseLimit(config config.ServerConfig, limit *int) int {
+	if limit != nil {
+		if *limit > config.TransitiveResources.MaxResponseSize {
+			return config.TransitiveResources.DefaultResponseSize
+		}
+		return *limit
+	}
+	return config.TransitiveResources.DefaultResponseSize
 }

@@ -42,6 +42,7 @@ type TransitiveDependencyDTO struct {
 	Depth     int            `json:"depth"`
 	Ecosystem string         `json:"ecosystem"`
 	Purls     []DepPurlInput `json:"purls"`
+	Limit     int            `json:"limit"`
 }
 
 // ParseDependencyInput converts the input byte array to a DependencyInput structure.

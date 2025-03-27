@@ -33,6 +33,8 @@
   },
   "TransitiveResources": {
     "MaxWorkers": 10,
-    "MaxQueueSize": 20000
+    "MaxQueueSize": 20000,
+    "MaxResponseSize": 1000,
+    "Timeout": 600
   }
 }

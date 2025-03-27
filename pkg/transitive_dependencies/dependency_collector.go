@@ -23,6 +23,7 @@ type Result struct {
 type DependencyCollectorCfg struct {
 	MaxWorkers    int
 	MaxQueueLimit int
+	TimeOut       int
 }
 
 type DependencyCollector struct {
@@ -69,7 +70,7 @@ func (dc *DependencyCollector) InitJobs(inputJobs []DependencyJob) {
 func (dc *DependencyCollector) Start() {
 	// Create context with cancel
 	ctx, cancel := context.WithCancel(dc.ctx)
-	ctxTimeout, timeoutCancel := context.WithTimeout(ctx, 10*time.Minute)
+	ctxTimeout, timeoutCancel := context.WithTimeout(ctx, time.Duration(dc.Config.TimeOut)*time.Second)
 	// Make sure to defer both cancels (in reverse order)
 	defer timeoutCancel()
 	defer cancel()

@@ -33,7 +33,7 @@ import (
 func TestDependencyUseCase(t *testing.T) {
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+		t.Fatalf("an error '%s' was not expected when opening a sugared S", err)
 	}
 	defer zlog.SyncZap()
 	ctx := context.Background()

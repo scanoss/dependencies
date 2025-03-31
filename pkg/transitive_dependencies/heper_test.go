@@ -9,10 +9,10 @@ import (
 )
 
 func TestProcessCollectorResult(t *testing.T) {
-	// Setup test logger
+	// Setup test SugaredLogger
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+		t.Fatalf("an error '%s' was not expected when opening a sugared S", err)
 	}
 	defer zlog.SyncZap()
 	ctx := context.Background()

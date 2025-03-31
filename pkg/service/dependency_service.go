@@ -25,6 +25,8 @@ import (
 	_ "fmt"
 	_ "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	_ "google.golang.org/protobuf/runtime/protoimpl"
 	"time"
 
@@ -121,6 +123,10 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 		logger.Errorf("%v", err)
 		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED,
 			Message: fmt.Sprintf("%v", err)}
+		err = grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
+		if err != nil {
+			logger.Debugf("Error setting x-ttp-code to trailer: %v\n", err)
+		}
 		return &pb.TransitiveDependencyResponse{Status: &statusResp}, nil
 	}
 	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, logger, d.db, d.config)
@@ -128,9 +134,7 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 	transitiveDependencies, err := transitiveDependenciesUc.GetTransitiveDependencies(transitiveDependencyInput)
 	output := convertToTransitiveDependencyOutput(transitiveDependencies)
 	output.Status = &statusResp
-
 	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
-
 	return output, nil
 }
 

@@ -22,9 +22,9 @@ require (
 	modernc.org/sqlite v1.36.1
 )
 
-replace github.com/scanoss/papi => ../papi
-replace github.com/scanoss/go-grpc-helper => ../go-grpc-helper
-replace github.com/scanoss/zap-logging-helper => ../zap-logging-helper
+//replace github.com/scanoss/papi => ../papi
+//replace github.com/scanoss/go-grpc-helper => ../go-grpc-helper
+//replace github.com/scanoss/zap-logging-helper => ../zap-logging-helper
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect

@@ -42,7 +42,7 @@ func RunServer(config *myconfig.ServerConfig, v2API pb.DependenciesServer, port 
 	// Configure the port, interceptors, TLS and register the service
 	listen, server, err := gs.SetupGrpcServer(port, config.TLS.CertFile, config.TLS.KeyFile,
 		allowedIPs, deniedIPs, startTLS, config.Filtering.BlockByDefault, config.Filtering.TrustProxy,
-		config.Telemetry.Enabled, true)
+		config.Telemetry.Enabled, config.App.GRPCReflection)
 	if err != nil {
 		oltpShutdown()
 		return nil, err

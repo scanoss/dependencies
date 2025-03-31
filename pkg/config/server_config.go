@@ -29,12 +29,13 @@ const (
 // ServerConfig is configuration for Server.
 type ServerConfig struct {
 	App struct {
-		Name     string `env:"APP_NAME"`
-		GRPCPort string `env:"APP_PORT"`
-		RESTPort string `env:"REST_PORT"`
-		Debug    bool   `env:"APP_DEBUG"` // true/false
-		Trace    bool   `env:"APP_TRACE"` // true/false
-		Mode     string `env:"APP_MODE"`  // dev or prod
+		Name           string `env:"APP_NAME"`
+		GRPCPort       string `env:"APP_PORT"`
+		RESTPort       string `env:"REST_PORT"`
+		Debug          bool   `env:"APP_DEBUG"`           // true/false
+		Trace          bool   `env:"APP_TRACE"`           // true/false
+		Mode           string `env:"APP_MODE"`            // dev or prod
+		GRPCReflection bool   `env:"APP_GRPC_REFLECTION"` // Enables gRPC reflection service for debugging and discovery
 	}
 	Logging struct {
 		DynamicLogging bool   `env:"LOG_DYNAMIC"`      // true/false
@@ -117,6 +118,7 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.App.RESTPort = defaultRestPort
 	cfg.App.Mode = "dev"
 	cfg.App.Debug = false
+	cfg.App.GRPCReflection = false
 	cfg.Database.Driver = "postgres"
 	cfg.Database.Host = "localhost"
 	cfg.Database.User = "scanoss"

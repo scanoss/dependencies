@@ -83,6 +83,11 @@ type ServerConfig struct {
 		// when the requested size exceeds the maximum response size.
 		DefaultResponseSize int `env:"TRANSITIVE_RESOURCES_DEFAULT_RESPONSE_SIZE"`
 
+		MaxDepth int `env:"TRANSITIVE_RESOURCES_MAX_DEPTH"`
+
+		// DEFAULT_DEPTH
+		DefaultDepth int `env:"TRANSITIVE_RESOURCES_DEFAULT_DEPTH"`
+
 		// Timeout in seconds
 		TimeOut int `env:"TRANSITIVE_RESOURCES_TIMEOUT"`
 	}
@@ -128,4 +133,6 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.TransitiveResources.MaxResponseSize = 5000
 	cfg.TransitiveResources.DefaultResponseSize = 1000
 	cfg.TransitiveResources.TimeOut = 600
+	cfg.TransitiveResources.MaxDepth = 10
+	cfg.TransitiveResources.DefaultDepth = 3
 }

@@ -93,10 +93,20 @@ func ExtractDependencyFromJob(job DependencyJob) (Dependency, error) {
 
 func GetMaxResponseLimit(config config.ServerConfig, limit *int) int {
 	if limit != nil {
-		if *limit > config.TransitiveResources.MaxResponseSize {
+		if *limit > config.TransitiveResources.MaxResponseSize || *limit == 0 {
 			return config.TransitiveResources.DefaultResponseSize
 		}
 		return *limit
 	}
 	return config.TransitiveResources.DefaultResponseSize
+}
+
+func GetMaxDepthLimit(config config.ServerConfig, depth *int) int {
+	if depth != nil {
+		if *depth > config.TransitiveResources.MaxDepth || *depth == 0 {
+			return config.TransitiveResources.DefaultDepth
+		}
+		return *depth
+	}
+	return config.TransitiveResources.DefaultDepth
 }

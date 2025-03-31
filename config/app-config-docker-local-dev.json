@@ -32,6 +32,8 @@
     "MaxQueueSize": 20000,
     "DefaultResponseSize": 1000,
     "MaxResponseSize": 5000,
-    "Timeout": 600
+    "Timeout": 600,
+    "MaxDepth": 10,
+    "DefaultDepth": 3
   }
 }

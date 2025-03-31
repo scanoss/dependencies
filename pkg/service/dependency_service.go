@@ -116,7 +116,7 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 	defer conn.Close()
 	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
 	// Convert the request to a transitive dependency collection job for processing
-	transitiveDependencyInput, err := convertToTransitiveDependencyCollection(logger, request)
+	transitiveDependencyInput, err := convertToTransitiveDependencyCollection(logger, d.config, request)
 	if err != nil {
 		logger.Errorf("%v", err)
 		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED,

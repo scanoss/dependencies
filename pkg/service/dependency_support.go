@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
+	"scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/shared"
 	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
@@ -82,23 +83,28 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 
 func convertToTransitiveDependencyCollection(
 	s *zap.SugaredLogger,
+	config *config.ServerConfig,
 	request *pb.TransitiveDependencyRequest) (usecase.DependencyJobCollection, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request input: %v", err)
 		return usecase.DependencyJobCollection{}, errors.New("problem extracting dependency input")
 	}
-	s.Debugf("Parsed data: %v", data)
 	transitiveDepDTO, err := dtos.ParseTransitiveReqDTOS(s, data)
 	if err != nil {
 		s.Errorf("Problem parsing dependency request input: %v", err)
 		return usecase.DependencyJobCollection{}, errors.New("problem parsing dependency input")
 	}
+
 	var dependencyJobs []trasitive_dependencies.DependencyJob
 	if _, ok := shared.SupportedEcosystems[transitiveDepDTO.Ecosystem]; !ok {
 		s.Errorf("unsupported ecosystem: %s", transitiveDepDTO.Ecosystem)
 		return usecase.DependencyJobCollection{}, errors.New("unsupported ecosystem")
 	}
+	// Get max depth limit
+	depthLimit := trasitive_dependencies.GetMaxDepthLimit(*config, transitiveDepDTO.Depth)
+	// Get max response limit
+	responseLimit := trasitive_dependencies.GetMaxResponseLimit(*config, transitiveDepDTO.Limit)
 	for _, dto := range transitiveDepDTO.Purls {
 		p, purlErr := packageurl.FromString(dto.Purl)
 		if purlErr != nil {
@@ -118,12 +124,12 @@ func convertToTransitiveDependencyCollection(
 			PurlName:  purlName,
 			Version:   dto.Requirement,
 			Ecosystem: transitiveDepDTO.Ecosystem,
-			Depth:     transitiveDepDTO.Depth,
+			Depth:     depthLimit,
 		})
 	}
 	return usecase.DependencyJobCollection{
 		DependencyJobs: dependencyJobs,
-		ResponseLimit:  transitiveDepDTO.Limit,
+		ResponseLimit:  responseLimit,
 	}, nil
 }
 

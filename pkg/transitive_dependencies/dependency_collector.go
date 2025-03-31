@@ -37,7 +37,7 @@ type DependencyCollector struct {
 	resultChannel   chan Result
 	jobChannel      chan DependencyJob
 	pendingJobs     int
-	logger          *zap.SugaredLogger
+	S               *zap.SugaredLogger
 }
 
 func NewDependencyCollector(
@@ -56,7 +56,7 @@ func NewDependencyCollector(
 		resultChannel:   make(chan Result, config.MaxQueueLimit),
 		jobChannel:      make(chan DependencyJob, config.MaxQueueLimit),
 		pendingJobs:     0,
-		logger:          logger,
+		S:               logger,
 	}
 }
 
@@ -84,7 +84,7 @@ func (dc *DependencyCollector) Start() {
 
 	// Send initial jobs
 	for _, job := range dc.jobs {
-		dc.logger.Infof("Main: Sending job %s with depth %d\n", job.PurlName, job.Depth)
+		dc.S.Infof("Main: Sending job %s with depth %d\n", job.PurlName, job.Depth)
 		dc.jobChannel <- job
 	}
 
@@ -93,7 +93,7 @@ func (dc *DependencyCollector) Start() {
 	go dc.processResult(&wg, ctxTimeout, cancel)
 	wg.Wait()
 
-	dc.logger.Info("All workers have exited. Processing completed.")
+	dc.S.Info("All workers have exited. Processing completed.")
 }
 
 // processResult monitors the result channel, processes dependency results
@@ -106,7 +106,7 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 		select {
 		case <-ctx.Done():
 			// Context was cancelled, stop processing results
-			dc.logger.Debug("Results processor stopping due to context cancellation")
+			dc.S.Debug("Results processor stopping due to context cancellation")
 			return
 
 		case result := <-dc.resultChannel:
@@ -116,7 +116,7 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 			which signals the collector to cancel further operations. Returns false to continue processing.
 			*/
 			if dc.ResultHandler(result) {
-				dc.logger.Debug("Result handler signaled to stop processing")
+				dc.S.Debug("Result handler signaled to stop processing")
 				cancel()
 				return
 			}
@@ -130,7 +130,7 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 					case <-ctx.Done():
 						return
 					default:
-						dc.logger.Debug("Skipping dependency due to max queue limit reached")
+						dc.S.Debug("Skipping dependency due to max queue limit reached")
 					}
 				}
 			}
@@ -138,7 +138,7 @@ func (dc *DependencyCollector) processResult(wg *sync.WaitGroup, ctx context.Con
 			dc.pendingJobs--
 			// Check if we're done with all jobs
 			if dc.pendingJobs == 0 {
-				dc.logger.Debug("No more pending jobs, signaling completion")
+				dc.S.Debug("No more pending jobs, signaling completion")
 				cancel()
 				return
 			}
@@ -155,7 +155,7 @@ func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.
 		select {
 		case <-ctx.Done():
 			// Context was cancelled, stop the worker
-			dc.logger.Debugf("Worker %d stopping due to context cancellation\n", id)
+			dc.S.Debugf("Worker %d stopping due to context cancellation\n", id)
 			return
 
 		case job := <-jobs:
@@ -184,7 +184,7 @@ func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.
 			for _, ud := range transitiveDependencies {
 				fixedVersion, err := PickFirstVersionFromRange(ud.Requirement)
 				if err != nil {
-					dc.logger.Debugf("Cannot resolve requirement %s\n", ud.Requirement)
+					dc.S.Debugf("Cannot resolve requirement %s\n", ud.Requirement)
 					continue
 				}
 				sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{
@@ -200,12 +200,12 @@ func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.
 				Parent:                 job,
 				TransitiveDependencies: transitiveDependenciesJobs,
 			}:
-				dc.logger.Debugf("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
+				dc.S.Debugf("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
 			case <-ctx.Done():
-				dc.logger.Debugf("Worker %d: Context cancelled while sending results\n", id)
+				dc.S.Debugf("Worker %d: Context cancelled while sending results\n", id)
 				return
 			}
-			dc.logger.Infof("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
+			dc.S.Infof("Worker %d: Completed job %s at depth %d\n", id, job.PurlName, newJobDepth)
 		}
 	}
 }

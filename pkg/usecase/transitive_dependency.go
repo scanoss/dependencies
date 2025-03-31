@@ -32,19 +32,19 @@ type DependencyJobCollection struct {
 
 type TransitiveDependencyUseCase struct {
 	ctx             context.Context
-	logger          *zap.SugaredLogger
+	S               *zap.SugaredLogger
 	db              *sqlx.DB
 	dependencyModel *models.DependencyModel
 	config          *myconfig.ServerConfig
 }
 
 // NewTransitiveDependencies creates a new instance of the Dependency Use Case.
-func NewTransitiveDependencies(ctx context.Context, logger *zap.SugaredLogger, db *sqlx.DB, config *myconfig.ServerConfig) *TransitiveDependencyUseCase {
+func NewTransitiveDependencies(ctx context.Context, S *zap.SugaredLogger, db *sqlx.DB, config *myconfig.ServerConfig) *TransitiveDependencyUseCase {
 	return &TransitiveDependencyUseCase{
 		ctx:             ctx,
-		logger:          logger,
+		S:               S,
 		db:              db,
-		dependencyModel: models.NewDependencyModel(ctx, logger, db),
+		dependencyModel: models.NewDependencyModel(ctx, S, db),
 		config:          config,
 	}
 }
@@ -54,7 +54,7 @@ func (d TransitiveDependencyUseCase) createEntryDependenciesIndex(dependencyJobs
 	for _, dj := range dependencyJobs {
 		dep, err := transitiveDep.ExtractDependencyFromJob(dj)
 		if err != nil {
-			d.logger.Errorf("failed to convert dependency:%v, %v", dj, err)
+			d.S.Errorf("failed to convert dependency:%v, %v", dj, err)
 			continue
 		}
 		inputSet[dep.Purl+"@"+dep.Version] = struct{}{}
@@ -76,10 +76,10 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(depJobCollection 
 	}
 	transitiveDependencyCollector := transitiveDep.NewDependencyCollector(
 		d.ctx,
-		transitiveDep.ProcessCollectorResult(d.logger, depGraph, responseSize),
+		transitiveDep.ProcessCollectorResult(d.S, depGraph, responseSize),
 		dependencyCollectorCfg,
-		models.NewDependencyModel(d.ctx, d.logger, d.db),
-		d.logger)
+		models.NewDependencyModel(d.ctx, d.S, d.db),
+		d.S)
 	transitiveDependencyCollector.InitJobs(depJobCollection.DependencyJobs)
 	transitiveDependencyCollector.Start()
 	var transitiveDependencies []transitiveDep.Dependency

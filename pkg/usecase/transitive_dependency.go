@@ -68,7 +68,7 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(depJobCollection 
 	depGraph := transitiveDep.NewDepGraph()
 	entryDependenciesIndex := d.createEntryDependenciesIndex(depJobCollection.DependencyJobs)
 	// Increase the max response size to account for entry dependencies that will be filtered out later
-	responseSize := transitiveDep.GetMaxResponseLimit(*d.config, &depJobCollection.ResponseLimit) + len(entryDependenciesIndex)
+	responseSize := depJobCollection.ResponseLimit + len(entryDependenciesIndex)
 	dependencyCollectorCfg := transitiveDep.DependencyCollectorCfg{
 		MaxWorkers:    d.config.TransitiveResources.MaxWorkers,
 		MaxQueueLimit: responseSize,

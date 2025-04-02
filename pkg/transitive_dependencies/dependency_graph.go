@@ -6,84 +6,76 @@ import (
 	"strings"
 )
 
-type Status string
-
-// Node represents a node in the dependency graph
+// Dependency represents a node in the dependency graph
 type Dependency struct {
 	Purl    string
 	Version string
 }
 
-type Purl string
-
-// DepGraph represents a directed acyclic graph of dependencies
-type DepGraph struct {
-	index map[Purl]*Dependency
-
-	graph map[*Dependency][]*Dependency
-
-	visited map[string]Status
+// DependencyGraph represents a directed graph of dependencies.
+type DependencyGraph struct {
+	// The Dependency type works as a map key because it contains only comparable types.
+	// More info: https://go.dev/blog/maps#key-types
+	dependenciesOf map[Dependency][]Dependency
 }
 
-func NewDepGraph() *DepGraph {
-	return &DepGraph{
-		graph:   make(map[*Dependency][]*Dependency),
-		index:   make(map[Purl]*Dependency),
-		visited: make(map[string]Status),
+// NewDepGraph creates and initializes a new empty dependency graph
+func NewDepGraph() *DependencyGraph {
+	return &DependencyGraph{
+		dependenciesOf: make(map[Dependency][]Dependency),
 	}
 }
 
-func (dp *DepGraph) getOrCreateDependencyByPurl(d Dependency) *Dependency {
-	key := Purl(d.Purl + "@" + d.Version)
-	if dp.index[key] == nil {
-		dp.index[key] = &Dependency{
-			Purl:    d.Purl,
-			Version: d.Version,
-		}
-	}
-
-	return dp.index[key]
+// isRegisteredDependency checks if a dependency is already present in the graph
+// Returns true if the dependency exists, false otherwise
+func (dg *DependencyGraph) isRegisteredDependency(d Dependency) bool {
+	_, exists := dg.dependenciesOf[d]
+	return exists
 }
 
-func (dp *DepGraph) Insert(dep Dependency, transitive Dependency) {
-	// Get or create the parent dependency node
-	parent := dp.getOrCreateDependencyByPurl(dep)
+// registerDependency adds a new dependency to the graph with an empty list of children
+// This creates a node in the graph without any outgoing edges
+func (dg *DependencyGraph) registerDependency(d Dependency) {
+	dg.dependenciesOf[d] = []Dependency{}
+}
 
-	// Check if transitive dependency is empty
-	isEmptyTransitive := transitive == Dependency{}
+// Connect establishes a dependency relationship between root and child
+// If either dependency doesn't exist in the graph, it will be registered first
+// If child is empty, only the root dependency is registered without creating an edge
+func (dg *DependencyGraph) Connect(root Dependency, child Dependency) {
 
-	// Initialize parent's adjacency list if needed
-	if dp.graph[parent] == nil {
-		dp.graph[parent] = []*Dependency{}
+	if !dg.isRegisteredDependency(root) {
+		dg.registerDependency(root)
 	}
 
-	// If transitive is empty, we're just ensuring parent exists in the graph
-	if isEmptyTransitive {
+	//If child is empty, don't create an entry in the graph
+	if (child == Dependency{}) {
 		return
 	}
 
-	// Get or create the child dependency node
-	child := dp.getOrCreateDependencyByPurl(transitive)
-
-	if dp.graph[child] == nil {
-		dp.graph[child] = []*Dependency{}
+	if !dg.isRegisteredDependency(child) {
+		dg.registerDependency(child)
 	}
-	// Add child to parent's adjacency list
-	dp.graph[parent] = append(dp.graph[parent], child)
+
+	dg.dependenciesOf[root] = append(dg.dependenciesOf[root], child)
 }
 
-func (dp *DepGraph) String() string {
+// String generates a string representation of the graph
+// The output shows all dependencies and their relationships
+// Each line follows the format: "<dependency> --> <child_dependency>"
+// Dependencies with no children show "<dependency> --> null"
+func (dg *DependencyGraph) String() string {
 	var result strings.Builder
-	deps := make([]*Dependency, 0, len(dp.graph))
-	for dep := range dp.graph {
-		deps = append(deps, dep)
+	deps := make([]*Dependency, 0, len(dg.dependenciesOf))
+	for dep := range dg.dependenciesOf {
+		deps = append(deps, &dep)
 	}
 
 	sort.Slice(deps, func(i, j int) bool {
 		return string(deps[i].Purl) < string(deps[j].Purl)
 	})
 
-	for key, value := range dp.graph {
+	for key, value := range dg.dependenciesOf {
 		children := value
 
 		if len(children) == 0 {
@@ -99,14 +91,17 @@ func (dp *DepGraph) String() string {
 	return result.String()
 }
 
-func (dp *DepGraph) Flatten() []Dependency {
-	purls := make([]Dependency, 0, len(dp.graph))
-	for key, _ := range dp.graph {
+// Flatten returns a slice containing all dependencies in the graph
+// This provides a flat list of all unique dependencies without their relationships
+func (dg *DependencyGraph) Flatten() []Dependency {
+	purls := make([]Dependency, 0, len(dg.dependenciesOf))
+	for key, _ := range dg.dependenciesOf {
 		purls = append(purls, Dependency{Purl: key.Purl, Version: key.Version})
 	}
 	return purls
 }
 
-func (dp *DepGraph) GetDependenciesCount() int {
-	return len(dp.graph)
+// GetDependenciesCount returns the total number of unique dependencies in the graph
+func (dg *DependencyGraph) GetDependenciesCount() int {
+	return len(dg.dependenciesOf)
 }

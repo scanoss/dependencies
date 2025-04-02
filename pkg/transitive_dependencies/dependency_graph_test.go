@@ -14,7 +14,7 @@ func TestInsertDependency(t *testing.T) {
 		wantErr    bool
 	}{
 		{
-			name: "Insert parent dependency with transitive dependencies",
+			name: "Connect parent dependency with transitive dependencies",
 			parent: Dependency{
 				Purl:    "pkg:/scanoss/scanoss.js",
 				Version: "0.15.4",
@@ -54,7 +54,7 @@ func TestInsertDependency(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Insert parent dependency with empty transitive dependencies",
+			name: "Connect parent dependency with empty transitive dependencies",
 			parent: Dependency{
 				Purl:    "pkg:/scanoss/scanoss.js",
 				Version: "0.15.4",
@@ -74,10 +74,10 @@ func TestInsertDependency(t *testing.T) {
 			graph := NewDepGraph()
 			if len(tt.transitive) > 0 {
 				for _, dependency := range tt.transitive {
-					graph.Insert(tt.parent, dependency)
+					graph.Connect(tt.parent, dependency)
 				}
 			} else {
-				graph.Insert(tt.parent, Dependency{})
+				graph.Connect(tt.parent, Dependency{})
 			}
 
 			if len(tt.expected) != len(graph.Flatten()) {
@@ -89,7 +89,7 @@ func TestInsertDependency(t *testing.T) {
 
 func TestGetFlattenGraph(t *testing.T) {
 	graph := NewDepGraph()
-	graph.Insert(
+	graph.Connect(
 		Dependency{Purl: "pkg:/scanoss/scanoss.js", Version: "0.15.4"},
 		Dependency{Purl: "pkg:npm/typescript", Version: "0.10.0"},
 	)
@@ -115,13 +115,13 @@ func TestGetFlattenGraph(t *testing.T) {
 }
 
 func TestGetGraphString(t *testing.T) {
-	// Initialize the dependency graph
+	// Initialize the dependency adjacencyList
 	graph := NewDepGraph()
 
-	// Insert dependencies
+	// Connect dependencies
 	parent := Dependency{Purl: "pkg:/scanoss/scanoss.js", Version: "0.15.4"}
 	child := Dependency{Purl: "pkg:npm/typescript", Version: "0.10.0"}
-	graph.Insert(parent, child)
+	graph.Connect(parent, child)
 	result := graph.String()
 	// Check that both expected lines appear somewhere in the result
 	if !strings.Contains(result, "pkg:npm/typescript --> null") {

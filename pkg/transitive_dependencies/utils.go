@@ -32,7 +32,7 @@ func GetPurlFromPurlName(packageName string, version string, ecosystem string) (
 		return nil, fmt.Errorf("empty ecosystem")
 	}
 
-	_, ok := shared.SupportedEcosystems[ecosystem]
+	_, ok := shared.RegisteredEcosystems[ecosystem]
 	if !ok {
 		return nil, fmt.Errorf("invalid ecosystem: %s", ecosystem)
 	}

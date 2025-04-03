@@ -39,12 +39,12 @@ func GetPurlFromPurlName(packageName string, version string, ecosystem string) (
 
 	// Example with a specific version
 	var versionedPurl = packageurl.NewPackageURL(
-		shared.SupportedEcosystems[ecosystem], // type
-		"",                                    // namespace
-		packageName,                           // name
-		version,                               // version
-		nil,                                   // qualifiers
-		"",                                    // subpath
+		ecosystem,   // type
+		"",          // namespace
+		packageName, // name
+		version,     // version
+		nil,         // qualifiers
+		"",          // subpath
 	)
 	return versionedPurl, nil
 }
@@ -93,7 +93,10 @@ func ExtractDependencyFromJob(job DependencyJob) (Dependency, error) {
 
 func GetMaxResponseLimit(config config.ServerConfig, limit *int) int {
 	if limit != nil {
-		if *limit > config.TransitiveResources.MaxResponseSize || *limit == 0 {
+		if *limit > config.TransitiveResources.MaxResponseSize {
+			return config.TransitiveResources.MaxResponseSize
+		}
+		if *limit == 0 {
 			return config.TransitiveResources.DefaultResponseSize
 		}
 		return *limit
@@ -103,7 +106,10 @@ func GetMaxResponseLimit(config config.ServerConfig, limit *int) int {
 
 func GetMaxDepthLimit(config config.ServerConfig, depth *int) int {
 	if depth != nil {
-		if *depth > config.TransitiveResources.MaxDepth || *depth == 0 {
+		if *depth > config.TransitiveResources.MaxDepth {
+			return config.TransitiveResources.MaxDepth
+		}
+		if *depth == 0 {
 			return config.TransitiveResources.DefaultDepth
 		}
 		return *depth

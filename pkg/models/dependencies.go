@@ -64,7 +64,7 @@ func (m *DependencyModel) GetDependencies(purl string, version string, ecosystem
 	var dependencies []UnresolvedDependency
 
 	// Build query with table name based on ecosystem
-	query := fmt.Sprintf("SELECT dep_data FROM %s_dependencies WHERE purl_name = $1 AND version = $2", ecosystem)
+	query := fmt.Sprintf("SELECT dep_data FROM %s_dependencies WHERE purl_name = $1 AND version = $2", shared.EcosystemDBMapper[ecosystem])
 
 	// Execute query and scan result into byte slice
 	var jsonData []byte

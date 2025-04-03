@@ -39,7 +39,7 @@ func TestGolangDependencies(t *testing.T) {
 		t.Errorf("FAILED: Expected an error when passing an invalid ecosystem, got err = nil")
 	}
 
-	unresolvedDependencies, err = dependenciesModel.GetDependencies("vue-phone", "1.0.9", "npmjs")
+	unresolvedDependencies, err = dependenciesModel.GetDependencies("vue-phone", "1.0.9", "npm")
 	if err != nil {
 		t.Errorf("FAILED: Expected no errors, got err = %v", err)
 	}

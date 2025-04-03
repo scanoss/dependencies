@@ -101,7 +101,7 @@ func convertToTransitiveDependencyCollection(
 	}
 
 	var dependencyJobs []trasitive_dependencies.DependencyJob
-	if _, ok := shared.SupportedEcosystems[transitiveDepDTO.Ecosystem]; !ok {
+	if _, ok := shared.RegisteredEcosystems[transitiveDepDTO.Ecosystem]; !ok {
 		s.Errorf("unsupported ecosystem: %s", transitiveDepDTO.Ecosystem)
 		return usecase.DependencyJobCollection{}, errors.New("unsupported ecosystem")
 	}

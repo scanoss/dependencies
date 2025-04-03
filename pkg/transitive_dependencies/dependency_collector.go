@@ -75,7 +75,6 @@ func (dc *DependencyCollector) Start() {
 	defer timeoutCancel()
 	defer cancel()
 	var wg sync.WaitGroup
-
 	// Start workers
 	for i := 1; i <= dc.Config.MaxWorkers; i++ {
 		wg.Add(1)

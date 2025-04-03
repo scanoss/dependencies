@@ -96,6 +96,10 @@ func convertToTransitiveDependencyCollection(
 		return usecase.DependencyJobCollection{}, errors.New("problem parsing dependency input")
 	}
 
+	if len(transitiveDepDTO.Purls) <= 0 {
+		return usecase.DependencyJobCollection{}, errors.New("no PURLs to process")
+	}
+
 	var dependencyJobs []trasitive_dependencies.DependencyJob
 	if _, ok := shared.SupportedEcosystems[transitiveDepDTO.Ecosystem]; !ok {
 		s.Errorf("unsupported ecosystem: %s", transitiveDepDTO.Ecosystem)
@@ -112,7 +116,7 @@ func convertToTransitiveDependencyCollection(
 			continue
 		}
 
-		if p.Type != shared.SupportedEcosystems[transitiveDepDTO.Ecosystem] {
+		if transitiveDepDTO.Ecosystem != p.Type {
 			errorMsg := fmt.Sprintf("ecosystem mismatch in PURL '%s': requested '%s' but PURL belongs to '%s' ecosystem",
 				dto.Purl, transitiveDepDTO.Ecosystem, p.Type)
 			return usecase.DependencyJobCollection{}, errors.New(errorMsg)
@@ -127,6 +131,11 @@ func convertToTransitiveDependencyCollection(
 			Depth:     depthLimit,
 		})
 	}
+	if len(dependencyJobs) <= 0 {
+		errorMsg := fmt.Sprintf("Unable to process PURLS: %v", transitiveDepDTO.Purls)
+		return usecase.DependencyJobCollection{}, errors.New(errorMsg)
+	}
+
 	return usecase.DependencyJobCollection{
 		DependencyJobs: dependencyJobs,
 		ResponseLimit:  responseLimit,

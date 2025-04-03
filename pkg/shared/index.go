@@ -1,9 +1,17 @@
 package shared
 
-var SupportedEcosystems = map[string]string{
+var EcosystemDBMapper = map[string]string{
 	"composer": "composer",
 	"crates":   "crates",
 	"maven":    "maven",
-	"npmjs":    "npm",
-	"ruby":     "gem",
+	"npm":      "npmjs",
+	"gem":      "ruby",
+}
+
+var SupportedEcosystems = map[string]struct{}{
+	"composer": {},
+	"crates":   {},
+	"maven":    {},
+	"npm":      {},
+	"gem":      {},
 }

@@ -2,7 +2,6 @@ package transitive_dependencies
 
 import (
 	"context"
-	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	"testing"
@@ -64,19 +63,19 @@ func TestProcessCollectorResult(t *testing.T) {
 		parent := DependencyJob{
 			PurlName:  "parent-dep",
 			Version:   "1.0.0",
-			Ecosystem: "npmjs",
+			Ecosystem: "npm",
 			Depth:     0,
 		}
 		child1 := DependencyJob{
 			PurlName:  "child-dep1",
 			Version:   "1.0.0",
-			Ecosystem: "npmjs",
+			Ecosystem: "npm",
 			Depth:     1,
 		}
 		child2 := DependencyJob{
 			PurlName:  "child-dep2",
 			Version:   "1.0.0",
-			Ecosystem: "npmjs",
+			Ecosystem: "npm",
 			Depth:     1,
 		}
 
@@ -88,7 +87,6 @@ func TestProcessCollectorResult(t *testing.T) {
 		// Execute function under test
 		callback := ProcessCollectorResult(s, mockGraph, 2)
 		shouldStop := callback(result)
-		fmt.Printf("STOP: %v", shouldStop)
 		if !shouldStop {
 			t.Error("should signal to stop processing")
 		}

@@ -18,11 +18,12 @@ package usecase
 
 import (
 	"context"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/models"
-	transitiveDep "scanoss.com/dependencies/pkg/transitive_dependencies"
+	transitiveDep "scanoss.com/dependencies/pkg/transdep"
 )
 
 type DependencyJobCollection struct {
@@ -39,12 +40,12 @@ type TransitiveDependencyUseCase struct {
 }
 
 // NewTransitiveDependencies creates a new instance of the Dependency Use Case.
-func NewTransitiveDependencies(ctx context.Context, S *zap.SugaredLogger, db *sqlx.DB, config *myconfig.ServerConfig) *TransitiveDependencyUseCase {
+func NewTransitiveDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, config *myconfig.ServerConfig) *TransitiveDependencyUseCase {
 	return &TransitiveDependencyUseCase{
 		ctx:             ctx,
-		S:               S,
+		S:               s,
 		db:              db,
-		dependencyModel: models.NewDependencyModel(ctx, S, db),
+		dependencyModel: models.NewDependencyModel(ctx, s, db),
 		config:          config,
 	}
 }

@@ -42,7 +42,6 @@ type GolangProjects struct {
 	lic     *LicenseModel
 	mine    *MineModel
 	project *ProjectModel // TODO Do we add golang component to the projects table?
-	db      *sqlx.DB
 }
 
 // NewGolangProjectModel creates a new instance of Golang Project Model.

@@ -36,7 +36,6 @@ type DependencyUseCase struct {
 	conn    *sqlx.Conn
 	allUrls *models.AllUrlsModel
 	lic     *models.LicenseModel
-	db      *sqlx.DB
 }
 
 // NewDependencies creates a new instance of the Dependency Use Case.

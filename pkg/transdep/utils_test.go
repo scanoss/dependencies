@@ -1,11 +1,12 @@
-package transitive_dependencies
+package transdep
 
 import (
-	"github.com/package-url/packageurl-go"
 	"testing"
+
+	"github.com/package-url/packageurl-go"
 )
 
-// Tests were generated from Claude based on NPMJS versions BNF Grammar
+// Tests were generated from Claude based on NPMJS versions BNF Grammar.
 func TestPickFirstVersionFromRange(t *testing.T) {
 	tests := []struct {
 		name        string

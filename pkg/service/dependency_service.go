@@ -20,20 +20,16 @@ package service
 import (
 	"context"
 	"errors"
-	_ "errors"
-	"fmt"
-	_ "fmt"
-	_ "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
-	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-	_ "google.golang.org/protobuf/runtime/protoimpl"
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
+	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	_ "google.golang.org/protobuf/runtime/protoimpl"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/usecase"
 )
@@ -106,35 +102,44 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 }
 
 func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request *pb.TransitiveDependencyRequest) (*pb.TransitiveDependencyResponse, error) {
-	requestStartTime := time.Now() // Capture the scan start time
-	logger := ctxzap.Extract(ctx).Sugar()
-	logger.Info("Processing dependency request...")
-	conn, err := d.db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		logger.Errorf("Failed to get a database connection from the pool: %v", err)
-		// Return error response...
-		return nil, errors.New("problem getting database pool connection")
-	}
-	defer conn.Close()
-	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
+	requestStartTime := time.Now()                              // Capture the scan start time
+	defer telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
+	s := ctxzap.Extract(ctx).Sugar()
+	s.Info("Processing transitive dependency request...")
 	// Convert the request to a transitive dependency collection job for processing
-	transitiveDependencyInput, err := convertToTransitiveDependencyCollection(logger, d.config, request)
+	transitiveDependencyInput, err := convertToTransitiveDependencyCollection(s, d.config, request)
 	if err != nil {
-		logger.Errorf("%v", err)
-		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED,
-			Message: fmt.Sprintf("%v", err)}
+		s.Errorf("failed to parse transitive dependency request: %v", err)
 		err = grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
 		if err != nil {
-			logger.Debugf("Error setting x-ttp-code to trailer: %v\n", err)
+			s.Debugf("error setting x-http-code to trailer: %v\n", err)
 		}
-		return &pb.TransitiveDependencyResponse{Status: &statusResp}, nil
+		return &pb.TransitiveDependencyResponse{
+			Status: &common.StatusResponse{
+				Status:  common.StatusCode_FAILED,
+				Message: "failed to parse transitive dependency request",
+			}}, nil
 	}
-	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, logger, d.db, d.config)
-	logger.Infof("Processing dependency request...%v", transitiveDependencyInput)
+
+	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, s, d.db, d.config)
+	s.Infof("Processing transitive dependency request...%v", transitiveDependencyInput)
 	transitiveDependencies, err := transitiveDependenciesUc.GetTransitiveDependencies(transitiveDependencyInput)
+	if err != nil {
+		s.Errorf("failed getting transitive dependencies: %v", err)
+		err = grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
+		if err != nil {
+			s.Debugf("error setting x-http-code to trailer: %v\n", err)
+		}
+		return &pb.TransitiveDependencyResponse{
+			Status: &common.StatusResponse{
+				Status:  common.StatusCode_FAILED,
+				Message: "failed getting transitive dependencies",
+			}}, nil
+	}
+
 	output := convertToTransitiveDependencyOutput(transitiveDependencies)
-	output.Status = &statusResp
-	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
+	output.Status = &common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}
+
 	return output, nil
 }
 

@@ -21,6 +21,9 @@ func TestGolangDependencies(t *testing.T) {
 	db := sqliteSetup(t)           // Setup SQL Lite DB
 	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	err = LoadTestSQLData(db, ctx, conn)
+	if err != nil {
+		t.Fatalf("failed to load test SQL data: %v", err)
+	}
 	defer db.Close()
 	defer CloseConn(conn)
 	myConfig, err := myconfig.NewServerConfig(nil)
@@ -30,16 +33,14 @@ func TestGolangDependencies(t *testing.T) {
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
 
-	var dependenciesModel *DependencyModel
-
 	// Invalid ecosystem
-	dependenciesModel = NewDependencyModel(ctx, s, db)
-	unresolvedDependencies, err := dependenciesModel.GetDependencies("vue-phone", "1.0.8", "notExists")
+	dependenciesModel := NewDependencyModel(ctx, s, db)
+	_, err = dependenciesModel.GetDependencies("vue-phone", "1.0.8", "notExists")
 	if err == nil {
 		t.Errorf("FAILED: Expected an error when passing an invalid ecosystem, got err = nil")
 	}
 
-	unresolvedDependencies, err = dependenciesModel.GetDependencies("vue-phone", "1.0.9", "npm")
+	unresolvedDependencies, err := dependenciesModel.GetDependencies("vue-phone", "1.0.9", "npm")
 	if err != nil {
 		t.Errorf("FAILED: Expected no errors, got err = %v", err)
 	}

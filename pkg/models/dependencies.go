@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"scanoss.com/dependencies/pkg/shared"

@@ -1,11 +1,12 @@
-package transitive_dependencies
+package transdep
 
 import (
 	"context"
-	"go.uber.org/zap"
-	"scanoss.com/dependencies/pkg/models"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
+	"scanoss.com/dependencies/pkg/models"
 )
 
 type DependencyJob struct {
@@ -66,7 +67,7 @@ func (dc *DependencyCollector) InitJobs(inputJobs []DependencyJob) {
 }
 
 // Start initiates dependency collection by spawning workers, sending initial jobs, and
-// monitoring results until completion or timeout
+// monitoring results until completion or timeout.
 func (dc *DependencyCollector) Start() {
 	// Create context with cancel
 	ctx, cancel := context.WithCancel(dc.ctx)
@@ -179,17 +180,12 @@ func (dc *DependencyCollector) worker(id int, jobs chan DependencyJob, wg *sync.
 
 			// sanitize versions
 			var transitiveDependenciesJobs []DependencyJob
-			var sanitizedDependencies []models.UnresolvedDependency
 			for _, ud := range transitiveDependencies {
 				fixedVersion, err := PickFirstVersionFromRange(ud.Requirement)
 				if err != nil {
 					dc.S.Debugf("Cannot resolve requirement %s\n", ud.Requirement)
 					continue
 				}
-				sanitizedDependencies = append(sanitizedDependencies, models.UnresolvedDependency{
-					Purl:        ud.Purl,
-					Requirement: fixedVersion,
-				})
 				transitiveDependenciesJobs = append(transitiveDependenciesJobs, DependencyJob{PurlName: ud.Purl, Version: fixedVersion, Ecosystem: job.Ecosystem, Depth: newJobDepth})
 			}
 

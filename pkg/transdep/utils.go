@@ -1,23 +1,23 @@
-package transitive_dependencies
+package transdep
 
 import (
 	"errors"
 	"fmt"
 	"regexp"
-	"scanoss.com/dependencies/pkg/config"
-	"scanoss.com/dependencies/pkg/shared"
 	"strings"
 
-	packageurl "github.com/package-url/packageurl-go"
+	"github.com/package-url/packageurl-go"
+	"scanoss.com/dependencies/pkg/config"
+	"scanoss.com/dependencies/pkg/shared"
 )
 
 // NPMJS range version is defined here: https://docs.npmjs.com/cli/v6/using-npm/semver#range-grammar
 
 var (
-	versionRegex = regexp.MustCompile("(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)")
+	versionRegex = regexp.MustCompile(`(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)`)
 )
 
-// PickFirstVersionFromRange try to extract the first version from a version range string (no ecosystem dependent)
+// PickFirstVersionFromRange try to extract the first version from a version range string (no ecosystem dependent).
 func PickFirstVersionFromRange(requirement string) (string, error) {
 	version := versionRegex.FindString(requirement)
 	if len(version) == 0 {
@@ -26,7 +26,7 @@ func PickFirstVersionFromRange(requirement string) (string, error) {
 	return version, nil
 }
 
-// GetPurlFromPurlName convert packageName@version to PackageURL
+// GetPurlFromPurlName convert packageName@version to PackageURL.
 func GetPurlFromPurlName(packageName string, version string, ecosystem string) (*packageurl.PackageURL, error) {
 	if ecosystem == "" {
 		return nil, fmt.Errorf("empty ecosystem")
@@ -49,7 +49,7 @@ func GetPurlFromPurlName(packageName string, version string, ecosystem string) (
 	return versionedPurl, nil
 }
 
-// GetPackageNameFromPurl convert purl to package name
+// GetPackageNameFromPurl convert purl to package name.
 func ExtractPackageIdentifierFromPurl(purl string) (string, error) {
 	// Parse the purl string into a PackageURL object
 	p, err := packageurl.FromString(purl)
@@ -66,7 +66,7 @@ func ExtractPackageIdentifierFromPurl(purl string) (string, error) {
 	return p.Name, nil
 }
 
-// GetPurlWithoutVersion convert PackageURL to purl without version
+// GetPurlWithoutVersion convert PackageURL to purl without version.
 func GetPurlWithoutVersion(p *packageurl.PackageURL) (string, error) {
 	purl := p.String()
 	if !strings.Contains(purl, "@") {
@@ -76,18 +76,18 @@ func GetPurlWithoutVersion(p *packageurl.PackageURL) (string, error) {
 }
 
 func ExtractDependencyFromJob(job DependencyJob) (Dependency, error) {
-	packageUrl, err := GetPurlFromPurlName(job.PurlName, job.Version, job.Ecosystem)
+	packageURL, err := GetPurlFromPurlName(job.PurlName, job.Version, job.Ecosystem)
 	if err != nil {
 		return Dependency{}, err
 	}
 	// Extract base purls without versions for parent dependency
-	purl, err := GetPurlWithoutVersion(packageUrl)
+	purl, err := GetPurlWithoutVersion(packageURL)
 	if err != nil {
 		return Dependency{}, fmt.Errorf("error extracting base purl from %v: %v", purl, err)
 	}
 	return Dependency{
 		Purl:    purl,
-		Version: packageUrl.Version,
+		Version: packageURL.Version,
 	}, nil
 }
 

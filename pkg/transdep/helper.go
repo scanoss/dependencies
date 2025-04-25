@@ -1,10 +1,10 @@
-package transitive_dependencies
+package transdep
 
 import (
 	"go.uber.org/zap"
 )
 
-// ProcessCollectorResult process collector results and save result in a adjacencyList structure
+// ProcessCollectorResult process collector results and save result in a adjacencyList structure.
 func ProcessCollectorResult(s *zap.SugaredLogger, depGraph *DependencyGraph, maxDependencyResponseSize int) func(Result) bool {
 	return func(result Result) bool {
 		parentDep, err := ExtractDependencyFromJob(result.Parent)

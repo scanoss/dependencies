@@ -1,4 +1,4 @@
-package transitive_dependencies
+package transdep
 
 import (
 	"strings"

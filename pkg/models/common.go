@@ -21,11 +21,12 @@ package models
 import (
 	"context"
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	_ "modernc.org/sqlite"
-	"os"
-	"testing"
 )
 
 // loadSQLData Load the specified SQL files into the supplied DB.

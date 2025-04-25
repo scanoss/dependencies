@@ -1,10 +1,11 @@
-package transitive_dependencies
+package transdep
 
 import (
 	"context"
+	"testing"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	"testing"
 )
 
 func TestProcessCollectorResult(t *testing.T) {
@@ -91,5 +92,4 @@ func TestProcessCollectorResult(t *testing.T) {
 			t.Error("should signal to stop processing")
 		}
 	})
-
 }

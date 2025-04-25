@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/package-url/packageurl-go"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.opentelemetry.io/otel"
@@ -28,7 +29,7 @@ import (
 	"scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/shared"
-	trasitive_dependencies "scanoss.com/dependencies/pkg/transitive_dependencies"
+	trasitive_dependencies "scanoss.com/dependencies/pkg/transdep"
 	"scanoss.com/dependencies/pkg/usecase"
 )
 
@@ -96,7 +97,7 @@ func convertToTransitiveDependencyCollection(
 		return usecase.DependencyJobCollection{}, errors.New("problem parsing dependency input")
 	}
 
-	if len(transitiveDepDTO.Purls) <= 0 {
+	if len(transitiveDepDTO.Purls) == 0 {
 		return usecase.DependencyJobCollection{}, errors.New("no PURLs to process")
 	}
 
@@ -131,7 +132,7 @@ func convertToTransitiveDependencyCollection(
 			Depth:     depthLimit,
 		})
 	}
-	if len(dependencyJobs) <= 0 {
+	if len(dependencyJobs) == 0 {
 		errorMsg := fmt.Sprintf("Unable to process PURLS: %v", transitiveDepDTO.Purls)
 		return usecase.DependencyJobCollection{}, errors.New(errorMsg)
 	}

@@ -83,6 +83,5 @@ func (m *DependencyModel) GetDependencies(purl string, version string, ecosystem
 	if err != nil {
 		return dependencies, fmt.Errorf("failed to unmarshal dependency data: %v", err)
 	}
-
 	return dependencies, nil
 }

@@ -2,6 +2,7 @@ package transdep
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -61,9 +62,13 @@ func NewDependencyCollector(
 	}
 }
 
-func (dc *DependencyCollector) InitJobs(inputJobs []DependencyJob) {
+func (dc *DependencyCollector) InitJobs(inputJobs []DependencyJob) error {
+	if len(inputJobs) == 0 {
+		return errors.New("empty jobs to initialize dependency collector")
+	}
 	dc.jobs = inputJobs
 	dc.pendingJobs = len(dc.jobs)
+	return nil
 }
 
 // Start initiates dependency collection by spawning workers, sending initial jobs, and

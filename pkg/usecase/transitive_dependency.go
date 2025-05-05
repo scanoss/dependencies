@@ -81,7 +81,10 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(depJobCollection 
 		dependencyCollectorCfg,
 		models.NewDependencyModel(d.ctx, d.S, d.db),
 		d.S)
-	transitiveDependencyCollector.InitJobs(depJobCollection.DependencyJobs)
+	err := transitiveDependencyCollector.InitJobs(depJobCollection.DependencyJobs)
+	if err != nil {
+		return []transitiveDep.Dependency{}, err
+	}
 	transitiveDependencyCollector.Start()
 	var transitiveDependencies []transitiveDep.Dependency
 	for _, d := range depGraph.Flatten() {

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// setupTestDependencyCollector creates a DependencyCollector for testing purposes
+// setupTestDependencyCollector creates a DependencyCollector for testing purposes.
 func setupTestDependencyCollector(t *testing.T) (*DependencyCollector, *DependencyGraph, context.Context, *sqlx.DB, func()) {
 	t.Helper() // Marks this function as a test helper
 
@@ -197,7 +197,10 @@ func TestDependencyCollector_GetTransitiveDependencies(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			transitiveDependencyCollector.InitJobs(tt.jobs)
+			err := transitiveDependencyCollector.InitJobs(tt.jobs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("transitiveDependencyCollector.InitJobs() error = %v, wantErr %v", err, tt.wantErr)
+			}
 			transitiveDependencyCollector.Start()
 
 			// Create a map of actual dependencies for quick lookup
@@ -286,7 +289,7 @@ func TestDependencyCollector_Worker(t *testing.T) {
 }
 
 // TestProcessResultCancellation tests that the processResult method
-// properly handles context cancellation
+// properly handles context cancellation.
 func TestProcessResultCancellation(t *testing.T) {
 	dc, _, _, _, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()
@@ -314,7 +317,7 @@ func TestProcessResultCancellation(t *testing.T) {
 }
 
 // TestProcessResultJobCompletion tests that the processResult method
-// exits when all jobs are completed
+// exits when all jobs are completed.
 func TestProcessResultJobCompletion(t *testing.T) {
 	dc, _, _, _, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()
@@ -351,7 +354,7 @@ func TestProcessResultJobCompletion(t *testing.T) {
 }
 
 // TestResultHandlerStopsProcessing tests that when the ResultHandler returns true,
-// processing stops immediately with the appropriate debug message
+// processing stops immediately with the appropriate debug message.
 func TestResultHandlerStopsProcessing(t *testing.T) {
 	dc, _, _, _, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()

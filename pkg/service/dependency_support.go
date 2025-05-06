@@ -107,9 +107,11 @@ func convertToTransitiveDependencyCollection(
 		return usecase.DependencyJobCollection{}, errors.New("unsupported ecosystem")
 	}
 	// Get max depth limit
-	depthLimit := trasitive_dependencies.GetMaxDepthLimit(*config, transitiveDepDTO.Depth)
+	depthLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxDepth,
+		config.TransitiveResources.DefaultDepth, transitiveDepDTO.Depth)
 	// Get max response limit
-	responseLimit := trasitive_dependencies.GetMaxResponseLimit(*config, transitiveDepDTO.Limit)
+	responseLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxResponseSize,
+		config.TransitiveResources.DefaultResponseSize, transitiveDepDTO.Limit)
 	for _, dto := range transitiveDepDTO.Purls {
 		p, purlErr := packageurl.FromString(dto.Purl)
 		if purlErr != nil {

@@ -2,18 +2,20 @@ package transdep
 
 import (
 	"context"
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
-	"github.com/jmoiron/sqlx"
-	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	myconfig "scanoss.com/dependencies/pkg/config"
-	"scanoss.com/dependencies/pkg/models"
 	"sync"
 	"testing"
 	"time"
+
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
+	myconfig "scanoss.com/dependencies/pkg/config"
+
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"github.com/jmoiron/sqlx"
+	"scanoss.com/dependencies/pkg/models"
 )
 
 // setupTestDependencyCollector creates a DependencyCollector for testing purposes.
-func setupTestDependencyCollector(t *testing.T) (*DependencyCollector, *DependencyGraph, context.Context, *sqlx.DB, func()) {
+func setupTestDependencyCollector(t *testing.T) (*DependencyCollector, *DependencyGraph, func()) {
 	t.Helper() // Marks this function as a test helper
 
 	// Setup logger
@@ -61,11 +63,11 @@ func setupTestDependencyCollector(t *testing.T) (*DependencyCollector, *Dependen
 		models.CloseDB(db)
 		zlog.SyncZap()
 	}
-	return transitiveDependencyCollector, depGraph, ctx, db, cleanup
+	return transitiveDependencyCollector, depGraph, cleanup
 }
 
 func TestDependencyCollector_InitJobsDependency(t *testing.T) {
-	transitiveDependencyCollector, _, _, _, cleanup := setupTestDependencyCollector(t)
+	transitiveDependencyCollector, _, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()
 	tests := []struct {
 		name    string
@@ -120,7 +122,7 @@ func TestDependencyCollector_InitJobsDependency(t *testing.T) {
 }
 
 func TestDependencyCollector_GetTransitiveDependencies(t *testing.T) {
-	transitiveDependencyCollector, depGraph, _, _, cleanup := setupTestDependencyCollector(t)
+	transitiveDependencyCollector, depGraph, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()
 	tests := []struct {
 		name           string
@@ -223,7 +225,7 @@ func TestDependencyCollector_GetTransitiveDependencies(t *testing.T) {
 }
 
 func TestDependencyCollector_Worker(t *testing.T) {
-	transitiveDependencyCollector, _, _, _, cleanup := setupTestDependencyCollector(t)
+	transitiveDependencyCollector, _, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()
 	// Test cases
 	testCases := []struct {
@@ -291,7 +293,7 @@ func TestDependencyCollector_Worker(t *testing.T) {
 // TestProcessResultCancellation tests that the processResult method
 // properly handles context cancellation.
 func TestProcessResultCancellation(t *testing.T) {
-	dc, _, _, _, cleanup := setupTestDependencyCollector(t)
+	dc, _, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()
 	// Create context with cancel
 	ctx, cancel := context.WithCancel(context.Background())
@@ -319,7 +321,7 @@ func TestProcessResultCancellation(t *testing.T) {
 // TestProcessResultJobCompletion tests that the processResult method
 // exits when all jobs are completed.
 func TestProcessResultJobCompletion(t *testing.T) {
-	dc, _, _, _, cleanup := setupTestDependencyCollector(t)
+	dc, _, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()
 	// Create a result handler that continues processing
 	resultHandler := func(result Result) bool {
@@ -356,7 +358,7 @@ func TestProcessResultJobCompletion(t *testing.T) {
 // TestResultHandlerStopsProcessing tests that when the ResultHandler returns true,
 // processing stops immediately with the appropriate debug message.
 func TestResultHandlerStopsProcessing(t *testing.T) {
-	dc, _, _, _, cleanup := setupTestDependencyCollector(t)
+	dc, _, cleanup := setupTestDependencyCollector(t)
 	defer cleanup()
 	dc.pendingJobs = 1
 	// Create a counter to track handler calls

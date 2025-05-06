@@ -494,3 +494,50 @@ func TestGetPurlWithoutVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestGetMaxLimit(t *testing.T) {
+	tests := []struct {
+		name          string
+		limit         *int
+		defaultLimit  int
+		maxLimit      int
+		expectedLimit int
+	}{
+		{
+			name:          "Should use default limit when limit is nil",
+			limit:         nil,
+			defaultLimit:  10,
+			maxLimit:      10,
+			expectedLimit: 10,
+		},
+		{
+			name:          "Should use max limit when limit set exceeds it",
+			limit:         func() *int { i := 13; return &i }(), // Limit = 13
+			defaultLimit:  10,
+			maxLimit:      10,
+			expectedLimit: 10,
+		},
+		{
+			name:          "Should use default limit when limit is zero",
+			limit:         func() *int { i := 0; return &i }(),
+			defaultLimit:  5,
+			maxLimit:      15,
+			expectedLimit: 5,
+		},
+		{
+			name:          "Should use specified limit when within valid range",
+			limit:         func() *int { i := 8; return &i }(),
+			defaultLimit:  5,
+			maxLimit:      15,
+			expectedLimit: 8,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := GetMaxLimit(tt.maxLimit, tt.defaultLimit, tt.limit)
+			if resp != tt.expectedLimit {
+				t.Errorf("got %d, want %d", resp, tt.expectedLimit)
+			}
+		})
+	}
+}

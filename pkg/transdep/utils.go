@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/package-url/packageurl-go"
-	"scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/shared"
 )
 
@@ -91,28 +90,15 @@ func ExtractDependencyFromJob(job DependencyJob) (Dependency, error) {
 	}, nil
 }
 
-func GetMaxResponseLimit(config config.ServerConfig, limit *int) int {
+func GetMaxLimit(maxLimit int, defaultLimit int, limit *int) int {
 	if limit != nil {
-		if *limit > config.TransitiveResources.MaxResponseSize {
-			return config.TransitiveResources.MaxResponseSize
+		if *limit > maxLimit {
+			return maxLimit
 		}
 		if *limit == 0 {
-			return config.TransitiveResources.DefaultResponseSize
+			return defaultLimit
 		}
 		return *limit
 	}
-	return config.TransitiveResources.DefaultResponseSize
-}
-
-func GetMaxDepthLimit(config config.ServerConfig, depth *int) int {
-	if depth != nil {
-		if *depth > config.TransitiveResources.MaxDepth {
-			return config.TransitiveResources.MaxDepth
-		}
-		if *depth == 0 {
-			return config.TransitiveResources.DefaultDepth
-		}
-		return *depth
-	}
-	return config.TransitiveResources.DefaultDepth
+	return defaultLimit
 }

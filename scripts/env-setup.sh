@@ -19,9 +19,13 @@ fi
 DEFAULT_ENV=""
 ENVIRONMENT="${1:-$DEFAULT_ENV}"
 
-export C_PATH=/usr/local/etc/scanoss/dependencies
+export BASE_C_PATH=/usr/local/etc/scanoss
+export C_PATH="${BASE_C_PATH}/dependencies"
 export LOG_DIR=/var/log/scanoss
 export L_PATH="${LOG_DIR}/dependencies"
+export DB_PATH_BASE=/var/lib/scanoss
+export SQLITE_PATH="${DB_PATH_BASE}/db/sqlite"
+export SQLITE_DB_NAME="base.sqlite"
 
 # Makes sure the scanoss user exists
 export RUNTIME_USER=scanoss
@@ -46,11 +50,11 @@ fi
 # Setup all the required folders and ownership
 echo "Setting up Dependencies API system folders..."
 if ! mkdir -p $C_PATH ; then
-  echo "mkdir failed"
+  echo "Error creating dependency APY system folders"
   exti 1
 fi
 if ! mkdir -p $L_PATH ; then
-  echo "mkdir failed"
+  echo "Error creating dependency folder logging"
   exit 1
 fi
 if [ "$RUNTIME_USER" != "root" ] ; then
@@ -87,20 +91,131 @@ if ! cp scanoss-dependencies-api.sh /usr/local/bin ; then
   echo "dependencies startup script copy failed"
   exit 1
 fi
-# Copy in the configuration file if requested
+
+####################################################
+#                SEARCH CONFIG FILE                #
+####################################################
 CONF=app-config-prod.json
 if [ -n "$ENVIRONMENT" ] ; then
   CONF="app-config-${ENVIRONMENT}.json"
 fi
-if [ -f "$CONF" ] ; then
-  echo "Copying app config to $C_PATH ..."
-  if ! cp "$CONF" $C_PATH ; then
-    echo "copy $CONF failed"
-    exit 1
-  fi
-else
-  echo "Please put the config file into: $C_PATH/$CONF"
+
+CONFIG_FILE_PATH=""
+# Search on current dir
+if [ -f "./$CONF" ]; then
+    CONFIG_FILE_PATH="./$CONF"
+# Search on parent dir
+elif [ -f "../$CONF" ]; then
+    CONFIG_FILE_PATH="../$CONF"
 fi
+############### END SEARCH CONFIG FILE ##############
+
+
+####################################################
+#                   SETUP SQLITE DB                #
+####################################################
+
+SQLITE_DB_PATH=""
+# Search on current dir
+if [ -f "./$SQLITE_DB_NAME" ]; then
+    SQLITE_DB_PATH="./$SQLITE_DB_NAME"
+# Search on parent dir
+elif [ -f "../$SQLITE_DB_NAME" ]; then
+    SQLITE_DB_PATH="../$SQLITE_DB_NAME"
+fi
+
+## If SQLite DB is found.
+if [ -n "$SQLITE_DB_PATH" ]; then
+
+    #SQLITE_TARGET_PATH = /var/lib/scanoss/db/sqlite/base.sqlite
+    SQLITE_TARGET_PATH="$SQLITE_PATH/$SQLITE_DB_NAME"
+
+    if [ -f "$SQLITE_TARGET_PATH" ]; then
+        read -p "SQLite file found at $(realpath "$SQLITE_DB_PATH"). Do you want to replace the ${SQLITE_TARGET_PATH}? (n/y) [n]: " -n 1 -r
+              echo
+       if [[ "$REPLY" =~ ^[Yy]$ ]] ; then
+          echo "Copying SQLite from $(realpath "$SQLITE_DB_PATH") to $SQLITE_PATH"
+          echo "Please be patient, this process might take some minutes."
+          if ! cp "$SQLITE_DB_PATH" "$SQLITE_PATH/$SQLITE_DB_NAME"; then
+              echo "Error: Failed to copy SQLite database"
+              exit 1
+          fi
+          echo "Database copied successfully"
+       fi
+    else
+       # Create SQLite DB dir
+       if ! mkdir -p "$SQLITE_PATH"; then
+           echo "Error: Failed to create directory: $SQLITE_PATH"
+           echo "Please check if you have proper permissions"
+           exit 1
+       fi
+
+       # Copy database
+       echo "Copying SQLite from $(realpath "$SQLITE_DB_PATH") to $SQLITE_PATH"
+       echo "Please be patient, this process might take some minutes."
+       if ! cp "$SQLITE_DB_PATH" "$SQLITE_PATH/$SQLITE_DB_NAME"; then
+           echo "Error: Failed to copy SQLite database"
+           exit 1
+       fi
+       echo "Database copied successfully"
+
+    fi
+fi
+############### END SETUP SQLITE DB ################
+
+
+####################################################
+#                  COPY CONFIG FILE                #
+####################################################
+if [ -n "$CONFIG_FILE_PATH" ]; then
+  # TARGET_CONFIG_PATH = /usr/local/etc/scanoss/dependencies/app-config-<prod|env>.json
+  TARGET_CONFIG_PATH="$C_PATH/$CONF"
+  if [ -f "$TARGET_CONFIG_PATH" ]; then
+      read -p "Configuration file found at $(realpath "$TARGET_CONFIG_PATH"). Do you want to replace $TARGET_CONFIG_PATH? (n/y) [n]: " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]] ; then
+          echo "Copying config file from $(realpath "$CONFIG_FILE_PATH") to $C_PATH ..."
+          if ! cp "$CONFIG_FILE_PATH" "$C_PATH/"; then
+            echo "Error: Failed to copy config file"
+            exit 1
+          fi
+        fi
+  else
+      echo "Copying config file from $(realpath "$CONFIG_FILE_PATH") to $C_PATH ..."
+      if ! cp "$CONFIG_FILE_PATH" "$C_PATH/"; then
+        echo "Error: Failed to copy config file"
+        exit 1
+      fi
+  fi
+fi
+################ END CONFIG FILE ##################
+
+
+
+####################################################
+#         CHANGE OWNERSHIP AND PERMISSIONS         #
+####################################################
+# Change ownership to config folder
+if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$BASE_C_PATH"; then
+  echo "Error changing ownership to config folder: $BASE_C_PATH"
+  exit 1
+fi
+
+# Change permissions to config folder
+if ! chmod -R 700 "$C_PATH"; then
+  echo "Error changing permissions to config folder: $C_PATH"
+  exit 1
+fi
+
+# Change ownership to SQLite folder
+if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$DB_PATH_BASE"; then
+    echo "Error: Failed to change ownership to $RUNTIME_USER"
+    echo "Please check if the user exists and you have proper permissions"
+    exit 1
+fi
+######  END CHANGE OWNERSHIP AND PERMISSIONS #######
+
+
 # Copy the binaries if requested
 BINARY=scanoss-dependencies-api
 if [ -f $BINARY ] ; then

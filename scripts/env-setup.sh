@@ -18,7 +18,6 @@ if [ "$1" = "-h" ] || [ "$1" = "-help" ] ; then
 fi
 DEFAULT_ENV=""
 ENVIRONMENT="${1:-$DEFAULT_ENV}"
-
 export BASE_C_PATH=/usr/local/etc/scanoss
 export C_PATH="${BASE_C_PATH}/dependencies"
 export LOG_DIR=/var/log/scanoss
@@ -50,17 +49,17 @@ fi
 # Setup all the required folders and ownership
 echo "Setting up Dependencies API system folders..."
 if ! mkdir -p $C_PATH ; then
-  echo "Error creating dependency APY system folders"
+  echo "Error: Problem creating dependency API system folders: $C_PATH"
   exti 1
 fi
 if ! mkdir -p $L_PATH ; then
-  echo "Error creating dependency folder logging"
+  echo "Error: Problem creating dependency logging folder: $L_PATH"
   exit 1
 fi
 if [ "$RUNTIME_USER" != "root" ] ; then
   echo "Changing ownership of $LOG_DIR to $RUNTIME_USER ..."
   if ! chown -R $RUNTIME_USER $LOG_DIR ; then
-    echo "chown of $LOG_DIR to $RUNTIME_USER failed"
+    echo "Error: chown of $LOG_DIR to $RUNTIME_USER failed"
     exit 1
   fi
 fi
@@ -75,7 +74,7 @@ export service_stopped=""
 if [ -f "/etc/systemd/system/$SC_SERVICE_FILE" ] ; then
   echo "Stopping $SC_SERVICE_NAME service first..."
   if ! systemctl stop "$SC_SERVICE_NAME" ; then
-    echo "service stop failed"
+    echo "Error: service stop failed"
     exit 1
   fi
   export service_stopped="true"
@@ -83,15 +82,14 @@ fi
 echo "Copying service startup config..."
 if [ -f "$SC_SERVICE_FILE" ] ; then
   if ! cp "$SC_SERVICE_FILE" /etc/systemd/system ; then
-    echo "service copy failed"
+    echo "Error: service copy failed"
     exti 1
   fi
 fi
 if ! cp scanoss-dependencies-api.sh /usr/local/bin ; then
-  echo "dependencies startup script copy failed"
+  echo "Error: dependencies startup script copy failed"
   exit 1
 fi
-
 ####################################################
 #                SEARCH CONFIG FILE                #
 ####################################################
@@ -99,7 +97,6 @@ CONF=app-config-prod.json
 if [ -n "$ENVIRONMENT" ] ; then
   CONF="app-config-${ENVIRONMENT}.json"
 fi
-
 CONFIG_FILE_PATH=""
 # Search on current dir
 if [ -f "./$CONF" ]; then
@@ -110,11 +107,9 @@ elif [ -f "../$CONF" ]; then
 fi
 ############### END SEARCH CONFIG FILE ##############
 
-
 ####################################################
 #                   SETUP SQLITE DB                #
 ####################################################
-
 SQLITE_DB_PATH=""
 # Search on current dir
 if [ -f "./$SQLITE_DB_NAME" ]; then
@@ -123,43 +118,45 @@ if [ -f "./$SQLITE_DB_NAME" ]; then
 elif [ -f "../$SQLITE_DB_NAME" ]; then
     SQLITE_DB_PATH="../$SQLITE_DB_NAME"
 fi
-
 ## If SQLite DB is found.
+SQLITE_TARGET_PATH="$SQLITE_PATH/$SQLITE_DB_NAME"
 if [ -n "$SQLITE_DB_PATH" ]; then
-
-    #SQLITE_TARGET_PATH = /var/lib/scanoss/db/sqlite/base.sqlite
-    SQLITE_TARGET_PATH="$SQLITE_PATH/$SQLITE_DB_NAME"
-
+    # If the target DB already exists, ask to replace it.
     if [ -f "$SQLITE_TARGET_PATH" ]; then
         read -p "SQLite file found at $(realpath "$SQLITE_DB_PATH"). Do you want to replace the ${SQLITE_TARGET_PATH}? (n/y) [n]: " -n 1 -r
               echo
        if [[ "$REPLY" =~ ^[Yy]$ ]] ; then
           echo "Copying SQLite from $(realpath "$SQLITE_DB_PATH") to $SQLITE_PATH"
-          echo "Please be patient, this process might take some minutes."
+          echo "Please be patient, this process might take some minutes..."
           if ! cp "$SQLITE_DB_PATH" "$SQLITE_PATH/$SQLITE_DB_NAME"; then
               echo "Error: Failed to copy SQLite database"
               exit 1
           fi
-          echo "Database copied successfully"
+          echo "Database successfully copied."
+       else
+         echo "Skipping DB copy."
        fi
     else
        # Create SQLite DB dir
        if ! mkdir -p "$SQLITE_PATH"; then
            echo "Error: Failed to create directory: $SQLITE_PATH"
-           echo "Please check if you have proper permissions"
            exit 1
        fi
-
        # Copy database
        echo "Copying SQLite from $(realpath "$SQLITE_DB_PATH") to $SQLITE_PATH"
        echo "Please be patient, this process might take some minutes."
        if ! cp "$SQLITE_DB_PATH" "$SQLITE_PATH/$SQLITE_DB_NAME"; then
-           echo "Error: Failed to copy SQLite database"
+           echo "Error: Failed to copy SQLite database from $SQLITE_DB_PATH to $SQLITE_PATH/$SQLITE_DB_NAME"
            exit 1
        fi
-       echo "Database copied successfully"
-
+       echo "Database successfully copied."
     fi
+else
+  echo "Warning: No SQLite DB detected. Skipping DB setup."
+fi
+if [ ! -f "$SQLITE_TARGET_PATH" ] ; then
+  echo "Warning: No database exists at: $SQLITE_TARGET_PATH"
+  echo "Service startup will most likely fail."
 fi
 ############### END SETUP SQLITE DB ################
 
@@ -167,9 +164,8 @@ fi
 ####################################################
 #                  COPY CONFIG FILE                #
 ####################################################
+TARGET_CONFIG_PATH="$C_PATH/$CONF"
 if [ -n "$CONFIG_FILE_PATH" ]; then
-  # TARGET_CONFIG_PATH = /usr/local/etc/scanoss/dependencies/app-config-<prod|env>.json
-  TARGET_CONFIG_PATH="$C_PATH/$CONF"
   if [ -f "$TARGET_CONFIG_PATH" ]; then
       read -p "Configuration file found at $(realpath "$TARGET_CONFIG_PATH"). Do you want to replace $TARGET_CONFIG_PATH? (n/y) [n]: " -n 1 -r
         echo
@@ -179,34 +175,36 @@ if [ -n "$CONFIG_FILE_PATH" ]; then
             echo "Error: Failed to copy config file"
             exit 1
           fi
+        else
+          echo "Skipping config file copy."
         fi
   else
       echo "Copying config file from $(realpath "$CONFIG_FILE_PATH") to $C_PATH ..."
-      if ! cp "$CONFIG_FILE_PATH" "$C_PATH/"; then
-        echo "Error: Failed to copy config file"
+      if ! cp "$CONFIG_FILE_PATH" "$C_PATH/$CONFIG_FILE_PATH"; then
+        echo "Error: Failed to copy config file from $CONFIG_FILE_PATH to $C_PATH/$CONFIG_FILE_PATH"
         exit 1
       fi
   fi
 fi
+if [ ! -f "$TARGET_CONFIG_PATH" ] ; then
+  echo "Warning: No application config file in place: $TARGET_CONFIG_PATH"
+  echo "Service startup will most likely fail, especially in relation to the DB location."
+fi
 ################ END CONFIG FILE ##################
-
-
 
 ####################################################
 #         CHANGE OWNERSHIP AND PERMISSIONS         #
 ####################################################
 # Change ownership to config folder
 if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$BASE_C_PATH"; then
-  echo "Error changing ownership to config folder: $BASE_C_PATH"
+  echo "Error: Problem changing ownership to config folder: $BASE_C_PATH"
   exit 1
 fi
-
 # Change permissions to config folder
 if ! chmod -R 700 "$C_PATH"; then
-  echo "Error changing permissions to config folder: $C_PATH"
+  echo "Error: Problem changing permissions to config folder: $C_PATH"
   exit 1
 fi
-
 # Change ownership to SQLite folder
 if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$DB_PATH_BASE"; then
     echo "Error: Failed to change ownership to $RUNTIME_USER"
@@ -215,13 +213,12 @@ if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$DB_PATH_BASE"; then
 fi
 ######  END CHANGE OWNERSHIP AND PERMISSIONS #######
 
-
 # Copy the binaries if requested
 BINARY=scanoss-dependencies-api
 if [ -f $BINARY ] ; then
   echo "Copying app binary to /usr/local/bin ..."
   if ! cp $BINARY /usr/local/bin ; then
-    echo "copy $BINARY failed"
+    echo "Error: copy $BINARY failed"
     echo "Please make sure the service is stopped: systemctl stop scanoss-dependencies-api"
     exit 1
   fi
@@ -233,13 +230,13 @@ echo "Installation complete."
 if [ "$service_stopped" == "true" ] ; then
   echo "Restarting service after install..."
   if ! systemctl start "$SC_SERVICE_NAME" ; then
-    echo "failed to restart service"
+    echo "Error: failed to restart service"
     exit 1
   fi
   systemctl status "$SC_SERVICE_NAME"
 fi
 echo
-echo "Review service config in: $C_PATH/$CONF"
+echo "Review service config in: $TARGET_CONFIG_PATH"
 echo "Review service logs in: $L_PATH"
 echo "Start the service using: systemctl start $SC_SERVICE_NAME"
 echo "Stop the service using: systemctl stop $SC_SERVICE_NAME"

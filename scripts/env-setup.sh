@@ -187,12 +187,16 @@ if [ -n "$CONFIG_FILE_PATH" ]; then
       fi
   fi
 else
-   read -p "Configuration file not found. Do you want to download an example $CONF file? (n/y) [n]: " -n 1 -r
+   read -p "Configuration file not found. Do you want to download an example $CONF file? (n/y) [y]: " -n 1 -r
         echo
-      if [[ $REPLY =~ ^[Nn]$ ]] ; then
-          echo "Please put the config file into: $CONF_DIR/$CONF"
-        elif ! curl $CONF_DOWNLOAD_URL > "$CONF_DIR/$CONF" ; then
-          echo "Warning: curl download failed"
+      if [[ $REPLY =~ ^[Yy]$ ]] ; then
+          if curl $CONF_DOWNLOAD_URL > "$CONF_DIR/$CONF" ; then
+            echo "Configuration file successfully downloaded to $CONF_DIR/$CONF"
+          else
+           echo "Error: Failed to download configuration file from $CONF_DOWNLOAD_URL"
+          fi
+      else
+         echo "Warning: Please put the config file into: $CONF_DIR/$CONF"
       fi
 fi
 

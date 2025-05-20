@@ -24,7 +24,8 @@ export LOG_DIR=/var/log/scanoss
 export L_PATH="${LOG_DIR}/dependencies"
 export DB_PATH_BASE=/var/lib/scanoss
 export SQLITE_PATH="${DB_PATH_BASE}/db/sqlite/dependencies"
-export SQLITE_DB_NAME="db.sqlite"
+export SQLITE_DB_NAME=base.sqlite
+export TARGET_SQLITE_DB_NAME=db.sqlite
 export CONF_DOWNLOAD_URL="https://raw.githubusercontent.com/scanoss/dependencies/refs/heads/main/config/app-config-prod.json"
 
 # Makes sure the scanoss user exists
@@ -127,7 +128,7 @@ if [ ! -d "$SQLITE_PATH" ] ; then
   fi
 fi
 ## If SQLite DB is found.
-SQLITE_TARGET_PATH="$SQLITE_PATH/$SQLITE_DB_NAME"
+SQLITE_TARGET_PATH="$SQLITE_PATH/$TARGET_SQLITE_DB_NAME"
 if [ -n "$SQLITE_DB_PATH" ]; then
     # If the target DB already exists, ask to replace it.
     if [ -f "$SQLITE_TARGET_PATH" ]; then
@@ -136,7 +137,7 @@ if [ -n "$SQLITE_DB_PATH" ]; then
        if [[ "$REPLY" =~ ^[Yy]$ ]] ; then
           echo "Copying SQLite from $(realpath "$SQLITE_DB_PATH") to $SQLITE_PATH"
           echo "Please be patient, this process might take some minutes..."
-          if ! cp "$SQLITE_DB_PATH" "$SQLITE_PATH/$SQLITE_DB_NAME"; then
+          if ! cp "$SQLITE_DB_PATH" "$SQLITE_TARGET_PATH"; then
               echo "Error: Failed to copy SQLite database."
               exit 1
           fi
@@ -148,8 +149,8 @@ if [ -n "$SQLITE_DB_PATH" ]; then
        # Copy database
        echo "Copying SQLite from $(realpath "$SQLITE_DB_PATH") to $SQLITE_PATH"
        echo "Please be patient, this process might take some minutes."
-       if ! cp "$SQLITE_DB_PATH" "$SQLITE_PATH/$SQLITE_DB_NAME"; then
-           echo "Error: Failed to copy SQLite database from $SQLITE_DB_PATH to $SQLITE_PATH/$SQLITE_DB_NAME"
+       if ! cp "$SQLITE_DB_PATH" "$SQLITE_TARGET_PATH"; then
+           echo "Error: Failed to copy SQLite database from $SQLITE_DB_PATH to $SQLITE_PATH"
            exit 1
        fi
        echo "Database successfully copied."
@@ -192,13 +193,13 @@ else
    read -p "Configuration file not found. Do you want to download an example $CONF file? (n/y) [y]: " -n 1 -r
         echo
       if [[ $REPLY =~ ^[Yy]$ ]] ; then
-          if curl $CONF_DOWNLOAD_URL > "$CONF_DIR/$CONF" ; then
-            echo "Configuration file successfully downloaded to $CONF_DIR/$CONF"
+          if curl $CONF_DOWNLOAD_URL > "$CONFIG_DIR/$CONF" ; then
+            echo "Configuration file successfully downloaded to $CONFIG_DIR/$CONF"
           else
            echo "Error: Failed to download configuration file from $CONF_DOWNLOAD_URL"
           fi
       else
-         echo "Warning: Please put the config file into: $CONF_DIR/$CONF"
+         echo "Warning: Please put the config file into: $CONFIG_DIR/$CONF"
       fi
 fi
 

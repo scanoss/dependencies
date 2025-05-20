@@ -19,23 +19,24 @@ fi
 DEFAULT_ENV=""
 ENVIRONMENT="${1:-$DEFAULT_ENV}"
 export BASE_C_PATH=/usr/local/etc/scanoss
-export C_PATH="${BASE_C_PATH}/dependencies"
+export CONFIG_DIR="${BASE_C_PATH}/dependencies"
 export LOG_DIR=/var/log/scanoss
 export L_PATH="${LOG_DIR}/dependencies"
 export DB_PATH_BASE=/var/lib/scanoss
-export SQLITE_PATH="${DB_PATH_BASE}/db/sqlite"
-export SQLITE_DB_NAME="base.sqlite"
+export SQLITE_PATH="${DB_PATH_BASE}/db/sqlite/dependencies"
+export SQLITE_DB_NAME="db.sqlite"
+export CONF_DOWNLOAD_URL="https://raw.githubusercontent.com/scanoss/dependencies/refs/heads/main/config/app-config-dev.json"
 
 # Makes sure the scanoss user exists
 export RUNTIME_USER=scanoss
 if ! getent passwd $RUNTIME_USER > /dev/null ; then
-  echo "Runtime user does not exist: $RUNTIME_USER"
-  echo "Please create using: useradd --system $RUNTIME_USER"
+  echo "Runtime user does not exist: $RUNTIME_USER."
+  echo "Please create using: useradd --system $RUNTIME_USER."
   exit 1
 fi
 # Also, make sure we're running as root
 if [ "$EUID" -ne 0 ] ; then
-  echo "Please run as root"
+  echo "Please run as root."
   exit 1
 fi
 read -p "Install SCANOSS Dependencies API $ENVIRONMENT (y/n) [n]? " -n 1 -r
@@ -48,18 +49,18 @@ else
 fi
 # Setup all the required folders and ownership
 echo "Setting up Dependencies API system folders..."
-if ! mkdir -p $C_PATH ; then
-  echo "Error: Problem creating dependency API system folders: $C_PATH"
+if ! mkdir -p $CONFIG_DIR ; then
+  echo "Error: Problem creating dependency API system folders: $CONFIG_DIR."
   exti 1
 fi
 if ! mkdir -p $L_PATH ; then
-  echo "Error: Problem creating dependency logging folder: $L_PATH"
+  echo "Error: Problem creating dependency logging folder: $L_PATH."
   exit 1
 fi
 if [ "$RUNTIME_USER" != "root" ] ; then
   echo "Changing ownership of $LOG_DIR to $RUNTIME_USER ..."
   if ! chown -R $RUNTIME_USER $LOG_DIR ; then
-    echo "Error: chown of $LOG_DIR to $RUNTIME_USER failed"
+    echo "Error: chown of $LOG_DIR to $RUNTIME_USER failed."
     exit 1
   fi
 fi
@@ -87,7 +88,7 @@ if [ -f "$SC_SERVICE_FILE" ] ; then
   fi
 fi
 if ! cp scanoss-dependencies-api.sh /usr/local/bin ; then
-  echo "Error: dependencies startup script copy failed"
+  echo "Error: dependencies startup script copy failed."
   exit 1
 fi
 ####################################################
@@ -129,7 +130,7 @@ if [ -n "$SQLITE_DB_PATH" ]; then
           echo "Copying SQLite from $(realpath "$SQLITE_DB_PATH") to $SQLITE_PATH"
           echo "Please be patient, this process might take some minutes..."
           if ! cp "$SQLITE_DB_PATH" "$SQLITE_PATH/$SQLITE_DB_NAME"; then
-              echo "Error: Failed to copy SQLite database"
+              echo "Error: Failed to copy SQLite database."
               exit 1
           fi
           echo "Database successfully copied."
@@ -164,28 +165,37 @@ fi
 ####################################################
 #                  COPY CONFIG FILE                #
 ####################################################
-TARGET_CONFIG_PATH="$C_PATH/$CONF"
+TARGET_CONFIG_PATH="$CONFIG_DIR/$CONF"
 if [ -n "$CONFIG_FILE_PATH" ]; then
   if [ -f "$TARGET_CONFIG_PATH" ]; then
       read -p "Configuration file found at $(realpath "$TARGET_CONFIG_PATH"). Do you want to replace $TARGET_CONFIG_PATH? (n/y) [n]: " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]] ; then
-          echo "Copying config file from $(realpath "$CONFIG_FILE_PATH") to $C_PATH ..."
-          if ! cp "$CONFIG_FILE_PATH" "$C_PATH/"; then
-            echo "Error: Failed to copy config file"
+          echo "Copying config file from $(realpath "$CONFIG_FILE_PATH") to $CONFIG_DIR ..."
+          if ! cp "$CONFIG_FILE_PATH" "$CONFIG_DIR/"; then
+            echo "Error: Failed to copy config file."
             exit 1
           fi
         else
           echo "Skipping config file copy."
         fi
   else
-      echo "Copying config file from $(realpath "$CONFIG_FILE_PATH") to $C_PATH ..."
-      if ! cp "$CONFIG_FILE_PATH" "$C_PATH/$CONFIG_FILE_PATH"; then
-        echo "Error: Failed to copy config file from $CONFIG_FILE_PATH to $C_PATH/$CONFIG_FILE_PATH"
+      echo "Copying config file from $(realpath "$CONFIG_FILE_PATH") to $CONFIG_DIR ..."
+      if ! cp "$CONFIG_FILE_PATH" "$CONFIG_DIR/"; then
+        echo "Error: Failed to copy config file."
         exit 1
       fi
   fi
+else
+   read -p "Configuration file not found. Do you want to download an example $CONF file? (n/y) [n]: " -n 1 -r
+        echo
+      if [[ $REPLY =~ ^[Nn]$ ]] ; then
+          echo "Please put the config file into: $CONF_DIR/$CONF"
+        elif ! curl $CONF_DOWNLOAD_URL > "$CONF_DIR/$CONF" ; then
+          echo "Warning: curl download failed"
+      fi
 fi
+
 if [ ! -f "$TARGET_CONFIG_PATH" ] ; then
   echo "Warning: No application config file in place: $TARGET_CONFIG_PATH"
   echo "Service startup will most likely fail, especially in relation to the DB location."
@@ -201,14 +211,14 @@ if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$BASE_C_PATH"; then
   exit 1
 fi
 # Change permissions to config folder
-if ! chmod -R 700 "$C_PATH"; then
-  echo "Error: Problem changing permissions to config folder: $C_PATH"
+if ! chmod -R 700 "$CONFIG_DIR"; then
+  echo "Error: Problem changing permissions to config folder: $CONFIG_DIR"
   exit 1
 fi
 # Change ownership to SQLite folder
 if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$DB_PATH_BASE"; then
     echo "Error: Failed to change ownership to $RUNTIME_USER"
-    echo "Please check if the user exists and you have proper permissions"
+    echo "Please check if the user exists and you have proper permissions."
     exit 1
 fi
 ######  END CHANGE OWNERSHIP AND PERMISSIONS #######
@@ -218,8 +228,8 @@ BINARY=scanoss-dependencies-api
 if [ -f $BINARY ] ; then
   echo "Copying app binary to /usr/local/bin ..."
   if ! cp $BINARY /usr/local/bin ; then
-    echo "Error: copy $BINARY failed"
-    echo "Please make sure the service is stopped: systemctl stop scanoss-dependencies-api"
+    echo "Error: copy $BINARY failed."
+    echo "Please make sure the service is stopped: systemctl stop scanoss-dependencies-api."
     exit 1
   fi
 else

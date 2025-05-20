@@ -1,0 +1,24 @@
+{
+  "App": {
+    "Name": "Dependency Service",
+    "Debug": false,
+    "Mode":  "prod",
+    "GRPCPort": "50051",
+    "RESTPort": "40051"
+  },
+  "Database": {
+    "Driver": "sqlite",
+    "Dsn": "/var/lib/scanoss/sqlite/dependencies/db.sqlite?cache=shared&mode=memory",
+    "Trace": false
+  },
+  "TLS": {
+    "CertFile": "",
+    "KeyFile": ""
+  },
+  "Filtering": {
+    "AllowListFile": "",
+    "DenyListFile": "",
+    "BlockByDefault": false,
+    "TrustProxy": false
+  }
+}

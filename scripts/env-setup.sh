@@ -119,6 +119,13 @@ if [ -f "./$SQLITE_DB_NAME" ]; then
 elif [ -f "../$SQLITE_DB_NAME" ]; then
     SQLITE_DB_PATH="../$SQLITE_DB_NAME"
 fi
+# Create SQLite DB dir
+if [ ! -d "$SQLITE_PATH" ] ; then
+  if ! mkdir -p "$SQLITE_PATH"; then
+    echo "Error: Failed to create directory: $SQLITE_PATH"
+    exit 1
+  fi
+fi
 ## If SQLite DB is found.
 SQLITE_TARGET_PATH="$SQLITE_PATH/$SQLITE_DB_NAME"
 if [ -n "$SQLITE_DB_PATH" ]; then
@@ -138,11 +145,6 @@ if [ -n "$SQLITE_DB_PATH" ]; then
          echo "Skipping DB copy."
        fi
     else
-       # Create SQLite DB dir
-       if ! mkdir -p "$SQLITE_PATH"; then
-           echo "Error: Failed to create directory: $SQLITE_PATH"
-           exit 1
-       fi
        # Copy database
        echo "Copying SQLite from $(realpath "$SQLITE_DB_PATH") to $SQLITE_PATH"
        echo "Please be patient, this process might take some minutes."
@@ -215,8 +217,13 @@ if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$BASE_C_PATH"; then
   exit 1
 fi
 # Change permissions to config folder
-if ! chmod -R 700 "$CONFIG_DIR"; then
+if ! find "$CONFIG_DIR" -type d -exec chmod 0750 "{}" \; ; then
   echo "Error: Problem changing permissions to config folder: $CONFIG_DIR"
+  exit 1
+fi
+# Change permissions to config folder files
+if ! find "$CONFIG_DIR" -type f -exec chmod 0600 "{}" \; ; then
+  echo "Error: Problem changing permissions to config files within: $CONFIG_DIR"
   exit 1
 fi
 # Change ownership to SQLite folder
@@ -224,6 +231,16 @@ if ! chown -R $RUNTIME_USER:$RUNTIME_USER "$DB_PATH_BASE"; then
     echo "Error: Failed to change ownership to $RUNTIME_USER"
     echo "Please check if the user exists and you have proper permissions."
     exit 1
+fi
+# Change permissions to config folder
+if ! find "$DB_PATH_BASE" -type d -exec chmod 0750 "{}" \; ; then
+  echo "Error: Problem changing permissions to DB folder: $CONFIG_DIR"
+  exit 1
+fi
+# Change permissions to config folder files
+if ! find "$DB_PATH_BASE" -type f -exec chmod 0640 "{}" \; ; then
+  echo "Error: Problem changing permissions to DB files within: $CONFIG_DIR"
+  exit 1
 fi
 ######  END CHANGE OWNERSHIP AND PERMISSIONS #######
 

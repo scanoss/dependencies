@@ -8,7 +8,7 @@
   },
   "Database": {
     "Driver": "sqlite",
-    "Dsn": "/var/lib/scanoss/sqlite/dependencies/db.sqlite?cache=shared&mode=memory",
+    "Dsn": "/var/lib/scanoss/db/sqlite/dependencies/db.sqlite?cache=shared&mode=memory",
     "Trace": false
   },
   "TLS": {

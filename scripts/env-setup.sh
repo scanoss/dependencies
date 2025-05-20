@@ -25,7 +25,7 @@ export L_PATH="${LOG_DIR}/dependencies"
 export DB_PATH_BASE=/var/lib/scanoss
 export SQLITE_PATH="${DB_PATH_BASE}/db/sqlite/dependencies"
 export SQLITE_DB_NAME="db.sqlite"
-export CONF_DOWNLOAD_URL="https://raw.githubusercontent.com/scanoss/dependencies/refs/heads/main/config/app-config-dev.json"
+export CONF_DOWNLOAD_URL="https://raw.githubusercontent.com/scanoss/dependencies/refs/heads/main/config/app-config-prod.json"
 
 # Makes sure the scanoss user exists
 export RUNTIME_USER=scanoss

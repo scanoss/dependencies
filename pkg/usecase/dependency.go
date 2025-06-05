@@ -74,8 +74,22 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				problems = true // Record this as a warning
 				continue
 			}
+
+			// Avoids empty version
+			if len(url.Version) > 0 {
+				depOutput.Version = url.Version
+			} else {
+				purlParts := strings.Split(purl.Purl, "@")
+				if len(purlParts) > 1 {
+					depOutput.Version = purlParts[1]
+				} else if len(purl.Requirement) > 0 {
+					depOutput.Version = purl.Requirement
+				} else {
+					depOutput.Version = "unknown"
+				}
+			}
+
 			depOutput.Component = url.Component
-			depOutput.Version = url.Version
 			depOutput.URL = url.URL
 			var licenses []dtos.DependencyLicense
 			splitLicenses := strings.Split(url.LicenseID, "/") // Check to see if we have multiple licenses returned

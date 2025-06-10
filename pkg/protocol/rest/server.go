@@ -32,7 +32,7 @@ import (
 func RunServer(config *myconfig.ServerConfig, ctx context.Context, grpcPort, httpPort string,
 	allowedIPs, deniedIPs []string, startTLS bool) (*http.Server, error) {
 	// configure the gateway for forwarding to gRPC
-	srv, mux, grpcGateway, opts, err := gw.SetupGateway(grpcPort, httpPort, config.TLS.CertFile,
+	srv, mux, grpcGateway, opts, err := gw.SetupGateway(grpcPort, httpPort, config.TLS.CertFile, config.TLS.CN,
 		allowedIPs, deniedIPs, config.Filtering.BlockByDefault, config.Filtering.TrustProxy,
 		startTLS)
 	if err != nil {

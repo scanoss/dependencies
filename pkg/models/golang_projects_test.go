@@ -49,7 +49,7 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
-	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
 
 	url, err := golangProjModel.GetGolangUrlsByPurlNameType("google.golang.org/grpc", "golang", "")
 	if err != nil {
@@ -125,7 +125,7 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
-	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
 
 	url, err := golangProjModel.GetGolangUrlsByPurlNameTypeVersion("google.golang.org/grpc", "golang", "1.19.0")
 	if err != nil {
@@ -213,7 +213,7 @@ func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
 
 	url, err := golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", ">0.0.4")
 	if err != nil {
@@ -255,7 +255,7 @@ func TestGolangPkgGoDev(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
 
 	_, _, _, err = golangProjModel.queryPkgGoDev("", "")
 	if err == nil {
@@ -352,7 +352,7 @@ func TestGolangProjectsSearchBadSql(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, s, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
 
 	_, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "")
 	if err == nil {

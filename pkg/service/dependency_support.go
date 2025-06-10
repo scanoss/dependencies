@@ -19,13 +19,18 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
+	"github.com/package-url/packageurl-go"
+	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-
-	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.uber.org/zap"
+	"scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
+	"scanoss.com/dependencies/pkg/shared"
+	trasitive_dependencies "scanoss.com/dependencies/pkg/transdep"
+	"scanoss.com/dependencies/pkg/usecase"
 )
 
 // Structure for storing OTEL metrics.
@@ -75,4 +80,78 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 		return &pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
 	}
 	return &depResp, nil
+}
+
+func convertToTransitiveDependencyCollection(
+	s *zap.SugaredLogger,
+	config *config.ServerConfig,
+	request *pb.TransitiveDependencyRequest) (usecase.DependencyJobCollection, error) {
+	data, err := json.Marshal(request)
+	if err != nil {
+		s.Errorf("Problem marshalling dependency request input: %v", err)
+		return usecase.DependencyJobCollection{}, errors.New("problem extracting dependency input")
+	}
+	transitiveDepDTO, err := dtos.ParseTransitiveReqDTOS(s, data)
+	if err != nil {
+		s.Errorf("Problem parsing dependency request input: %v", err)
+		return usecase.DependencyJobCollection{}, errors.New("problem parsing dependency input")
+	}
+
+	if len(transitiveDepDTO.Purls) == 0 {
+		return usecase.DependencyJobCollection{}, errors.New("no PURLs to process")
+	}
+
+	var dependencyJobs []trasitive_dependencies.DependencyJob
+	if _, ok := shared.RegisteredEcosystems[transitiveDepDTO.Ecosystem]; !ok {
+		s.Errorf("unsupported ecosystem: %s", transitiveDepDTO.Ecosystem)
+		return usecase.DependencyJobCollection{}, errors.New("unsupported ecosystem")
+	}
+	// Get max depth limit
+	depthLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxDepth,
+		config.TransitiveResources.DefaultDepth, transitiveDepDTO.Depth)
+	// Get max response limit
+	responseLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxResponseSize,
+		config.TransitiveResources.DefaultResponseSize, transitiveDepDTO.Limit)
+	for _, dto := range transitiveDepDTO.Purls {
+		p, purlErr := packageurl.FromString(dto.Purl)
+		if purlErr != nil {
+			s.Errorf("problem extracting package identifier from: %s", dto.Purl)
+			continue
+		}
+
+		if transitiveDepDTO.Ecosystem != p.Type {
+			errorMsg := fmt.Sprintf("ecosystem mismatch in PURL '%s': requested '%s' but PURL belongs to '%s' ecosystem",
+				dto.Purl, transitiveDepDTO.Ecosystem, p.Type)
+			return usecase.DependencyJobCollection{}, errors.New(errorMsg)
+		}
+
+		purlName, _ := trasitive_dependencies.ExtractPackageIdentifierFromPurl(dto.Purl)
+
+		dependencyJobs = append(dependencyJobs, trasitive_dependencies.DependencyJob{
+			PurlName:  purlName,
+			Version:   dto.Requirement,
+			Ecosystem: transitiveDepDTO.Ecosystem,
+			Depth:     depthLimit,
+		})
+	}
+	if len(dependencyJobs) == 0 {
+		errorMsg := fmt.Sprintf("Unable to process PURLS: %v", transitiveDepDTO.Purls)
+		return usecase.DependencyJobCollection{}, errors.New(errorMsg)
+	}
+
+	return usecase.DependencyJobCollection{
+		DependencyJobs: dependencyJobs,
+		ResponseLimit:  responseLimit,
+	}, nil
+}
+
+func convertToTransitiveDependencyOutput(dependencies []trasitive_dependencies.Dependency) *pb.TransitiveDependencyResponse {
+	var tdr pb.TransitiveDependencyResponse
+	for _, d := range dependencies {
+		tdr.Dependencies = append(tdr.Dependencies, &pb.TransitiveDependencyResponse_Dependencies{
+			Purl:    d.Purl,
+			Version: d.Version,
+		})
+	}
+	return &tdr
 }

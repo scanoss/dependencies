@@ -74,3 +74,4 @@ issues:
         - gocognit
         - stylecheck
         - goconst
+        - funlen

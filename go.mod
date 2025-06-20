@@ -9,7 +9,7 @@ require (
 	github.com/guseggert/pkggodev-client v0.0.0-20211029144512-2df8afe3ebe4
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
-	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/package-url/packageurl-go v0.1.2
 	github.com/scanoss/go-grpc-helper v0.3.0
 	github.com/scanoss/go-purl-helper v0.2.0

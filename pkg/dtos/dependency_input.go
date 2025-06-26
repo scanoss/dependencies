@@ -39,6 +39,13 @@ type DepPurlInput struct {
 	Requirement string `json:"requirement,omitempty"`
 }
 
+type TransitiveDependencyDTO struct {
+	Depth     *int           `json:"depth,omitempty"`
+	Ecosystem string         `json:"ecosystem"`
+	Purls     []DepPurlInput `json:"purls"`
+	Limit     *int           `json:"limit,omitempty"`
+}
+
 // ParseDependencyInput converts the input byte array to a DependencyInput structure.
 func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, error) {
 	if len(input) == 0 {
@@ -49,6 +56,20 @@ func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, 
 	if err != nil {
 		s.Errorf("Parse failure: %v", err)
 		return DependencyInput{}, fmt.Errorf("failed to parse dependency input data: %v", err)
+	}
+	return data, nil
+}
+
+// ParseTransitiveReqDTOS converts the input byte array to a TransitiveDependencyDTO structure.
+func ParseTransitiveReqDTOS(s *zap.SugaredLogger, input []byte) (TransitiveDependencyDTO, error) {
+	if len(input) == 0 {
+		return TransitiveDependencyDTO{}, errors.New("no input dependency data supplied to parse")
+	}
+	var data TransitiveDependencyDTO
+	err := json.Unmarshal(input, &data)
+	if err != nil {
+		s.Errorf("Parse failure: %v", err)
+		return TransitiveDependencyDTO{}, fmt.Errorf("failed to parse dependency input data: %v", err)
 	}
 	return data, nil
 }

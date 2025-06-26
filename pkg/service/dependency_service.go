@@ -27,6 +27,9 @@ import (
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	_ "google.golang.org/protobuf/runtime/protoimpl"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/usecase"
 )
@@ -76,7 +79,7 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	}
 	defer gd.CloseSQLConnection(conn)
 	// Search the KB for information about each dependency
-	depUc := usecase.NewDependencies(ctx, s, conn, d.config)
+	depUc := usecase.NewDependencies(ctx, s, d.db, conn, d.config)
 	dtoDependencies, warn, err := depUc.GetDependencies(dtoRequest)
 	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
 	if err != nil {
@@ -96,6 +99,48 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
 	// Set the status and respond with the data
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
+}
+
+func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request *pb.TransitiveDependencyRequest) (*pb.TransitiveDependencyResponse, error) {
+	requestStartTime := time.Now()                              // Capture the scan start time
+	defer telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
+	s := ctxzap.Extract(ctx).Sugar()
+	s.Info("Processing transitive dependency request...")
+	// Convert the request to a transitive dependency collection job for processing
+	transitiveDependencyInput, err := convertToTransitiveDependencyCollection(s, d.config, request)
+	if err != nil {
+		s.Errorf("failed to parse transitive dependency request: %v", err)
+		err = grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
+		if err != nil {
+			s.Debugf("error setting x-http-code to trailer: %v\n", err)
+		}
+		return &pb.TransitiveDependencyResponse{
+			Status: &common.StatusResponse{
+				Status:  common.StatusCode_FAILED,
+				Message: "failed to parse transitive dependency request",
+			}}, nil
+	}
+
+	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, s, d.db, d.config)
+	s.Infof("Processing transitive dependency request...%v", transitiveDependencyInput)
+	transitiveDependencies, err := transitiveDependenciesUc.GetTransitiveDependencies(transitiveDependencyInput)
+	if err != nil {
+		s.Errorf("failed getting transitive dependencies: %v", err)
+		err = grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
+		if err != nil {
+			s.Debugf("error setting x-http-code to trailer: %v\n", err)
+		}
+		return &pb.TransitiveDependencyResponse{
+			Status: &common.StatusResponse{
+				Status:  common.StatusCode_FAILED,
+				Message: "failed getting transitive dependencies",
+			}}, nil
+	}
+
+	output := convertToTransitiveDependencyOutput(transitiveDependencies)
+	output.Status = &common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}
+
+	return output, nil
 }
 
 // telemetryRequestTime records the request time to telemetry.

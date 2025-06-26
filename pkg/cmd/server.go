@@ -32,6 +32,7 @@ import (
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	gs "github.com/scanoss/go-grpc-helper/pkg/grpc/server"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
+	_ "modernc.org/sqlite"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/protocol/grpc"
 	"scanoss.com/dependencies/pkg/protocol/rest"

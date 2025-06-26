@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
-## [0.7.5] - 2025-06-26
+## [0.8.0] - 2025-06-26
 ### Added
 - Added transitive dependency service
 - Added sqlite configuration on env-setup.sh
@@ -75,5 +75,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.7.1]: https://github.com/scanoss/papi/compare/v0.7.0...v0.7.1
 [0.7.2]: https://github.com/scanoss/papi/compare/v0.7.1...v0.7.2
 [0.7.3]: https://github.com/scanoss/papi/compare/v0.7.2...v0.7.3
-[0.7.3]: https://github.com/scanoss/papi/compare/v0.7.3...v0.7.4
-[0.7.5]: https://github.com/scanoss/papi/compare/v0.7.4...v0.7.5
+[0.7.4]: https://github.com/scanoss/papi/compare/v0.7.3...v0.7.4
+[0.8.0]: https://github.com/scanoss/papi/compare/v0.7.4...v0.8.0

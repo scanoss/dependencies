@@ -34,7 +34,7 @@ type AllUrlsModel struct {
 	ctx        context.Context
 	s          *zap.SugaredLogger
 	conn       *sqlx.Conn
-	project    *ProjectModel
+	project    *models.ProjectModel
 	golangProj *GolangProjects
 	q          *database.DBQueryContext
 }
@@ -52,7 +52,7 @@ const (
 )
 
 // NewAllURLModel creates a new instance of the 'All URL' Model.
-func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects, q *database.DBQueryContext) *AllUrlsModel {
+func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *models.ProjectModel, golangProj *GolangProjects, q *database.DBQueryContext) *AllUrlsModel {
 	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj, q: q}
 }
 

@@ -23,6 +23,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	pkggodevclient "github.com/guseggert/pkggodev-client"
+	"github.com/scanoss/go-models-helper/pkg/models"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	myconfig "scanoss.com/dependencies/pkg/config"
 )
@@ -281,8 +282,8 @@ func TestGolangPkgGoDev(t *testing.T) {
 	fmt.Printf("Golang URL Version: %#v\n", url)
 
 	var allUrl AllURL
-	var license License
-	var version Version
+	var license models.License
+	var version models.Version
 	fmt.Printf("SavePkg: %#v - %#v - %#v", allUrl, license, version)
 	err = golangProjModel.savePkg(allUrl, version, license, nil)
 	if err == nil {

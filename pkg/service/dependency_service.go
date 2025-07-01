@@ -25,6 +25,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
+	"github.com/scanoss/go-models-helper/pkg/models"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"google.golang.org/grpc"
@@ -78,8 +79,14 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
 	}
 	defer gd.CloseSQLConnection(conn)
+	// Create request-scoped models with request logger and connection
+	modelConfig := models.ModelConfig{
+		CommitMissing: d.config.Components.CommitMissing,
+		Trace:         d.config.Database.Trace,
+	}
+	scanossModels := models.NewScanossModels(ctx, s, conn, modelConfig)
 	// Search the KB for information about each dependency
-	depUc := usecase.NewDependencies(ctx, s, d.db, conn, d.config)
+	depUc := usecase.NewDependencies(ctx, scanossModels)
 	dtoDependencies, warn, err := depUc.GetDependencies(dtoRequest)
 	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
 	if err != nil {

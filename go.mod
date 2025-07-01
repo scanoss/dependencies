@@ -3,7 +3,6 @@ module scanoss.com/dependencies
 go 1.24.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/golobby/config/v3 v3.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/guseggert/pkggodev-client v0.0.0-20240318140526-cdb0034504cf
@@ -11,6 +10,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/scanoss/go-grpc-helper v0.9.0
+	github.com/scanoss/go-models-helper v0.0.0-unpublished
 	github.com/scanoss/go-purl-helper v0.2.1
 	github.com/scanoss/papi v0.7.2
 	github.com/scanoss/zap-logging-helper v0.4.0
@@ -25,9 +25,11 @@ require (
 //replace github.com/scanoss/papi => ../papi
 //replace github.com/scanoss/go-grpc-helper => ../go-grpc-helper
 //replace github.com/scanoss/zap-logging-helper => ../zap-logging-helper
+replace github.com/scanoss/go-models-helper => ../go-models-helper
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/PuerkitoBio/goquery v1.10.3 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/antchfx/htmlquery v1.2.4 // indirect

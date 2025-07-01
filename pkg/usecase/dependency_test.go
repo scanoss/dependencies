@@ -23,11 +23,10 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-models-helper/pkg/models"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	_ "modernc.org/sqlite"
-	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
-	"scanoss.com/dependencies/pkg/models"
 )
 
 func TestDependencyUseCase(t *testing.T) {
@@ -53,6 +52,12 @@ func TestDependencyUseCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)
 	}
+	// Create models for testing
+	modelConfig := models.ModelConfig{
+		CommitMissing: false,
+		Trace:         false,
+	}
+	scanossModels := models.NewScanossModels(ctx, s, conn, modelConfig)
 	var depRequestData = `{
   "depth": 1,
   "files": [
@@ -80,11 +85,7 @@ func TestDependencyUseCase(t *testing.T) {
   ]
 }
 `
-	myConfig, err := myconfig.NewServerConfig(nil)
-	if err != nil {
-		t.Fatalf("failed to load Config: %v", err)
-	}
-	depUc := NewDependencies(ctx, s, db, conn, myConfig)
+	depUc := NewDependencies(ctx, scanossModels)
 	requestDto, err := dtos.ParseDependencyInput(s, []byte(depRequestData))
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when parsing input json", err)

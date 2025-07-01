@@ -21,34 +21,20 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/scanoss/go-models-helper/pkg/models"
-	"go.uber.org/zap"
-	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 )
 
 type DependencyUseCase struct {
 	ctx    context.Context
-	s      *zap.SugaredLogger
-	conn   *sqlx.Conn
 	models *models.ScanossModels
 }
 
 // NewDependencies creates a new instance of the Dependency Use Case.
-func NewDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
-	modelConfig := models.ModelConfig{
-		CommitMissing: config.Components.CommitMissing,
-		Trace:         config.Database.Trace,
-	}
-
-	scanossModels := models.NewScanossModels(ctx, s, conn, modelConfig)
-
+func NewDependencies(ctx context.Context, models *models.ScanossModels) *DependencyUseCase {
 	return &DependencyUseCase{
 		ctx:    ctx,
-		s:      s,
-		conn:   conn,
-		models: scanossModels,
+		models: models,
 	}
 }
 
@@ -56,24 +42,24 @@ func NewDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, con
 func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, bool, error) {
 	var depFileOutputs []dtos.DependencyFileOutput
 	var problems = false
-	d.s.Infof("Processing %v dependency files...", len(request.Files))
+	d.models.Logger().Infof("Processing %v dependency files...", len(request.Files))
 	for _, file := range request.Files {
 		var fileOutput dtos.DependencyFileOutput
 		fileOutput.File = file.File
 		fileOutput.ID = "dependency"
 		fileOutput.Status = "pending"
 		var depOutputs []dtos.DependenciesOutput
-		d.s.Infof("Processing %v purls for %v...", len(file.Purls), file.File)
+		d.models.Logger().Infof("Processing %v purls for %v...", len(file.Purls), file.File)
 		for _, purl := range file.Purls {
 			if len(purl.Purl) == 0 {
-				d.s.Infof("Empty Purl string supplied for: %v. Skipping", file.File)
+				d.models.Logger().Infof("Empty Purl string supplied for: %v. Skipping", file.File)
 				continue
 			}
 			var depOutput dtos.DependenciesOutput
 			depOutput.Purl = strings.Split(purl.Purl, "@")[0] // Remove any version specific info from the PURL
 			url, err := d.models.AllUrls.GetURLsByPurlString(purl.Purl, purl.Requirement)
 			if err != nil {
-				d.s.Warnf("Problem encountered extracting URLs for: %v, %v - %v.", file.File, purl, err)
+				d.models.Logger().Warnf("Problem encountered extracting URLs for: %v, %v - %v.", file.File, purl, err)
 				problems = true // Record this as a warning
 				continue
 			}
@@ -99,11 +85,11 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			if len(splitLicenses) > 1 {
 				for _, splitLicense := range splitLicenses {
 					spl := strings.TrimSpace(splitLicense)
-					d.s.Debugf("Searching for split license: %v", spl)
+					d.models.Logger().Debugf("Searching for split license: %v", spl)
 					lic, err := d.models.Licenses.GetLicenseByName(spl, false)
 					if err != nil || len(lic.LicenseName) == 0 {
 						if err != nil {
-							d.s.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, err)
+							d.models.Logger().Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, err)
 						}
 						var license dtos.DependencyLicense
 						license.Name = spl
@@ -131,9 +117,9 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 		fileOutput.Dependencies = depOutputs
 		depFileOutputs = append(depFileOutputs, fileOutput)
 	}
-	d.s.Debugf("Output dependencies: %v", depFileOutputs)
+	d.models.Logger().Debugf("Output dependencies: %v", depFileOutputs)
 	if problems {
-		d.s.Warnf("Encountered issues while processing dependencies: %v", request)
+		d.models.Logger().Warnf("Encountered issues while processing dependencies: %v", request)
 		return dtos.DependencyOutput{Files: depFileOutputs}, true, errors.New("encountered issues while processing dependencies")
 	}
 

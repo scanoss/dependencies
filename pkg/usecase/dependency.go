@@ -21,31 +21,34 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
-
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-models-helper/pkg/models"
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
-	"scanoss.com/dependencies/pkg/models"
 )
 
 type DependencyUseCase struct {
-	ctx     context.Context
-	s       *zap.SugaredLogger
-	conn    *sqlx.Conn
-	allUrls *models.AllUrlsModel
-	lic     *models.LicenseModel
+	ctx    context.Context
+	s      *zap.SugaredLogger
+	conn   *sqlx.Conn
+	models *models.ScanossModels
 }
 
 // NewDependencies creates a new instance of the Dependency Use Case.
 func NewDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, conn *sqlx.Conn, config *myconfig.ServerConfig) *DependencyUseCase {
-	return &DependencyUseCase{ctx: ctx, s: s, conn: conn,
-		allUrls: models.NewAllURLModel(ctx, s, conn, models.NewProjectModel(ctx, s, conn),
-			models.NewGolangProjectModel(ctx, s, db, conn, config),
-			database.NewDBSelectContext(s, db, conn, config.Database.Trace),
-		),
-		lic: models.NewLicenseModel(ctx, s, conn),
+	modelConfig := models.ModelConfig{
+		CommitMissing: config.Components.CommitMissing,
+		Trace:         config.Database.Trace,
+	}
+
+	scanossModels := models.NewScanossModels(ctx, s, conn, modelConfig)
+
+	return &DependencyUseCase{
+		ctx:    ctx,
+		s:      s,
+		conn:   conn,
+		models: scanossModels,
 	}
 }
 
@@ -68,7 +71,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			}
 			var depOutput dtos.DependenciesOutput
 			depOutput.Purl = strings.Split(purl.Purl, "@")[0] // Remove any version specific info from the PURL
-			url, err := d.allUrls.GetURLsByPurlString(purl.Purl, purl.Requirement)
+			url, err := d.models.AllUrls.GetURLsByPurlString(purl.Purl, purl.Requirement)
 			if err != nil {
 				d.s.Warnf("Problem encountered extracting URLs for: %v, %v - %v.", file.File, purl, err)
 				problems = true // Record this as a warning
@@ -97,7 +100,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				for _, splitLicense := range splitLicenses {
 					spl := strings.TrimSpace(splitLicense)
 					d.s.Debugf("Searching for split license: %v", spl)
-					lic, err := d.lic.GetLicenseByName(spl, false)
+					lic, err := d.models.Licenses.GetLicenseByName(spl, false)
 					if err != nil || len(lic.LicenseName) == 0 {
 						if err != nil {
 							d.s.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, err)

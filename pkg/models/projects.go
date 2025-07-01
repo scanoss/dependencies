@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-models-helper/pkg/helpers"
 	"go.uber.org/zap"
 )
 
@@ -111,4 +112,24 @@ func (m *ProjectModel) GetProjectByPurlName(purlName string, mineID int32) (Proj
 		}
 	}
 	return project, nil
+}
+
+// GetProjectForHelper implements the helpers.ProjectRepository interface
+func (m *ProjectModel) GetProjectForHelper(purlName string, mineID int32) (helpers.Project, error) {
+	project, err := m.GetProjectByPurlName(purlName, mineID)
+	if err != nil {
+		return helpers.Project{}, err
+	}
+	
+	// Convert local Project to helpers.Project
+	return helpers.Project{
+		PurlName:     project.PurlName,
+		Component:    project.Component,
+		License:      project.License,
+		LicenseID:    project.LicenseID,
+		IsSpdx:       project.IsSpdx,
+		GitLicense:   project.GitLicense,
+		GitLicenseID: project.GitLicenseID,
+		GitIsSpdx:    project.GitIsSpdx,
+	}, nil
 }

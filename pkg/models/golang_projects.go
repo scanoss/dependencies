@@ -22,11 +22,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
-
-	pkggodevclient "github.com/guseggert/pkggodev-client"
+	"github.com/guseggert/pkggodev-client"
 	"github.com/jmoiron/sqlx"
 	"github.com/package-url/packageurl-go"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
+	"github.com/scanoss/go-models-helper/pkg/helpers"
+	"github.com/scanoss/go-models-helper/pkg/models"
 	purlutils "github.com/scanoss/go-purl-helper/pkg"
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
@@ -121,8 +122,18 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameType(purlName, purlType, purlReq
 		}
 	}
 
-	// Pick the most appropriate version to return
-	return pickOneUrl(m.s, m.project, allURLs, purlName, purlType, purlReq)
+	// Convert to helpers.AllURL slice and call shared helper
+	helperURLs := convertToHelperAllURLs(allURLs)
+	var projRepo helpers.ProjectRepository
+	if m.project != nil {
+		projRepo = m.project
+	}
+	result, err := helpers.PickOneURL(m.s, projRepo, helperURLs, purlName, purlType, purlReq)
+	if err != nil {
+		return AllURL{}, err
+	}
+	// Convert back to local AllURL
+	return convertFromHelperAllURL(result), nil
 }
 
 // GetGolangUrlsByPurlNameTypeVersion searches Golang Projects for specified Purl, Type and Version.
@@ -155,12 +166,21 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allURLs), purlType, purlName)
 	if len(allURLs) > 0 { // We found an entry. Let's check if it has license data
-		allURL, err2 := pickOneUrl(m.s, m.project, allURLs, purlName, purlType, "")
+		helperURLs := convertToHelperAllURLs(allURLs)
+		var projRepo helpers.ProjectRepository
+		if m.project != nil {
+			projRepo = m.project
+		}
+		helperResult, err2 := helpers.PickOneURL(m.s, projRepo, helperURLs, purlName, purlType, "")
+		if err2 != nil {
+			return AllURL{}, err2
+		}
+		allURL := convertFromHelperAllURL(helperResult)
 		if len(allURL.License) == 0 { // No license data found. Need to search for live info
 			m.s.Debugf("Couldn't find license data for component. Need to search live data")
 			allURLs = allURLs[:0]
 		} else {
-			return allURL, err2 // Return the component details
+			return allURL, nil // Return the component details
 		}
 	}
 	if len(allURLs) == 0 { // Check pkg.go.dev for the latest data
@@ -173,8 +193,18 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 			m.s.Infof("Ran into an issue looking up pkg.go.dev for: %v - %v. Ignoring", purlName, purlVersion)
 		}
 	}
-	// Pick the most appropriate version to return
-	return pickOneUrl(m.s, m.project, allURLs, purlName, purlType, "")
+	// Convert to helpers.AllURL slice and call shared helper
+	helperURLs := convertToHelperAllURLs(allURLs)
+	var projRepo helpers.ProjectRepository
+	if m.project != nil {
+		projRepo = m.project
+	}
+	result, err := helpers.PickOneURL(m.s, projRepo, helperURLs, purlName, purlType, "")
+	if err != nil {
+		return AllURL{}, err
+	}
+	// Convert back to local AllURL
+	return convertFromHelperAllURL(result), nil
 }
 
 // savePkg writes the given package details to the Golang Projects table.
@@ -262,7 +292,7 @@ func (m *GolangProjects) getLatestPkgGoDev(purlName, purlType, purlVersion strin
 	if err != nil {
 		return allURL, err
 	}
-	cleansedLicense, err := CleanseLicenseName(allURL.License)
+	cleansedLicense, err := models.CleanseLicenseName(allURL.License)
 	if err != nil {
 		return allURL, err
 	}
@@ -319,7 +349,7 @@ func (m *GolangProjects) queryPkgGoDev(purlName, purlVersion string) (AllURL, *p
 	if len(purlVersion) > 0 {
 		version = purlVersion // Force the requested version if specified (the returned value can be concatenated)
 	}
-	allURL := AllURL{
+	allURL := models.AllURL{
 		Component: purlName,
 		Version:   version,
 		License:   comp.License,

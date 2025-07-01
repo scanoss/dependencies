@@ -20,13 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
-	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
-
-	"github.com/Masterminds/semver/v3"
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
+	"github.com/scanoss/go-models-helper/pkg/helpers"
+	"github.com/scanoss/go-models-helper/pkg/models"
 	purlutils "github.com/scanoss/go-purl-helper/pkg"
 	"go.uber.org/zap"
 )
@@ -40,17 +39,8 @@ type AllUrlsModel struct {
 	q          *database.DBQueryContext
 }
 
-type AllURL struct {
-	Component string `db:"component"`
-	Version   string `db:"version"`
-	SemVer    string `db:"semver"`
-	License   string `db:"license"`
-	LicenseID string `db:"license_id"`
-	IsSpdx    bool   `db:"is_spdx"`
-	PurlName  string `db:"purl_name"`
-	MineID    int32  `db:"mine_id"`
-	URL       string `db:"-"`
-}
+// Use the AllURL struct from the shared models library.
+type AllURL = models.AllURL
 
 // SQL Query constants.
 const (
@@ -141,8 +131,52 @@ func (m *AllUrlsModel) GetURLsByPurlNameType(purlName, purlType, purlReq string)
 		return AllURL{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
-	// Pick one URL to return (checking for license details also)
-	return pickOneUrl(m.s, m.project, allUrls, purlName, purlType, purlReq)
+	// Convert to helpers.AllURL slice and call shared helper
+	helperURLs := convertToHelperAllURLs(allUrls)
+	var projRepo helpers.ProjectRepository
+	if m.project != nil {
+		projRepo = m.project
+	}
+	result, err := helpers.PickOneURL(m.s, projRepo, helperURLs, purlName, purlType, purlReq)
+	if err != nil {
+		return AllURL{}, err
+	}
+	// Convert back to local AllURL
+	return convertFromHelperAllURL(result), nil
+}
+
+// convertToHelperAllURLs converts local AllURL slice to helpers.AllURL slice.
+func convertToHelperAllURLs(localURLs []AllURL) []helpers.AllURL {
+	helperURLs := make([]helpers.AllURL, len(localURLs))
+	for i, url := range localURLs {
+		helperURLs[i] = helpers.AllURL{
+			Component: url.Component,
+			Version:   url.Version,
+			SemVer:    url.SemVer,
+			License:   url.License,
+			LicenseID: url.LicenseID,
+			IsSpdx:    url.IsSpdx,
+			PurlName:  url.PurlName,
+			MineID:    url.MineID,
+			URL:       url.URL,
+		}
+	}
+	return helperURLs
+}
+
+// convertFromHelperAllURL converts helpers.AllURL to local AllURL.
+func convertFromHelperAllURL(helperURL helpers.AllURL) AllURL {
+	return AllURL{
+		Component: helperURL.Component,
+		Version:   helperURL.Version,
+		SemVer:    helperURL.SemVer,
+		License:   helperURL.License,
+		LicenseID: helperURL.LicenseID,
+		IsSpdx:    helperURL.IsSpdx,
+		PurlName:  helperURL.PurlName,
+		MineID:    helperURL.MineID,
+		URL:       helperURL.URL,
+	}
 }
 
 // GetURLsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version.
@@ -169,89 +203,16 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 		return AllURL{}, fmt.Errorf("failed to query the all urls table: %v", err)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
-	// Pick one URL to return (checking for license details also)
-	return pickOneUrl(m.s, m.project, allUrls, purlName, purlType, "")
-}
-
-// pickOneUrl takes the potential matching component/versions and selects the most appropriate one.
-func pickOneUrl(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
-	if len(allUrls) == 0 {
-		s.Infof("No component match (in urls) found for %v, %v", purlName, purlType)
-		return AllURL{}, nil
+	// Convert to helpers.AllURL slice and call shared helper
+	helperURLs := convertToHelperAllURLs(allUrls)
+	var projRepo helpers.ProjectRepository
+	if m.project != nil {
+		projRepo = m.project
 	}
-	// s.Debugf("Potential Matches: %v", allUrls)
-	var c *semver.Constraints
-	var urlMap = make(map[*semver.Version]AllURL)
-	if len(purlReq) > 0 {
-		s.Debugf("Building version constraint for %v: %v", purlName, purlReq)
-		var err error
-		c, err = semver.NewConstraint(purlReq)
-		if err != nil {
-			s.Warnf("Encountered an issue parsing version constraint string '%v' (%v,%v): %v", purlReq, purlName, purlType, err)
-		}
+	result, err := helpers.PickOneURL(m.s, projRepo, helperURLs, purlName, purlType, "")
+	if err != nil {
+		return AllURL{}, err
 	}
-	s.Debugf("Checking versions...")
-	for _, url := range allUrls {
-		if len(url.SemVer) > 0 || len(url.Version) > 0 {
-			v, err := semver.NewVersion(url.Version)
-			if err != nil && len(url.SemVer) > 0 {
-				s.Debugf("Failed to parse SemVer: '%v'. Trying Version instead: %v (%v)", url.Version, url.SemVer, err)
-				v, err = semver.NewVersion(url.SemVer) // Semver failed, try the normal version
-			}
-			if err != nil {
-				s.Warnf("Encountered an issue parsing version string '%v' (%v) for %v: %v. Using v0.0.0", url.Version, url.SemVer, url, err)
-				v, err = semver.NewVersion("v0.0.0") // Semver failed, just use a standard version zero (for now)
-			}
-			if err == nil {
-				if c == nil || c.Check(v) {
-					_, ok := urlMap[v]
-					if !ok {
-						urlMap[v] = url // fits inside the constraint and hasn't already been stored
-					}
-				}
-			}
-		} else {
-			s.Infof("Skipping match as it doesn't have a version: %#v", url)
-		}
-	}
-	if len(urlMap) == 0 { // TODO should we return the latest version anyway?
-		s.Warnf("No component match found for %v, %v after filter %v", purlName, purlType, purlReq)
-		return AllURL{}, nil
-	}
-	var versions = make([]*semver.Version, len(urlMap))
-	var vi = 0
-	for version := range urlMap { // Save the list of versions so they can be sorted
-		versions[vi] = version
-		vi++
-	}
-	sort.Sort(semver.Collection(versions))
-	version := versions[len(versions)-1] // Get the latest (acceptable) URL version
-	s.Debugf("Sorted versions: %v. Highest: %v", versions, version)
-
-	url, ok := urlMap[version] // Retrieve the latest accepted URL version
-	if !ok {
-		s.Errorf("Problem retrieving URL data for %v (%v, %v)", version, purlName, purlType)
-		return AllURL{}, fmt.Errorf("failed to retrieve specific URL version: %v", version)
-	}
-	url.URL, _ = purlutils.ProjectUrl(purlName, purlType)
-
-	s.Debugf("Selected version: %#v", url)
-	if len(url.License) == 0 && projModel != nil { // Check for a project license if we don't have a component one
-		project, err := projModel.GetProjectByPurlName(purlName, url.MineID)
-		switch {
-		case err != nil:
-			s.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
-		case len(project.License) > 0:
-			s.Debugf("Adding project license data to %v from %v", url, project)
-			url.License = project.License
-			url.IsSpdx = project.IsSpdx
-			url.LicenseID = project.LicenseID
-		case len(project.GitLicense) > 0:
-			s.Debugf("Adding project git license data to %v from %v", url, project)
-			url.License = project.GitLicense
-			url.IsSpdx = project.GitIsSpdx
-			url.LicenseID = project.GitLicenseID
-		}
-	}
-	return url, nil // Return the best component match
+	// Convert back to local AllURL
+	return convertFromHelperAllURL(result), nil
 }

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
+## [0.9.0] - 2025-08-29
+### Changed
+- Updated `github.com/scanoss/papi` to v0.17.0 
+- Replaced REST endpoint POST `/api/v2/dependencies/dependencies` by `/v2/dependencies/dependencies`
+- Replaced REST endpoint POST `/api/v2/dependencies/transitive` by `/v2/dependencies/transitive`
+- Replaced REST endpoint POST `/api/v2/dependencies/echo` by `/v2/dependencies/echo`
+
 ## [0.8.0] - 2025-06-26
 ### Added
 - Added transitive dependency service
@@ -65,15 +72,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Added version search support
 
-[0.0.1]: https://github.com/scanoss/papi/compare/v0.0.0...v0.0.1
-[0.2.0]: https://github.com/scanoss/papi/compare/v0.0.1...v0.2.0
-[0.3.0]: https://github.com/scanoss/papi/compare/v0.2.0...v0.3.0
-[0.4.0]: https://github.com/scanoss/papi/compare/v0.3.0...v0.4.0
-[0.5.0]: https://github.com/scanoss/papi/compare/v0.4.0...v0.5.0
-[0.6.0]: https://github.com/scanoss/papi/compare/v0.5.0...v0.6.0
-[0.7.0]: https://github.com/scanoss/papi/compare/v0.6.0...v0.7.0
-[0.7.1]: https://github.com/scanoss/papi/compare/v0.7.0...v0.7.1
-[0.7.2]: https://github.com/scanoss/papi/compare/v0.7.1...v0.7.2
-[0.7.3]: https://github.com/scanoss/papi/compare/v0.7.2...v0.7.3
-[0.7.4]: https://github.com/scanoss/papi/compare/v0.7.3...v0.7.4
-[0.8.0]: https://github.com/scanoss/papi/compare/v0.7.4...v0.8.0
+[0.2.0]: https://github.com/scanoss/dependencies/compare/v0.0.1...v0.2.0
+[0.3.0]: https://github.com/scanoss/dependencies/compare/v0.2.0...v0.3.0
+[0.0.1]: https://github.com/scanoss/dependencies/compare/v0.0.0...v0.0.1
+[0.4.0]: https://github.com/scanoss/dependencies/compare/v0.3.0...v0.4.0
+[0.5.0]: https://github.com/scanoss/dependencies/compare/v0.4.0...v0.5.0
+[0.6.0]: https://github.com/scanoss/dependencies/compare/v0.5.0...v0.6.0
+[0.7.0]: https://github.com/scanoss/dependencies/compare/v0.6.0...v0.7.0
+[0.7.1]: https://github.com/scanoss/dependencies/compare/v0.7.0...v0.7.1
+[0.7.2]: https://github.com/scanoss/dependencies/compare/v0.7.1...v0.7.2
+[0.7.3]: https://github.com/scanoss/dependencies/compare/v0.7.2...v0.7.3
+[0.7.4]: https://github.com/scanoss/dependencies/compare/v0.7.3...v0.7.4
+[0.8.0]: https://github.com/scanoss/dependencies/compare/v0.7.4...v0.8.0
+[0.9.0]: https://github.com/scanoss/dependencies/compare/v0.8.0...v0.9.0

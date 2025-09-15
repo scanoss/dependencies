@@ -107,17 +107,17 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 	s := ctxzap.Extract(ctx).Sugar()
 	s.Info("Processing transitive dependency request...")
 	// Convert the request to a transitive dependency collection job for processing
-	transitiveDependencyInput, err := convertToTransitiveDependencyCollection(s, d.config, request)
-	if err != nil {
-		s.Errorf("failed to parse transitive dependency request: %v", err)
-		err = grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
+	transitiveDependencyInput, convErr := convertToTransitiveDependencyCollection(s, d.config, request)
+	if convErr != nil {
+		s.Errorf("failed to parse transitive dependency request: %v", convErr.Error())
+		err := grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
 		if err != nil {
 			s.Debugf("error setting x-http-code to trailer: %v\n", err)
 		}
 		return &pb.TransitiveDependencyResponse{
 			Status: &common.StatusResponse{
 				Status:  common.StatusCode_FAILED,
-				Message: "failed to parse transitive dependency request",
+				Message: convErr.Error(),
 			}}, nil
 	}
 

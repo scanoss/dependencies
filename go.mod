@@ -82,3 +82,4 @@ require (
 // https://github.com/golang/go/wiki/Modules#when-should-i-use-the-replace-directive
 // ie. replace github.com/scanoss/papi => ../papi
 // require github.com/scanoss/papi v0.0.0-unpublished
+replace github.com/scanoss/papi => ../papi

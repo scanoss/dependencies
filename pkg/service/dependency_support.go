@@ -82,60 +82,107 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 	return &depResp, nil
 }
 
+// determineEcosystem extracts and validates the ecosystem from transitive dependency components.
+// It ensures all components belong to the same ecosystem and that the ecosystem is registered.
+// Returns the ecosystem name or an error if validation fails.
+func determineEcosystem(transitiveDependencyDTO dtos.TransitiveDependencyDTO) (string, error) {
+	if len(transitiveDependencyDTO.Components) == 0 {
+		return "", errors.New("no components provided to determine ecosystem")
+	}
+
+	ecosystems := make(map[string]bool)
+	for _, component := range transitiveDependencyDTO.Components {
+		if component.Purl == "" {
+			return "", fmt.Errorf("component purl cannot be empty")
+		}
+		p, err := packageurl.FromString(component.Purl)
+		if err != nil {
+			return "", fmt.Errorf("unable to parse package url: %s - %w", component.Purl, err)
+		}
+		ecosystems[p.Type] = true
+
+		// Early exit if we detect multiple ecosystems
+		if len(ecosystems) > 1 {
+			var ecosystemTypes []string
+			for ecosystem := range ecosystems {
+				ecosystemTypes = append(ecosystemTypes, ecosystem)
+			}
+			return "", errors.New(fmt.Sprintf("multiple ecosystems found, expected single ecosystem: %v", ecosystemTypes))
+		}
+	}
+
+	if len(ecosystems) == 0 {
+		return "", errors.New("no valid ecosystems found in components")
+	}
+
+	// Get the single ecosystem
+	var ecosystem string
+	for key := range ecosystems {
+		ecosystem = key
+		break
+	}
+
+	// Validate that the ecosystem is registered
+	if _, ok := shared.RegisteredEcosystems[ecosystem]; !ok {
+		return "", errors.New(fmt.Sprintf("ecosystem '%s' is not registered", ecosystem))
+	}
+
+	return ecosystem, nil
+}
+
 func convertToTransitiveDependencyCollection(
 	s *zap.SugaredLogger,
 	config *config.ServerConfig,
 	request *pb.TransitiveDependencyRequest) (usecase.DependencyJobCollection, error) {
+
+	if request.Components == nil || len(request.Components) == 0 {
+		return usecase.DependencyJobCollection{}, errors.New("transitive dependency request failed: 'components' field is required and must contain at least one component")
+	}
+
 	data, err := json.Marshal(request)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request input: %v", err)
 		return usecase.DependencyJobCollection{}, errors.New("problem extracting dependency input")
 	}
+	s.Debugf("Marshalled request data: %s", string(data))
 	transitiveDepDTO, err := dtos.ParseTransitiveReqDTOS(s, data)
 	if err != nil {
 		s.Errorf("Problem parsing dependency request input: %v", err)
 		return usecase.DependencyJobCollection{}, errors.New("problem parsing dependency input")
 	}
-
-	if len(transitiveDepDTO.Purls) == 0 {
-		return usecase.DependencyJobCollection{}, errors.New("no PURLs to process")
-	}
+	s.Debugf("Transitive dependency request: %v", transitiveDepDTO)
 
 	var dependencyJobs []trasitive_dependencies.DependencyJob
-	if _, ok := shared.RegisteredEcosystems[transitiveDepDTO.Ecosystem]; !ok {
-		s.Errorf("unsupported ecosystem: %s", transitiveDepDTO.Ecosystem)
-		return usecase.DependencyJobCollection{}, errors.New("unsupported ecosystem")
-	}
 	// Get max depth limit
 	depthLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxDepth,
 		config.TransitiveResources.DefaultDepth, transitiveDepDTO.Depth)
 	// Get max response limit
 	responseLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxResponseSize,
 		config.TransitiveResources.DefaultResponseSize, transitiveDepDTO.Limit)
-	for _, dto := range transitiveDepDTO.Purls {
-		p, purlErr := packageurl.FromString(dto.Purl)
-		if purlErr != nil {
-			s.Errorf("problem extracting package identifier from: %s", dto.Purl)
+
+	ecosystem, err := determineEcosystem(transitiveDepDTO)
+	if err != nil {
+		return usecase.DependencyJobCollection{}, err
+	}
+	transitiveDepDTO.Ecosystem = ecosystem
+
+	for _, component := range transitiveDepDTO.Components {
+		purlName, err := trasitive_dependencies.ExtractPackageIdentifierFromPurl(component.Purl)
+		if err != nil {
+			s.Errorf("problem extracting package identifier from: %s", component.Purl)
 			continue
 		}
 
-		if transitiveDepDTO.Ecosystem != p.Type {
-			errorMsg := fmt.Sprintf("ecosystem mismatch in PURL '%s': requested '%s' but PURL belongs to '%s' ecosystem",
-				dto.Purl, transitiveDepDTO.Ecosystem, p.Type)
-			return usecase.DependencyJobCollection{}, errors.New(errorMsg)
-		}
-
-		purlName, _ := trasitive_dependencies.ExtractPackageIdentifierFromPurl(dto.Purl)
-
 		dependencyJobs = append(dependencyJobs, trasitive_dependencies.DependencyJob{
-			PurlName:  purlName,
-			Version:   dto.Requirement,
-			Ecosystem: transitiveDepDTO.Ecosystem,
-			Depth:     depthLimit,
+			PurlName:    purlName,
+			Version:     component.Requirement, // TODO: Use github.com/scanoss/go-models to determine component version from requirement
+			Requirement: component.Requirement,
+			Ecosystem:   transitiveDepDTO.Ecosystem,
+			Depth:       depthLimit,
 		})
 	}
 	if len(dependencyJobs) == 0 {
-		errorMsg := fmt.Sprintf("Unable to process PURLS: %v", transitiveDepDTO.Purls)
+		errorMsg := fmt.Sprintf("Unable to process PURLS: %v", transitiveDepDTO.Components)
 		return usecase.DependencyJobCollection{}, errors.New(errorMsg)
 	}
 
@@ -148,9 +195,10 @@ func convertToTransitiveDependencyCollection(
 func convertToTransitiveDependencyOutput(dependencies []trasitive_dependencies.Dependency) *pb.TransitiveDependencyResponse {
 	var tdr pb.TransitiveDependencyResponse
 	for _, d := range dependencies {
-		tdr.Dependencies = append(tdr.Dependencies, &pb.TransitiveDependencyResponse_Dependencies{
-			Purl:    d.Purl,
-			Version: d.Version,
+		tdr.Dependencies = append(tdr.Dependencies, &pb.TransitiveDependencyResponse_Component{
+			Purl:        d.Purl,
+			Version:     d.Version,
+			Requirement: d.Version,
 		})
 	}
 	return &tdr

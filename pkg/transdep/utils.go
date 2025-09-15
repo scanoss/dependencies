@@ -48,7 +48,7 @@ func GetPurlFromPurlName(packageName string, version string, ecosystem string) (
 	return versionedPurl, nil
 }
 
-// GetPackageNameFromPurl convert purl to package name.
+// ExtractPackageIdentifierFromPurl convert purl to package name.
 func ExtractPackageIdentifierFromPurl(purl string) (string, error) {
 	// Parse the purl string into a PackageURL object
 	p, err := packageurl.FromString(purl)

@@ -11,10 +11,11 @@ import (
 )
 
 type DependencyJob struct {
-	PurlName  string
-	Version   string
-	Depth     int
-	Ecosystem string
+	PurlName    string
+	Version     string
+	Requirement string
+	Depth       int
+	Ecosystem   string
 }
 
 type Result struct {

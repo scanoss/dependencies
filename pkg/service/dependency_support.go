@@ -18,7 +18,6 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/package-url/packageurl-go"
@@ -28,9 +27,9 @@ import (
 	"go.uber.org/zap"
 	"scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
+	"scanoss.com/dependencies/pkg/errors"
 	"scanoss.com/dependencies/pkg/shared"
 	trasitive_dependencies "scanoss.com/dependencies/pkg/transdep"
-	"scanoss.com/dependencies/pkg/usecase"
 )
 
 // Structure for storing OTEL metrics.
@@ -51,33 +50,39 @@ func setupMetrics() {
 }
 
 // convertDependencyInput converts a Dependency Request structure into an internal Dependency Input struct.
+//
+//nolint:staticcheck // SA1019: pb.DependencyRequest is deprecated but still needed for compatibility
 func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest) (dtos.DependencyInput, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request input: %v", err)
-		return dtos.DependencyInput{}, errors.New("problem marshalling dependency input")
+		return dtos.DependencyInput{}, errors.NewInternalError("problem marshalling dependency input", err)
 	}
 	dtoRequest, err := dtos.ParseDependencyInput(s, data)
 	if err != nil {
 		s.Errorf("Problem parsing dependency request input: %v", err)
-		return dtos.DependencyInput{}, errors.New("problem parsing dependency input")
+		return dtos.DependencyInput{}, errors.NewBadRequestError("problem parsing dependency input", err)
 	}
 	return dtoRequest, nil
 }
 
 // convertDependencyOutput converts an internal Dependency Output structure into a Dependency Response struct.
+//
+//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed for compatibility
 func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
 	data, err := json.Marshal(output)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request output: %v", err)
-		return &pb.DependencyResponse{}, errors.New("problem marshalling dependency output")
+		//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
+		return &pb.DependencyResponse{}, errors.NewInternalError("problem marshalling dependency output", err)
 	}
 	s.Debugf("Parsed data: %v", string(data))
 	var depResp pb.DependencyResponse
 	err = json.Unmarshal(data, &depResp)
 	if err != nil {
 		s.Errorf("Problem unmarshalling dependency request output: %v", err)
-		return &pb.DependencyResponse{}, errors.New("problem unmarshalling dependency output")
+		//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
+		return &pb.DependencyResponse{}, errors.NewInternalError("problem unmarshalling dependency output", err)
 	}
 	return &depResp, nil
 }
@@ -87,17 +92,18 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 // Returns the ecosystem name or an error if validation fails.
 func determineEcosystem(transitiveDependencyDTO dtos.TransitiveDependencyDTO) (string, error) {
 	if len(transitiveDependencyDTO.Components) == 0 {
-		return "", errors.New("no components provided to determine ecosystem")
+		return "", errors.NewBadRequestError("no components provided to determine ecosystem", nil)
 	}
 
 	ecosystems := make(map[string]bool)
 	for _, component := range transitiveDependencyDTO.Components {
 		if component.Purl == "" {
-			return "", fmt.Errorf("component purl cannot be empty")
+			return "", errors.NewBadRequestError("component purl cannot be empty", nil)
 		}
 		p, err := packageurl.FromString(component.Purl)
 		if err != nil {
-			return "", fmt.Errorf("unable to parse package url: %s - %w", component.Purl, err)
+			fmt.Printf("Error parsing purl: %v\n", err)
+			continue
 		}
 		ecosystems[p.Type] = true
 
@@ -107,12 +113,12 @@ func determineEcosystem(transitiveDependencyDTO dtos.TransitiveDependencyDTO) (s
 			for ecosystem := range ecosystems {
 				ecosystemTypes = append(ecosystemTypes, ecosystem)
 			}
-			return "", errors.New(fmt.Sprintf("multiple ecosystems found, expected single ecosystem: %v", ecosystemTypes))
+			return "", errors.NewBadRequestError(fmt.Sprintf("multiple ecosystems found, expected single ecosystem: %v", ecosystemTypes), nil)
 		}
 	}
 
 	if len(ecosystems) == 0 {
-		return "", errors.New("no valid ecosystems found in components")
+		return "", errors.NewBadRequestError("no valid ecosystems found in components", nil)
 	}
 
 	// Get the single ecosystem
@@ -121,38 +127,79 @@ func determineEcosystem(transitiveDependencyDTO dtos.TransitiveDependencyDTO) (s
 		ecosystem = key
 		break
 	}
-
 	// Validate that the ecosystem is registered
 	if _, ok := shared.RegisteredEcosystems[ecosystem]; !ok {
-		return "", errors.New(fmt.Sprintf("ecosystem '%s' is not registered", ecosystem))
+		return "", errors.NewBadRequestError(fmt.Sprintf("invalid ecosystem: '%s'. Supported ecosystems: 'composer', 'crates', 'maven', 'npm' and 'gem'", ecosystem), nil)
 	}
-
 	return ecosystem, nil
 }
 
-func convertToTransitiveDependencyCollection(
+func validateTransitiveDependencyRequest(request *pb.TransitiveDependencyRequest) error {
+	if len(request.Components) == 0 {
+		return errors.NewBadRequestError("'components' field is required and must contain at least one component", nil)
+	}
+	return nil
+}
+
+func convertProtobufToDTO(request *pb.TransitiveDependencyRequest) dtos.TransitiveDependencyDTO {
+	components := make([]dtos.ComponentDTO, len(request.Components))
+	for i, component := range request.Components {
+		components[i] = dtos.ComponentDTO{
+			Purl:        component.Purl,
+			Requirement: component.Requirement,
+		}
+	}
+
+	var depth *int
+	if request.Depth != 0 {
+		depthValue := int(request.Depth)
+		depth = &depthValue
+	}
+
+	var limit *int
+	if request.Limit != 0 {
+		limitValue := int(request.Limit)
+		limit = &limitValue
+	}
+
+	return dtos.TransitiveDependencyDTO{
+		Depth:      depth,
+		Ecosystem:  "", // Will be set later
+		Components: components,
+		Limit:      limit,
+	}
+}
+
+func convertToTransitiveDependencyDTO(
 	s *zap.SugaredLogger,
 	config *config.ServerConfig,
-	request *pb.TransitiveDependencyRequest) (usecase.DependencyJobCollection, error) {
-
-	if request.Components == nil || len(request.Components) == 0 {
-		return usecase.DependencyJobCollection{}, errors.New("transitive dependency request failed: 'components' field is required and must contain at least one component")
+	request *pb.TransitiveDependencyRequest) (dtos.TransitiveDependencyDTO, error) {
+	if err := validateTransitiveDependencyRequest(request); err != nil {
+		return dtos.TransitiveDependencyDTO{}, err
 	}
 
-	data, err := json.Marshal(request)
-	if err != nil {
-		s.Errorf("Problem marshalling dependency request input: %v", err)
-		return usecase.DependencyJobCollection{}, errors.New("problem extracting dependency input")
-	}
-	s.Debugf("Marshalled request data: %s", string(data))
-	transitiveDepDTO, err := dtos.ParseTransitiveReqDTOS(s, data)
-	if err != nil {
-		s.Errorf("Problem parsing dependency request input: %v", err)
-		return usecase.DependencyJobCollection{}, errors.New("problem parsing dependency input")
-	}
-	s.Debugf("Transitive dependency request: %v", transitiveDepDTO)
+	transitiveDepDTO := convertProtobufToDTO(request)
+	s.Debugf("Converted transitive dependency request: %v", transitiveDepDTO)
 
-	var dependencyJobs []trasitive_dependencies.DependencyJob
+	var invalidPurls []string
+	var validComponents []dtos.ComponentDTO
+	for _, component := range transitiveDepDTO.Components {
+		_, err := trasitive_dependencies.ExtractPackageIdentifierFromPurl(component.Purl)
+		if err != nil {
+			invalidPurls = append(invalidPurls, component.Purl)
+			continue
+		}
+		validComponents = append(validComponents, component)
+	}
+
+	fmt.Printf("Valid components: %v\n", validComponents)
+	fmt.Printf("Invalid components: %v\n", invalidPurls)
+	if len(validComponents) == 0 && len(invalidPurls) > 0 {
+		return dtos.TransitiveDependencyDTO{}, errors.NewBadRequestError(fmt.Sprintf("invalid purls: %v", invalidPurls), nil)
+	}
+
+	transitiveDepDTO.Components = validComponents
+
 	// Get max depth limit
 	depthLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxDepth,
 		config.TransitiveResources.DefaultDepth, transitiveDepDTO.Depth)
@@ -162,34 +209,13 @@ func convertToTransitiveDependencyCollection(
 
 	ecosystem, err := determineEcosystem(transitiveDepDTO)
 	if err != nil {
-		return usecase.DependencyJobCollection{}, err
+		return dtos.TransitiveDependencyDTO{}, err
 	}
 	transitiveDepDTO.Ecosystem = ecosystem
+	transitiveDepDTO.Limit = &responseLimit
+	transitiveDepDTO.Depth = &depthLimit
 
-	for _, component := range transitiveDepDTO.Components {
-		purlName, err := trasitive_dependencies.ExtractPackageIdentifierFromPurl(component.Purl)
-		if err != nil {
-			s.Errorf("problem extracting package identifier from: %s", component.Purl)
-			continue
-		}
-
-		dependencyJobs = append(dependencyJobs, trasitive_dependencies.DependencyJob{
-			PurlName:    purlName,
-			Version:     component.Requirement, // TODO: Use github.com/scanoss/go-models to determine component version from requirement
-			Requirement: component.Requirement,
-			Ecosystem:   transitiveDepDTO.Ecosystem,
-			Depth:       depthLimit,
-		})
-	}
-	if len(dependencyJobs) == 0 {
-		errorMsg := fmt.Sprintf("Unable to process PURLS: %v", transitiveDepDTO.Components)
-		return usecase.DependencyJobCollection{}, errors.New(errorMsg)
-	}
-
-	return usecase.DependencyJobCollection{
-		DependencyJobs: dependencyJobs,
-		ResponseLimit:  responseLimit,
-	}, nil
+	return transitiveDepDTO, nil
 }
 
 func convertToTransitiveDependencyOutput(dependencies []trasitive_dependencies.Dependency) *pb.TransitiveDependencyResponse {

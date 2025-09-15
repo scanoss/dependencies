@@ -21,10 +21,10 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
-
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	"go.uber.org/zap"
+
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/models"
@@ -50,6 +50,8 @@ func NewDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, con
 }
 
 // GetDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
+//
+//nolint:gocognit // Function complexity is acceptable for dependency processing logic
 func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, bool, error) {
 	var depFileOutputs []dtos.DependencyFileOutput
 	var problems = false
@@ -80,6 +82,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				depOutput.Version = url.Version
 			} else {
 				purlParts := strings.Split(purl.Purl, "@")
+				//nolint:gocritic // if-else chain is clearer than switch for version selection
 				if len(purlParts) > 1 {
 					depOutput.Version = purlParts[1]
 				} else if len(purl.Requirement) > 0 {

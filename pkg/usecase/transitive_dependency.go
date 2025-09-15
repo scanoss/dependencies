@@ -22,6 +22,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
+	"scanoss.com/dependencies/pkg/dtos"
+	"scanoss.com/dependencies/pkg/errors"
 	"scanoss.com/dependencies/pkg/models"
 	transitiveDep "scanoss.com/dependencies/pkg/transdep"
 )
@@ -29,6 +31,37 @@ import (
 type DependencyJobCollection struct {
 	DependencyJobs []transitiveDep.DependencyJob
 	ResponseLimit  int
+}
+
+// toJobCollection converts a TransitiveDependencyDTO to DependencyJobCollection.
+func toJobCollection(s *zap.SugaredLogger, dto dtos.TransitiveDependencyDTO) (DependencyJobCollection, error) {
+	dependencyJobs := make([]transitiveDep.DependencyJob, 0, len(dto.Components))
+	for _, component := range dto.Components {
+		purlName, err := transitiveDep.ExtractPackageIdentifierFromPurl(component.Purl)
+		if err != nil {
+			s.Errorf("failed to convert purl:%v, %v", component.Purl, err)
+			continue
+		}
+		dependencyJobs = append(dependencyJobs, transitiveDep.DependencyJob{
+			PurlName:    purlName,
+			Version:     component.Requirement,
+			Requirement: component.Requirement,
+			Ecosystem:   dto.Ecosystem,
+			Depth:       *dto.Depth,
+		})
+	}
+
+	if len(dependencyJobs) == 0 {
+		return DependencyJobCollection{}, errors.NewBadRequestError(
+			"no valid dependency jobs could be created from input",
+			nil,
+		)
+	}
+
+	return DependencyJobCollection{
+		DependencyJobs: dependencyJobs,
+		ResponseLimit:  *dto.Limit,
+	}, nil
 }
 
 type TransitiveDependencyUseCase struct {
@@ -64,12 +97,15 @@ func (d TransitiveDependencyUseCase) createEntryDependenciesIndex(dependencyJobs
 }
 
 // GetTransitiveDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
-func (d TransitiveDependencyUseCase) GetTransitiveDependencies(depJobCollection DependencyJobCollection) ([]transitiveDep.Dependency, error) {
-	// creates new dependency graph struct
+func (d TransitiveDependencyUseCase) GetTransitiveDependencies(s *zap.SugaredLogger, transitiveDependencyDTO dtos.TransitiveDependencyDTO) ([]transitiveDep.Dependency, error) {
+	jobCollection, err := toJobCollection(s, transitiveDependencyDTO)
+	if err != nil {
+		return nil, err
+	}
 	depGraph := transitiveDep.NewDepGraph()
-	entryDependenciesIndex := d.createEntryDependenciesIndex(depJobCollection.DependencyJobs)
+	entryDependenciesIndex := d.createEntryDependenciesIndex(jobCollection.DependencyJobs)
 	// Increase the max response size to account for entry dependencies that will be filtered out later
-	responseSize := depJobCollection.ResponseLimit + len(entryDependenciesIndex)
+	responseSize := jobCollection.ResponseLimit + len(entryDependenciesIndex)
 	dependencyCollectorCfg := transitiveDep.DependencyCollectorCfg{
 		MaxWorkers:    d.config.TransitiveResources.MaxWorkers,
 		MaxQueueLimit: responseSize,
@@ -81,16 +117,26 @@ func (d TransitiveDependencyUseCase) GetTransitiveDependencies(depJobCollection 
 		dependencyCollectorCfg,
 		models.NewDependencyModel(d.ctx, d.S, d.db),
 		d.S)
-	err := transitiveDependencyCollector.InitJobs(depJobCollection.DependencyJobs)
+
+	err = transitiveDependencyCollector.InitJobs(jobCollection.DependencyJobs)
 	if err != nil {
-		return []transitiveDep.Dependency{}, err
+		s.Errorf("Error initializing transitive dependencies jobs: %v", err)
+		// Default to internal error for unknown errors
+		return nil, errors.NewInternalError("failed to initialize dependency jobs", err)
 	}
+
 	transitiveDependencyCollector.Start()
 	var transitiveDependencies []transitiveDep.Dependency
-	for _, d := range depGraph.Flatten() {
-		if _, ok := entryDependenciesIndex[d.Purl+"@"+d.Version]; !ok {
-			transitiveDependencies = append(transitiveDependencies, d)
+	for _, dep := range depGraph.Flatten() {
+		if _, ok := entryDependenciesIndex[dep.Purl+"@"+dep.Version]; !ok {
+			transitiveDependencies = append(transitiveDependencies, dep)
 		}
 	}
+
+	// Check if we found any dependencies
+	if len(transitiveDependencies) == 0 {
+		return nil, errors.NewNotFoundError("transitive dependencies for the given components")
+	}
+
 	return transitiveDependencies, nil
 }

@@ -24,13 +24,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// DependencyInput deprecated
+// DependencyInput deprecated.
 type DependencyInput struct {
 	Files []DependencyFileInput `json:"files"`
 	Depth int                   `json:"depth"`
 }
 
-// DependencyFileInput deprecated
+// DependencyFileInput deprecated.
 type DependencyFileInput struct {
 	File  string         `json:"file,omitempty"`
 	Purls []ComponentDTO `json:"purls"`
@@ -46,6 +46,19 @@ type TransitiveDependencyDTO struct {
 	Ecosystem  string         `json:"ecosystem,omitempty"`
 	Components []ComponentDTO `json:"components"`
 	Limit      *int           `json:"limit,omitempty"`
+}
+
+type DependencyJobDTO struct {
+	PurlName    string
+	Version     string
+	Requirement string
+	Ecosystem   string
+	Depth       int
+}
+
+type TransitiveDependencyCollectionDTO struct {
+	DependencyJobs []DependencyJobDTO
+	ResponseLimit  int
 }
 
 // ParseDependencyInput converts the input byte array to a DependencyInput structure.

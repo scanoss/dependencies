@@ -49,7 +49,7 @@ func TestInputConvert(t *testing.T) {
 	}
 	defer zlog.SyncZap()
 
-	var depIn = &pb.DependencyRequest{}
+	var depIn = &pb.DependencyRequest{} //nolint:staticcheck // SA1019: pb.DependencyRequest is deprecated but still needed for tests
 	input, err := convertDependencyInput(zlog.S, depIn)
 	if err != nil {
 		t.Errorf("TestInputConvert failed: %v", err)

@@ -67,6 +67,8 @@ func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, 
 }
 
 // GetURLsByPurlString searches for component details of the specified Purl string (and optional requirement).
+//
+//nolint:gocognit // Function complexity is acceptable for PURL parsing and routing logic
 func (m *AllUrlsModel) GetURLsByPurlString(purlString, purlReq string) (AllURL, error) {
 	if len(purlString) == 0 {
 		m.s.Error("Please specify a valid Purl String to query")
@@ -174,6 +176,8 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 }
 
 // pickOneUrl takes the potential matching component/versions and selects the most appropriate one.
+//
+//nolint:gocognit,stylecheck // Function complexity is acceptable for URL selection logic
 func pickOneUrl(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
 	if len(allUrls) == 0 {
 		s.Infof("No component match (in urls) found for %v, %v", purlName, purlType)

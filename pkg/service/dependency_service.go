@@ -19,18 +19,21 @@ package service
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"net/http"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
 	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 	_ "google.golang.org/protobuf/runtime/protoimpl"
 	myconfig "scanoss.com/dependencies/pkg/config"
+	"scanoss.com/dependencies/pkg/errors"
 	"scanoss.com/dependencies/pkg/usecase"
 )
 
@@ -54,6 +57,8 @@ func (d dependencyServer) Echo(ctx context.Context, request *common.EchoRequest)
 }
 
 // GetDependencies searches for information about the supplied dependencies.
+//
+//nolint:staticcheck // SA1019: pb.DependencyRequest is deprecated but still needed for compatibility
 func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.DependencyRequest) (*pb.DependencyResponse, error) {
 	requestStartTime := time.Now() // Capture the scan start time
 	s := ctxzap.Extract(ctx).Sugar()
@@ -63,19 +68,22 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	if len(depRequest) == 0 {
 		s.Warn("No dependency request data supplied to decorate. Ignoring request.")
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "No dependency request data supplied"}
-		return &pb.DependencyResponse{Status: &statusResp}, errors.New("no request data supplied")
+		//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
+		return &pb.DependencyResponse{Status: &statusResp}, errors.NewBadRequestError("no request data supplied", nil)
 	}
 	dtoRequest, err := convertDependencyInput(s, request) // Convert to internal DTO for processing
 	if err != nil {
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problem parsing dependency input data"}
-		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem parsing dependency input data")
+		//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
+		return &pb.DependencyResponse{Status: &statusResp}, errors.NewBadRequestError("problem parsing dependency input data", err)
 	}
 	telemetryReqCounters(ctx, d.config, depRequest) // Update request counters
 	conn, err := d.db.Connx(ctx)                    // Get a connection from the pool
 	if err != nil {
 		s.Errorf("Failed to get a database connection from the pool: %v", err)
 		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
-		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem getting database pool connection")
+		//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
+		return &pb.DependencyResponse{Status: &statusResp}, errors.NewServiceUnavailableError("problem getting database pool connection", err)
 	}
 	defer gd.CloseSQLConnection(conn)
 	// Search the KB for information about each dependency
@@ -86,6 +94,7 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		if !warn { // Definitely an error, and not a warning
 			s.Errorf("Failed to get dependencies: %v", err)
 			statusResp = common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
+			//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
 			return &pb.DependencyResponse{Status: &statusResp}, nil
 		}
 		statusResp = common.StatusResponse{Status: common.StatusCode_SUCCEEDED_WITH_WARNINGS, Message: "Problems decorating some purls"}
@@ -94,10 +103,12 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 	if err != nil {
 		s.Errorf("Failed to covnert parsed dependencies: %v", err)
 		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
-		return &pb.DependencyResponse{Status: &statusResp}, errors.New("problem converting dependency DTO")
+		//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
+		return &pb.DependencyResponse{Status: &statusResp}, errors.NewInternalError("problem converting dependency DTO", err)
 	}
 	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
 	// Set the status and respond with the data
+	//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }
 
@@ -107,37 +118,31 @@ func (d dependencyServer) GetTransitiveDependencies(ctx context.Context, request
 	s := ctxzap.Extract(ctx).Sugar()
 	s.Info("Processing transitive dependency request...")
 	// Convert the request to a transitive dependency collection job for processing
-	transitiveDependencyInput, convErr := convertToTransitiveDependencyCollection(s, d.config, request)
-	if convErr != nil {
-		s.Errorf("failed to parse transitive dependency request: %v", convErr.Error())
-		err := grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
-		if err != nil {
-			s.Debugf("error setting x-http-code to trailer: %v\n", err)
-		}
+	transitiveDependencyDTO, err := convertToTransitiveDependencyDTO(s, d.config, request)
+	if err != nil {
 		return &pb.TransitiveDependencyResponse{
-			Status: &common.StatusResponse{
-				Status:  common.StatusCode_FAILED,
-				Message: convErr.Error(),
-			}}, nil
+			Status: errors.HandleServiceError(ctx, s, err),
+		}, nil
 	}
-
 	transitiveDependenciesUc := usecase.NewTransitiveDependencies(ctx, s, d.db, d.config)
-	s.Infof("Processing transitive dependency request...%v", transitiveDependencyInput)
-	transitiveDependencies, err := transitiveDependenciesUc.GetTransitiveDependencies(transitiveDependencyInput)
+	s.Infof("Processing transitive dependency request...%v", transitiveDependencyDTO)
+	transitiveDependencies, err := transitiveDependenciesUc.GetTransitiveDependencies(s, transitiveDependencyDTO)
 	if err != nil {
 		s.Errorf("failed getting transitive dependencies: %v", err)
-		err = grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", "400"))
-		if err != nil {
-			s.Debugf("error setting x-http-code to trailer: %v\n", err)
+		// Wrap non-service errors as internal errors
+		if !errors.IsServiceError(err) {
+			err = errors.NewInternalError("failed getting transitive dependencies", err)
 		}
 		return &pb.TransitiveDependencyResponse{
-			Status: &common.StatusResponse{
-				Status:  common.StatusCode_FAILED,
-				Message: "failed getting transitive dependencies",
-			}}, nil
+			Status: errors.HandleServiceError(ctx, s, err),
+		}, nil
 	}
 
 	output := convertToTransitiveDependencyOutput(transitiveDependencies)
+	trailerErr := grpc.SetTrailer(ctx, metadata.Pairs("x-http-code", fmt.Sprintf("%d", http.StatusOK)))
+	if trailerErr != nil {
+		s.Debugf("error setting x-http-code to trailer: %v", trailerErr)
+	}
 	output.Status = &common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}
 
 	return output, nil

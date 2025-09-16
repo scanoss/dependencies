@@ -67,8 +67,6 @@ func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, 
 }
 
 // GetURLsByPurlString searches for component details of the specified Purl string (and optional requirement).
-//
-//nolint:gocognit // Function complexity is acceptable for PURL parsing and routing logic
 func (m *AllUrlsModel) GetURLsByPurlString(purlString, purlReq string) (AllURL, error) {
 	if len(purlString) == 0 {
 		m.s.Error("Please specify a valid Purl String to query")
@@ -144,7 +142,7 @@ func (m *AllUrlsModel) GetURLsByPurlNameType(purlName, purlType, purlReq string)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Pick one URL to return (checking for license details also)
-	return pickOneUrl(m.s, m.project, allUrls, purlName, purlType, purlReq)
+	return pickOneURL(m.s, m.project, allUrls, purlName, purlType, purlReq)
 }
 
 // GetURLsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version.
@@ -172,13 +170,11 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Pick one URL to return (checking for license details also)
-	return pickOneUrl(m.s, m.project, allUrls, purlName, purlType, "")
+	return pickOneURL(m.s, m.project, allUrls, purlName, purlType, "")
 }
 
-// pickOneUrl takes the potential matching component/versions and selects the most appropriate one.
-//
-//nolint:gocognit,stylecheck // Function complexity is acceptable for URL selection logic
-func pickOneUrl(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
+// pickOneURL takes the potential matching component/versions and selects the most appropriate one.
+func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
 	if len(allUrls) == 0 {
 		s.Infof("No component match (in urls) found for %v, %v", purlName, purlType)
 		return AllURL{}, nil

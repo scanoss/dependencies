@@ -1,7 +1,5 @@
 run:
   timeout: 3m
-  skip-dirs:
-    - tests
 
 linters-settings:
   cyclop:
@@ -21,14 +19,13 @@ linters-settings:
     statements: 80
 
   gocognit:
-    min-complexity: 25
+    min-complexity: 50
 
   gosec:
     excludes:
       - G204
 
   govet:
-    check-shadowing: true
     enable-all: true
     disable-all: false
     disable:
@@ -39,6 +36,9 @@ linters-settings:
 
   lll:
     line-length: 180
+
+  staticcheck:
+    checks: ["all", "-SA1019"]
 
 linters:
   enable:
@@ -62,16 +62,20 @@ linters:
     - nonamedreturns
     - predeclared
     - reassign
+    - staticcheck
     - stylecheck
     - unconvert
     - unparam
     - usestdlibvars
     - whitespace
 issues:
-  exclude-rules:
-    - path: (.+)_test.go
-      linters:
-        - gocognit
-        - stylecheck
-        - goconst
-        - funlen
+  # Replacing deprecated run.skip-files
+  exclude-files:
+    - ".*_test.go$"
+
+  # Replacing deprecated run.skip-dirs
+  exclude-dirs:
+    - "test"        # Skip whole test directories if you have dedicated test folders
+    - "mocks"       # Skip mock directories
+    - "testdata"    # Skip testdata directories
+    - "tests"

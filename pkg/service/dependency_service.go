@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"scanoss.com/dependencies/pkg/errors"
 	"time"
 
 	"google.golang.org/grpc"
@@ -33,7 +34,6 @@ import (
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	_ "google.golang.org/protobuf/runtime/protoimpl"
 	myconfig "scanoss.com/dependencies/pkg/config"
-	"scanoss.com/dependencies/pkg/errors"
 	"scanoss.com/dependencies/pkg/usecase"
 )
 

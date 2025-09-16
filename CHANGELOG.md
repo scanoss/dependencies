@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
+## [0.10.0] - 2025-09-16
+### Changed
+- Updated `github.com/scanoss/papi` to v0.20.1
+- **BREAKING CHANGE**: Changed `/v2/dependencies/transitive` to `/v2/dependencies/transitive/components`
+- Deprecated `/v2/dependencies/dependencies` endpoint (use `/v2/licenses/components` instead)
+
 ## [0.9.0] - 2025-08-29
 ### Changed
 - Updated `github.com/scanoss/papi` to v0.17.0 

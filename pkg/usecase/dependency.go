@@ -50,8 +50,6 @@ func NewDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, con
 }
 
 // GetDependencies takes the Dependency Input request, searches for component details and returns a Dependency Output struct.
-//
-//nolint:gocognit // Function complexity is acceptable for dependency processing logic
 func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.DependencyOutput, bool, error) {
 	var depFileOutputs []dtos.DependencyFileOutput
 	var problems = false

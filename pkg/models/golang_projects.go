@@ -122,7 +122,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameType(purlName, purlType, purlReq
 	}
 
 	// Pick the most appropriate version to return
-	return pickOneUrl(m.s, m.project, allURLs, purlName, purlType, purlReq)
+	return pickOneURL(m.s, m.project, allURLs, purlName, purlType, purlReq)
 }
 
 // GetGolangUrlsByPurlNameTypeVersion searches Golang Projects for specified Purl, Type and Version.
@@ -155,7 +155,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allURLs), purlType, purlName)
 	if len(allURLs) > 0 { // We found an entry. Let's check if it has license data
-		allURL, err2 := pickOneUrl(m.s, m.project, allURLs, purlName, purlType, "")
+		allURL, err2 := pickOneURL(m.s, m.project, allURLs, purlName, purlType, "")
 		if len(allURL.License) == 0 { // No license data found. Need to search for live info
 			m.s.Debugf("Couldn't find license data for component. Need to search live data")
 			allURLs = allURLs[:0]
@@ -174,7 +174,7 @@ func (m *GolangProjects) GetGolangUrlsByPurlNameTypeVersion(purlName, purlType, 
 		}
 	}
 	// Pick the most appropriate version to return
-	return pickOneUrl(m.s, m.project, allURLs, purlName, purlType, "")
+	return pickOneURL(m.s, m.project, allURLs, purlName, purlType, "")
 }
 
 // savePkg writes the given package details to the Golang Projects table.

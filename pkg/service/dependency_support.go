@@ -50,8 +50,6 @@ func setupMetrics() {
 }
 
 // convertDependencyInput converts a Dependency Request structure into an internal Dependency Input struct.
-//
-//nolint:staticcheck // SA1019: pb.DependencyRequest is deprecated but still needed for compatibility
 func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest) (dtos.DependencyInput, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
@@ -67,13 +65,10 @@ func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest)
 }
 
 // convertDependencyOutput converts an internal Dependency Output structure into a Dependency Response struct.
-//
-//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed for compatibility
 func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
 	data, err := json.Marshal(output)
 	if err != nil {
 		s.Errorf("Problem marshalling dependency request output: %v", err)
-		//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
 		return &pb.DependencyResponse{}, errors.NewInternalError("problem marshalling dependency output", err)
 	}
 	s.Debugf("Parsed data: %v", string(data))
@@ -81,7 +76,6 @@ func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput)
 	err = json.Unmarshal(data, &depResp)
 	if err != nil {
 		s.Errorf("Problem unmarshalling dependency request output: %v", err)
-		//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed
 		return &pb.DependencyResponse{}, errors.NewInternalError("problem unmarshalling dependency output", err)
 	}
 	return &depResp, nil

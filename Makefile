@@ -32,6 +32,10 @@ unit_test:  ## Run all unit tests in the pkg folder
 	@echo "Running unit test framework..."
 	go test -v ./pkg/...
 
+unit_test_coverage: ##Run all unit tests in the pkg folder and get test coverage
+	@echo "Running unit test with coverage..."
+	go test -coverprofile=coverage.txt ./... && go tool cover -func=coverage.txt
+
 lint_local: ## Run local instance of linting across the code base
 	golangci-lint run ./...
 
@@ -39,11 +43,15 @@ lint_local_fix: ## Run local instance of linting across the code base including 
 	golangci-lint run --fix ./...
 
 lint_docker: ## Run docker instance of linting across the code base
-	docker run --rm -v $(pwd):/app -v ~/.cache/golangci-lint/v1.50.1:/root/.cache -w /app golangci/golangci-lint:v1.50.1 golangci-lint run ./...
+	docker run --rm -v $(PWD):/app -v ~/.cache/golangci-lint/v1.64.2:/root/.cache -w /app golangci/golangci-lint:v1.64.2 golangci-lint run ./...
 
 run_local:  ## Launch the API locally for test
 	@echo "Launching API locally..."
 	go run cmd/server/main.go -json-config config/app-config-dev.json -debug
+
+run_local_env:  ## Launch the API locally for test
+	@echo "Launching API locally using .env ..."
+	go run cmd/server/main.go -env-config .env -debug
 
 ghcr_build: version  ## Build GitHub container image
 	@echo "Building GHCR container image..."

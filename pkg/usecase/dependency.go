@@ -43,6 +43,7 @@ func NewDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, con
 	return &DependencyUseCase{ctx: ctx, s: s, conn: conn,
 		allUrls: models.NewAllURLModel(ctx, s, conn, models.NewProjectModel(ctx, s, conn),
 			models.NewGolangProjectModel(ctx, s, db, conn, config),
+			models.NewMineModel(ctx, s, conn),
 			database.NewDBSelectContext(s, db, conn, config.Database.Trace),
 		),
 		lic: models.NewLicenseModel(ctx, s, conn),

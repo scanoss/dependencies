@@ -37,6 +37,7 @@ type AllUrlsModel struct {
 	conn       *sqlx.Conn
 	project    *ProjectModel
 	golangProj *GolangProjects
+	mineModel  *MineModel
 	q          *database.DBQueryContext
 }
 
@@ -62,8 +63,8 @@ const (
 )
 
 // NewAllURLModel creates a new instance of the 'All URL' Model.
-func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects, q *database.DBQueryContext) *AllUrlsModel {
-	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj, q: q}
+func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects, mineModel *MineModel, q *database.DBQueryContext) *AllUrlsModel {
+	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj, mineModel: mineModel, q: q}
 }
 
 // GetURLsByPurlString searches for component details of the specified Purl string (and optional requirement).
@@ -142,7 +143,7 @@ func (m *AllUrlsModel) GetURLsByPurlNameType(purlName, purlType, purlReq string)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Pick one URL to return (checking for license details also)
-	return pickOneURL(m.s, m.project, allUrls, purlName, purlType, purlReq)
+	return pickOneURL(m.s, m.project, m.mineModel, allUrls, purlName, purlType, purlReq)
 }
 
 // GetURLsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version.
@@ -170,15 +171,31 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Pick one URL to return (checking for license details also)
-	return pickOneURL(m.s, m.project, allUrls, purlName, purlType, "")
+	return pickOneURL(m.s, m.project, m.mineModel, allUrls, purlName, purlType, "")
 }
 
 // pickOneURL takes the potential matching component/versions and selects the most appropriate one.
-func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
+func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
+
 	if len(allUrls) == 0 {
-		s.Infof("No component match (in urls) found for %v, %v", purlName, purlType)
-		return AllURL{}, nil
+		s.Infof("No component match (in urls) found for %v, %v,", purlName, purlType)
+		url := AllURL{}
+
+		if projModel == nil && mineModel == nil {
+			return url, nil
+		}
+
+		mineIds, err := mineModel.GetMineIdsByPurlType(purlType)
+		if err != nil {
+			s.Errorf("No component match (in urls) found for %v, %v,", purlName, purlType)
+			return url, nil
+		}
+		url.MineID = mineIds[0]
+		GetUrlFromProject(s, projModel, &url, purlName, purlType)
+
+		return url, nil
 	}
+
 	// s.Debugf("Potential Matches: %v", allUrls)
 	var c *semver.Constraints
 	var urlMap = make(map[*semver.Version]AllURL)
@@ -237,21 +254,25 @@ func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, allUrls []AllURL,
 
 	s.Debugf("Selected version: %#v", url)
 	if len(url.License) == 0 && projModel != nil { // Check for a project license if we don't have a component one
-		project, err := projModel.GetProjectByPurlName(purlName, url.MineID)
-		switch {
-		case err != nil:
-			s.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
-		case len(project.License) > 0:
-			s.Debugf("Adding project license data to %v from %v", url, project)
-			url.License = project.License
-			url.IsSpdx = project.IsSpdx
-			url.LicenseID = project.LicenseID
-		case len(project.GitLicense) > 0:
-			s.Debugf("Adding project git license data to %v from %v", url, project)
-			url.License = project.GitLicense
-			url.IsSpdx = project.GitIsSpdx
-			url.LicenseID = project.GitLicenseID
-		}
+		GetUrlFromProject(s, projModel, &url, purlName, purlType)
 	}
 	return url, nil // Return the best component match
+}
+
+func GetUrlFromProject(s *zap.SugaredLogger, projModel *ProjectModel, url *AllURL, purlName, purlType string) {
+	project, err := projModel.GetProjectByPurlName(purlName, url.MineID)
+	switch {
+	case err != nil:
+		s.Warnf("Problem searching projects table for %v, %v", purlName, purlType)
+	case len(project.License) > 0:
+		s.Debugf("Adding project license data to %v from %v", url, project)
+		url.License = project.License
+		url.IsSpdx = project.IsSpdx
+		url.LicenseID = project.LicenseID
+	case len(project.GitLicense) > 0:
+		s.Debugf("Adding project git license data to %v from %v", url, project)
+		url.License = project.GitLicense
+		url.IsSpdx = project.GitIsSpdx
+		url.LicenseID = project.GitLicenseID
+	}
 }

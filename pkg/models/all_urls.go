@@ -63,8 +63,23 @@ const (
 )
 
 // NewAllURLModel creates a new instance of the 'All URL' Model.
-func NewAllURLModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn, project *ProjectModel, golangProj *GolangProjects, mineModel *MineModel, q *database.DBQueryContext) *AllUrlsModel {
-	return &AllUrlsModel{ctx: ctx, s: s, conn: conn, project: project, golangProj: golangProj, mineModel: mineModel, q: q}
+func NewAllURLModel(ctx context.Context,
+	s *zap.SugaredLogger,
+	conn *sqlx.Conn,
+	project *ProjectModel,
+	golangProj *GolangProjects,
+	mineModel *MineModel,
+	q *database.DBQueryContext,
+) *AllUrlsModel {
+	return &AllUrlsModel{
+		ctx:        ctx,
+		s:          s,
+		conn:       conn,
+		project:    project,
+		golangProj: golangProj,
+		mineModel:  mineModel,
+		q:          q,
+	}
 }
 
 // GetURLsByPurlString searches for component details of the specified Purl string (and optional requirement).
@@ -176,7 +191,6 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 
 // pickOneURL takes the potential matching component/versions and selects the most appropriate one.
 func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
-
 	if len(allUrls) == 0 {
 		s.Infof("No component match (in urls) found for %v, %v,", purlName, purlType)
 		url := AllURL{}
@@ -187,11 +201,11 @@ func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineMo
 
 		mineIds, err := mineModel.GetMineIdsByPurlType(purlType)
 		if err != nil {
-			s.Errorf("No component match (in urls) found for %v, %v,", purlName, purlType)
+			s.Errorf("No component match (in urls) found for %v, %v: %v", purlName, purlType, err)
 			return url, nil
 		}
 		url.MineID = mineIds[0]
-		GetUrlFromProject(s, projModel, &url, purlName, purlType)
+		GetURLFromProject(s, projModel, &url, purlName, purlType)
 
 		return url, nil
 	}
@@ -254,12 +268,12 @@ func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineMo
 
 	s.Debugf("Selected version: %#v", url)
 	if len(url.License) == 0 && projModel != nil { // Check for a project license if we don't have a component one
-		GetUrlFromProject(s, projModel, &url, purlName, purlType)
+		GetURLFromProject(s, projModel, &url, purlName, purlType)
 	}
 	return url, nil // Return the best component match
 }
 
-func GetUrlFromProject(s *zap.SugaredLogger, projModel *ProjectModel, url *AllURL, purlName, purlType string) {
+func GetURLFromProject(s *zap.SugaredLogger, projModel *ProjectModel, url *AllURL, purlName, purlType string) {
 	project, err := projModel.GetProjectByPurlName(purlName, url.MineID)
 	switch {
 	case err != nil:

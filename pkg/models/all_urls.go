@@ -179,10 +179,6 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 		mineLeftJoinSQL + licLeftJoinSQL + verLeftJoinSQL +
 		" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3 ORDER BY date DESC"
 	var allUrls []AllURL
-	fmt.Printf("Query: %v\n", query)
-	fmt.Printf("PurlType: %v\n", purlType)
-	fmt.Printf("PurlName: %v\n", purlName)
-	fmt.Printf("PurlVersion: %v\n", purlVersion)
 	err := m.q.SelectContext(m.ctx, &allUrls, query, purlType, purlName, purlVersion)
 	if err != nil {
 		m.s.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)
@@ -197,21 +193,7 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
 	if len(allUrls) == 0 {
 		s.Infof("No component match (in urls) found for %v, %v,", purlName, purlType)
-		url := AllURL{}
-
-		if projModel == nil && mineModel == nil {
-			return url, nil
-		}
-
-		mineIds, err := mineModel.GetMineIdsByPurlType(purlType)
-		if err != nil {
-			s.Errorf("No component match (in urls) found for %v, %v: %v", purlName, purlType, err)
-			return url, nil
-		}
-		url.MineID = mineIds[0]
-		GetURLFromProject(s, projModel, &url, purlName, purlType)
-
-		return url, nil
+		return buildFallbackURL(s, projModel, mineModel, purlName, purlType), nil
 	}
 
 	// s.Debugf("Potential Matches: %v", allUrls)
@@ -251,7 +233,7 @@ func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineMo
 	}
 	if len(urlMap) == 0 { // TODO should we return the latest version anyway?
 		s.Warnf("No component match found for %v, %v after filter %v", purlName, purlType, purlReq)
-		return AllURL{}, nil
+		return buildFallbackURL(s, projModel, mineModel, purlName, purlType), nil
 	}
 	var versions = make([]*semver.Version, len(urlMap))
 	var vi = 0
@@ -275,6 +257,26 @@ func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineMo
 		GetURLFromProject(s, projModel, &url, purlName, purlType)
 	}
 	return url, nil // Return the best component match
+}
+
+// buildFallbackURL creates an empty AllURL populated with mine ID and project license info
+// when no component match is found in the all_urls table.
+func buildFallbackURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, purlName, purlType string) AllURL {
+	url := AllURL{}
+
+	if projModel == nil && mineModel == nil {
+		return url
+	}
+
+	mineIds, err := mineModel.GetMineIdsByPurlType(purlType)
+	if err != nil {
+		s.Errorf("No component match (in urls) found for %v, %v: %v", purlName, purlType, err)
+		return url
+	}
+	url.MineID = mineIds[0]
+	GetURLFromProject(s, projModel, &url, purlName, purlType)
+
+	return url
 }
 
 func GetURLFromProject(s *zap.SugaredLogger, projModel *ProjectModel, url *AllURL, purlName, purlType string) {

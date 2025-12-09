@@ -68,6 +68,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				continue
 			}
 			var depOutput dtos.DependenciesOutput
+			depOutput.Requirement = purl.Requirement
 			depOutput.Purl = strings.Split(purl.Purl, "@")[0] // Remove any version specific info from the PURL
 			url, err := d.allUrls.GetURLsByPurlString(purl.Purl, purl.Requirement)
 			if err != nil {
@@ -75,21 +76,17 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				problems = true // Record this as a warning
 				continue
 			}
-			depOutput.Requirement = purl.Requirement
+			if url.License == "" {
+				depOutput.Licenses = []dtos.DependencyLicense{}
+				depOutputs = append(depOutputs, depOutput)
+				continue
+			}
 
 			// Avoids empty version
 			if len(url.Version) > 0 {
 				depOutput.Version = url.Version
 			} else {
-				purlParts := strings.Split(purl.Purl, "@")
-				//nolint:gocritic // if-else chain is clearer than switch for version selection
-				if len(purlParts) > 1 {
-					depOutput.Version = purlParts[1]
-				} else if len(purl.Requirement) > 0 {
-					depOutput.Version = purl.Requirement
-				} else {
-					depOutput.Version = "unknown"
-				}
+				depOutput.Version = ""
 			}
 
 			depOutput.Component = url.Component

@@ -179,6 +179,10 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 		mineLeftJoinSQL + licLeftJoinSQL + verLeftJoinSQL +
 		" WHERE m.purl_type = $1 AND u.purl_name = $2 AND v.version_name = $3 ORDER BY date DESC"
 	var allUrls []AllURL
+	fmt.Printf("Query: %v\n", query)
+	fmt.Printf("PurlType: %v\n", purlType)
+	fmt.Printf("PurlName: %v\n", purlName)
+	fmt.Printf("PurlVersion: %v\n", purlVersion)
 	err := m.q.SelectContext(m.ctx, &allUrls, query, purlType, purlName, purlVersion)
 	if err != nil {
 		m.s.Errorf("Failed to query all urls table for %v - %v: %v", purlType, purlName, err)

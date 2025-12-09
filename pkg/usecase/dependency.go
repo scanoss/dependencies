@@ -75,6 +75,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				problems = true // Record this as a warning
 				continue
 			}
+			depOutput.Requirement = purl.Requirement
 
 			// Avoids empty version
 			if len(url.Version) > 0 {

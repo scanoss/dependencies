@@ -656,8 +656,8 @@ github.com/scanoss/go-purl-helper v0.2.1 h1:jp960a585ycyJSlqZky1NatMJBIQi/JGITDf
 github.com/scanoss/go-purl-helper v0.2.1/go.mod h1:v20/bKD8G+vGrILdiq6r0hyRD2bO8frCJlu9drEcQ38=
 github.com/scanoss/ipfilter/v2 v2.0.2 h1:GaB9i8kVJg9JQZm5XGStYkEpiaCVdsrj7ezI2wV/oh8=
 github.com/scanoss/ipfilter/v2 v2.0.2/go.mod h1:AwrpX4XGbZ7EKISMi1d6E5csBk1nWB8+ugpvXHFcTpA=
-github.com/scanoss/papi v0.20.1 h1:y0L1U8lDM3XK3dNgn0NKKWPoWSfTXHo1Cb16t4mQDYM=
-github.com/scanoss/papi v0.20.1/go.mod h1:Z4E/4IpwYdzHHRJXTgBCGG1GjksgrFjNW5cvhbKUfeU=
+github.com/scanoss/papi v0.26.0 h1:5vmJ9Ols7Hv7dT5Hbj69SHaHPegqU9IFEJ+aPckfix4=
+github.com/scanoss/papi v0.26.0/go.mod h1:Z4E/4IpwYdzHHRJXTgBCGG1GjksgrFjNW5cvhbKUfeU=
 github.com/scanoss/zap-logging-helper v0.4.0 h1:2qTYoaFa9+MlD2/1wmPtiDHfh+42NIEwgKVU3rPpl0Y=
 github.com/scanoss/zap-logging-helper v0.4.0/go.mod h1:9QuEZcq73g/0Izv1tWeOWukoIK0oTBzM4jSNQ5kRR1w=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=

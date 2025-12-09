@@ -36,12 +36,13 @@ type DependencyFileOutput struct {
 }
 
 type DependenciesOutput struct {
-	Component string              `json:"component"`
-	Purl      string              `json:"purl"`
-	Version   string              `json:"version"`
-	URL       string              `json:"url"`
-	Comment   string              `json:"comment"`
-	Licenses  []DependencyLicense `json:"licenses"`
+	Component   string              `json:"component"`
+	Purl        string              `json:"purl"`
+	Version     string              `json:"version"`
+	Requirement string              `json:"requirement"`
+	URL         string              `json:"url"`
+	Comment     string              `json:"comment"`
+	Licenses    []DependencyLicense `json:"licenses"`
 }
 
 type DependencyLicense struct {

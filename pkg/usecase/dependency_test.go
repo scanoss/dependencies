@@ -128,3 +128,78 @@ func TestDependencyUseCase(t *testing.T) {
 	}
 	fmt.Printf("Got expected error (warn: %v): %+v\n", warn, err)
 }
+
+func TestDependencyUseCaseOutput(t *testing.T) {
+	err := zlog.NewSugaredDevLogger()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared S", err)
+	}
+	defer zlog.SyncZap()
+	ctx := context.Background()
+	ctx = ctxzap.ToContext(ctx, zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
+	db, err := sqlx.Connect("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer models.CloseDB(db)
+	conn, err := db.Connx(ctx) // Get a connection from the pool
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer models.CloseConn(conn)
+	err = models.LoadTestSQLData(db, ctx, conn)
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when loading test data", err)
+	}
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	depUc := NewDependencies(ctx, s, db, conn, myConfig)
+
+	tests := []struct {
+		name           string
+		req            dtos.DependencyInput
+		expectedOutput dtos.DependenciesOutput
+	}{
+		{
+			name: "single npm dependency",
+			req: dtos.DependencyInput{
+				Depth: 1,
+				Files: []dtos.DependencyFileInput{
+					{
+						File: "package.json",
+						Purls: []dtos.ComponentDTO{
+							{Purl: "pkg:npm/lodash", Requirement: "^4.17.0"},
+						},
+					},
+				},
+			},
+			expectedOutput: dtos.DependenciesOutput{
+				Component:   "lodash",
+				Purl:        "pkg:npm/lodash",
+				Version:     "4.17.0",
+				Requirement: "^4.17.0",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dependencies, _, err := depUc.GetDependencies(tt.req)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(dependencies.Files) == 0 || len(dependencies.Files[0].Dependencies) == 0 {
+				t.Fatal("expected at least one dependency in response")
+			}
+			got := dependencies.Files[0].Dependencies[0]
+			if got.Purl != tt.expectedOutput.Purl {
+				t.Errorf("expected purl %v, got %v", tt.expectedOutput.Purl, got.Purl)
+			}
+			if got.Requirement != tt.expectedOutput.Requirement {
+				t.Errorf("expected requirement %v, got %v", tt.expectedOutput.Requirement, got.Requirement)
+			}
+		})
+	}
+}

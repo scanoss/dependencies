@@ -263,19 +263,22 @@ func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineMo
 // when no component match is found in the all_urls table.
 func buildFallbackURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, purlName, purlType string) AllURL {
 	url := AllURL{}
-
 	if projModel == nil && mineModel == nil {
 		return url
 	}
-
 	mineIds, err := mineModel.GetMineIdsByPurlType(purlType)
 	if err != nil {
 		s.Errorf("No component match (in urls) found for %v, %v: %v", purlName, purlType, err)
 		return url
 	}
 	url.MineID = mineIds[0]
-	GetURLFromProject(s, projModel, &url, purlName, purlType)
-
+	for _, m := range mineIds {
+		url.MineID = m
+		GetURLFromProject(s, projModel, &url, purlName, purlType)
+		if len(url.License) > 0 {
+			break
+		}
+	}
 	return url
 }
 

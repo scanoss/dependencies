@@ -263,6 +263,11 @@ func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineMo
 // when no component match is found in the all_urls table.
 func buildFallbackURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, purlName, purlType string) AllURL {
 	url := AllURL{}
+	projectURL, err := purlutils.ProjectUrl(purlName, purlType)
+	if err != nil {
+		s.Errorf("Failed to retrieve project URL for %v, %v: %v", purlName, purlType, err)
+	}
+	url.URL = projectURL
 	if projModel == nil && mineModel == nil {
 		return url
 	}

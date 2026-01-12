@@ -76,6 +76,8 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				problems = true // Record this as a warning
 				continue
 			}
+			depOutput.URL = url.URL
+			depOutput.Component = url.Component
 			if url.License == "" {
 				depOutput.Licenses = []dtos.DependencyLicense{}
 				depOutputs = append(depOutputs, depOutput)
@@ -88,9 +90,6 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			} else {
 				depOutput.Version = ""
 			}
-
-			depOutput.Component = url.Component
-			depOutput.URL = url.URL
 			var licenses []dtos.DependencyLicense
 			splitLicenses := strings.Split(url.LicenseID, "/") // Check to see if we have multiple licenses returned
 			if len(splitLicenses) > 1 {
@@ -133,6 +132,5 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 		d.s.Warnf("Encountered issues while processing dependencies: %v", request)
 		return dtos.DependencyOutput{Files: depFileOutputs}, true, errors.New("encountered issues while processing dependencies")
 	}
-
 	return dtos.DependencyOutput{Files: depFileOutputs}, false, nil
 }

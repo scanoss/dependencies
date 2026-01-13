@@ -155,12 +155,15 @@ fi
 ####################################################
 #                  COPY CONFIG FILE                #
 ####################################################
-TARGET_CONFIG_PATH="$CONFIG_DIR/$CONF"
-if [ -n "$CONFIG_FILE_PATH" ]; then
-  if [ -f "$TARGET_CONFIG_PATH" ]; then
-      if [ "$FORCE" = true ]; then
-        echo "[FORCE] Config already exists at $TARGET_CONFIG_PATH. Skipping replacement."
-      else
+####################################################
+#                  COPY CONFIG FILE                #
+####################################################
+if [ "$FORCE" = true ]; then
+  echo "[FORCE] Skipping config file setup."
+else
+  TARGET_CONFIG_PATH="$CONFIG_DIR/$CONF"
+  if [ -n "$CONFIG_FILE_PATH" ]; then
+    if [ -f "$TARGET_CONFIG_PATH" ]; then
         read -p "Config file exists. Replace $TARGET_CONFIG_PATH? (n/y) [n]: " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]] ; then
@@ -168,15 +171,10 @@ if [ -n "$CONFIG_FILE_PATH" ]; then
         else
           echo "Skipping config copy."
         fi
-      fi
+    else
+        cp "$CONFIG_FILE_PATH" "$CONFIG_DIR/" || { echo "Error copying config"; exit 1; }
+    fi
   else
-      cp "$CONFIG_FILE_PATH" "$CONFIG_DIR/" || { echo "Error copying config"; exit 1; }
-  fi
-else
-   if [ "$FORCE" = true ]; then
-     echo "[FORCE] No config found, downloading default $CONF"
-     curl -s "$CONF_DOWNLOAD_URL" > "$CONFIG_DIR/$CONF" || echo "Error downloading config"
-   else
      read -p "Config not found. Download example $CONF file? (n/y) [n]: " -n 1 -r
      echo
      if [[ $REPLY =~ ^[Yy]$ ]] ; then
@@ -184,8 +182,9 @@ else
      else
        echo "Warning: Please put the config file into: $CONFIG_DIR/$CONF"
      fi
-   fi
+  fi
 fi
+
 
 ####################################################
 #         CHANGE OWNERSHIP AND PERMISSIONS         #

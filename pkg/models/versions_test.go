@@ -41,7 +41,7 @@ func TestVersionsSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	versionModel := NewVersionModel(ctx, s, conn)
+	versionModel := NewVersionModel(ctx, s, db)
 	var name = "1.0.0"
 	fmt.Printf("Searching for version: %v\n", name)
 	version, err := versionModel.GetVersionByName(name, false)
@@ -105,7 +105,7 @@ func TestVersionsSearchBadSql(t *testing.T) {
 	defer CloseDB(db)
 	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
-	versionModel := NewVersionModel(ctx, s, conn)
+	versionModel := NewVersionModel(ctx, s, db)
 	_, err = versionModel.GetVersionByName("rubbish", false)
 	if err == nil {
 		t.Errorf("versions.GetVersionByName() error = did not get an error")

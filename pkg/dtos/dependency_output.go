@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 
 	"go.uber.org/zap"
 )
@@ -43,6 +44,7 @@ type DependenciesOutput struct {
 	URL         string              `json:"url"`
 	Comment     string              `json:"comment"`
 	Licenses    []DependencyLicense `json:"licenses"`
+	Status      domain.ComponentStatus
 }
 
 type DependencyLicense struct {

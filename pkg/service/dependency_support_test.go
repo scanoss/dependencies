@@ -34,11 +34,7 @@ func TestOutputConvert(t *testing.T) {
 
 	var outputDto = dtos.DependencyOutput{}
 
-	output, err := convertDependencyOutput(zlog.S, outputDto)
-	if err != nil {
-		t.Errorf("TestOutputConvert failed: %v", err)
-	}
-	// assert.NotNilf(t, output, "Output dependency empty")
+	output := convertDependencyOutput(outputDto)
 	fmt.Printf("Output: %v\n", output)
 }
 

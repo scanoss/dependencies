@@ -19,6 +19,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/scanoss/go-component-helper/componenthelper"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 
 	"github.com/package-url/packageurl-go"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
@@ -65,20 +67,51 @@ func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest)
 }
 
 // convertDependencyOutput converts an internal Dependency Output structure into a Dependency Response struct.
-func convertDependencyOutput(s *zap.SugaredLogger, output dtos.DependencyOutput) (*pb.DependencyResponse, error) {
-	data, err := json.Marshal(output)
-	if err != nil {
-		s.Errorf("Problem marshalling dependency request output: %v", err)
-		return &pb.DependencyResponse{}, errors.NewInternalError("problem marshalling dependency output", err)
+func convertDependencyOutput(output dtos.DependencyOutput) *pb.DependencyResponse {
+
+	response := pb.DependencyResponse{
+		Files: make([]*pb.DependencyResponse_Files, 0, len(output.Files)),
 	}
-	s.Debugf("Parsed data: %v", string(data))
-	var depResp pb.DependencyResponse
-	err = json.Unmarshal(data, &depResp)
-	if err != nil {
-		s.Errorf("Problem unmarshalling dependency request output: %v", err)
-		return &pb.DependencyResponse{}, errors.NewInternalError("problem unmarshalling dependency output", err)
+	for _, file := range output.Files {
+		f := &pb.DependencyResponse_Files{
+			File:   file.File,
+			Id:     file.ID,
+			Status: file.Status,
+		}
+		var deps []*pb.DependencyResponse_Dependencies
+		for _, dep := range file.Dependencies {
+			d := &pb.DependencyResponse_Dependencies{
+				Component:   dep.Component,
+				Purl:        dep.Purl,
+				Version:     dep.Version,
+				Url:         dep.URL,
+				Comment:     dep.Comment,
+				Requirement: dep.Requirement,
+			}
+			if dep.Status.StatusCode != domain.Success && dep.Status.Message != "" {
+				errorCode := domain.StatusCodeToErrorCode(dep.Status.StatusCode)
+				d.ErrorCode = errorCode
+				if dep.Status.Message != "" {
+					d.ErrorMessage = &dep.Status.Message
+				}
+				deps = append(deps, d)
+				continue
+			}
+			licenses := make([]*pb.DependencyResponse_Licenses, 0, len(dep.Licenses))
+			for _, lic := range dep.Licenses {
+				licenses = append(licenses, &pb.DependencyResponse_Licenses{
+					Name:           lic.Name,
+					SpdxId:         lic.SpdxID,
+					IsSpdxApproved: lic.IsSpdx,
+				})
+			}
+			d.Licenses = licenses
+			deps = append(deps, d)
+		}
+		f.Dependencies = deps
+		response.Files = append(response.Files, f)
 	}
-	return &depResp, nil
+	return &response
 }
 
 // determineEcosystem extracts and validates the ecosystem from transitive dependency components.
@@ -136,9 +169,9 @@ func validateTransitiveDependencyRequest(request *pb.TransitiveDependencyRequest
 }
 
 func convertProtobufToDTO(request *pb.TransitiveDependencyRequest) dtos.TransitiveDependencyDTO {
-	components := make([]dtos.ComponentDTO, len(request.Components))
+	components := make([]componenthelper.ComponentDTO, len(request.Components))
 	for i, component := range request.Components {
-		components[i] = dtos.ComponentDTO{
+		components[i] = componenthelper.ComponentDTO{
 			Purl:        component.Purl,
 			Requirement: component.Requirement,
 		}
@@ -176,7 +209,7 @@ func convertToTransitiveDependencyDTO(
 	s.Debugf("Converted transitive dependency request: %v", transitiveDepDTO)
 
 	var invalidPurls []string
-	var validComponents []dtos.ComponentDTO
+	var validComponents []componenthelper.ComponentDTO
 	for _, component := range transitiveDepDTO.Components {
 		_, err := trasitive_dependencies.ExtractPackageIdentifierFromPurl(component.Purl)
 		if err != nil {

@@ -41,7 +41,7 @@ func TestProjectsSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	projectsModel := NewProjectModel(ctx, s, conn)
+	projectsModel := NewProjectModel(ctx, s, db)
 	var purlName = "tablestyle"
 	var purlType = "gem"
 	fmt.Printf("Searching for project list: %v - %v\n", purlName, purlType)
@@ -116,7 +116,7 @@ func TestProjectsSearchBadSql(t *testing.T) {
 	defer CloseDB(db)
 	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
-	projectsModel := NewProjectModel(ctx, s, conn)
+	projectsModel := NewProjectModel(ctx, s, db)
 	_, err = projectsModel.GetProjectsByPurlName("rubbish", "rubbish")
 	if err == nil {
 		t.Errorf("projects.GetProjectsByPurlName() error = did not get an error")

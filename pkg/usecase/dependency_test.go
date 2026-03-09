@@ -19,10 +19,12 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"github.com/scanoss/go-component-helper/componenthelper"
 	"testing"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	_ "modernc.org/sqlite"
 	myconfig "scanoss.com/dependencies/pkg/config"
@@ -84,7 +86,7 @@ func TestDependencyUseCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load Config: %v", err)
 	}
-	depUc := NewDependencies(ctx, s, db, conn, myConfig)
+	depUc := NewDependencies(ctx, s, db, myConfig)
 	requestDto, err := dtos.ParseDependencyInput(s, []byte(depRequestData))
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when parsing input json", err)
@@ -123,10 +125,22 @@ func TestDependencyUseCase(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when parsing input json", err)
 	}
 	dependencies, warn, err = depUc.GetDependencies(requestDto)
-	if err == nil {
-		t.Fatalf("did not get an expected error: %v", dependencies)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	fmt.Printf("Got expected error (warn: %v): %+v\n", warn, err)
+	// Mixed batch: invalid purls should have error statuses, valid ones may succeed or fail
+	errorCount := 0
+	for _, file := range dependencies.Files {
+		for _, dep := range file.Dependencies {
+			if dep.Status.StatusCode != "" && dep.Status.StatusCode != domain.Success {
+				errorCount++
+			}
+		}
+	}
+	if errorCount == 0 {
+		t.Errorf("expected at least one component-level error in mixed batch, got none")
+	}
+	fmt.Printf("Got %d component-level errors (warn: %v): %+v\n", errorCount, warn, dependencies)
 }
 
 func TestDependencyUseCaseOutput(t *testing.T) {
@@ -156,7 +170,7 @@ func TestDependencyUseCaseOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load Config: %v", err)
 	}
-	depUc := NewDependencies(ctx, s, db, conn, myConfig)
+	depUc := NewDependencies(ctx, s, db, myConfig)
 
 	tests := []struct {
 		name           string
@@ -170,7 +184,7 @@ func TestDependencyUseCaseOutput(t *testing.T) {
 				Files: []dtos.DependencyFileInput{
 					{
 						File: "package.json",
-						Purls: []dtos.ComponentDTO{
+						Purls: []componenthelper.ComponentDTO{
 							{Purl: "pkg:npm/lodash", Requirement: "^4.17.0"},
 						},
 					},

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
+## [0.13.0] - 2026-03-09
+### Added
+- Added per-component error status (`error_code`, `error_message`) to dependency response
+### Changed
+- Completed `convertDependencyOutput` to build proto response with dependencies, licenses, and error status
+- Updated model constructors to use `*sqlx.DB` instead of `*sqlx.Conn`
+
 ## [0.12.2] - 2026-01-12
 ### Fixed
 - Included missing component URLs
@@ -116,3 +123,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.12.0]: https://github.com/scanoss/dependencies/compare/v0.11.0...v0.12.0
 [0.12.1]: https://github.com/scanoss/dependencies/compare/v0.12.0...v0.12.1
 [0.12.2]: https://github.com/scanoss/dependencies/compare/v0.12.1...v0.12.2
+[0.13.0]: https://github.com/scanoss/dependencies/compare/v0.12.2...v0.13.0

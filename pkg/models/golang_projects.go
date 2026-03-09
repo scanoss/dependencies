@@ -35,7 +35,7 @@ import (
 type GolangProjects struct {
 	ctx     context.Context
 	s       *zap.SugaredLogger
-	conn    *sqlx.Conn
+	db      *sqlx.DB
 	config  *myconfig.ServerConfig
 	q       *database.DBQueryContext
 	ver     *VersionModel
@@ -45,11 +45,11 @@ type GolangProjects struct {
 }
 
 // NewGolangProjectModel creates a new instance of Golang Project Model.
-func NewGolangProjectModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, conn *sqlx.Conn, config *myconfig.ServerConfig) *GolangProjects {
-	return &GolangProjects{ctx: ctx, s: s, conn: conn, config: config,
-		q:   database.NewDBSelectContext(s, db, conn, config.Database.Trace),
-		ver: NewVersionModel(ctx, s, conn), lic: NewLicenseModel(ctx, s, conn), mine: NewMineModel(ctx, s, conn),
-		project: NewProjectModel(ctx, s, conn),
+func NewGolangProjectModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, config *myconfig.ServerConfig) *GolangProjects {
+	return &GolangProjects{ctx: ctx, s: s, db: db, config: config,
+		q:   database.NewDBSelectContext(s, db, nil, config.Database.Trace),
+		ver: NewVersionModel(ctx, s, db), lic: NewLicenseModel(ctx, s, db), mine: NewMineModel(ctx, s, db),
+		project: NewProjectModel(ctx, s, db),
 	}
 }
 
@@ -204,7 +204,7 @@ func (m *GolangProjects) savePkg(allURL AllURL, version Version, license License
 	m.s.Debugf("Attempting to save '%#v' - %#v to the golang_projects table...", allURL, version)
 	// Search for an existing entry first
 	var existingPurl string
-	err := m.conn.QueryRowxContext(m.ctx,
+	err := m.db.QueryRowxContext(m.ctx,
 		"SELECT purl_name FROM golang_projects"+
 			" WHERE purl_name = $1 AND version = $2",
 		allURL.PurlName, allURL.Version,
@@ -219,7 +219,7 @@ func (m *GolangProjects) savePkg(allURL AllURL, version Version, license License
 		sqlQueryType = "update"
 		m.s.Debugf("Updating new Golang project: %#v", comp)
 		//goland:noinspection ALL
-		err = m.conn.QueryRowxContext(m.ctx,
+		err = m.db.QueryRowxContext(m.ctx,
 			"UPDATE golang_projects SET component = $1, version = $2, version_id = $3, version_date = $4,"+
 				" is_module = $5, is_package = $6, license = $7, license_id = $8, has_valid_go_mod_file = $9,"+
 				" has_redistributable_license = $10, has_tagged_version = $11, has_stable_version = $12,"+
@@ -235,7 +235,7 @@ func (m *GolangProjects) savePkg(allURL AllURL, version Version, license License
 	} else {
 		m.s.Debugf("Inserting new Golang project: %#v", comp)
 		// insert new entry
-		err = m.conn.QueryRowxContext(m.ctx,
+		err = m.db.QueryRowxContext(m.ctx,
 			"INSERT INTO golang_projects (component, version, version_id, version_date, is_module, is_package,"+
 				" license, license_id, has_valid_go_mod_file, has_redistributable_license, has_tagged_version,"+
 				" has_stable_version, repository, is_indexed, purl_name, mine_id, index_timestamp)"+

@@ -29,9 +29,9 @@ import (
 )
 
 type VersionModel struct {
-	ctx  context.Context
-	s    *zap.SugaredLogger
-	conn *sqlx.Conn
+	ctx context.Context
+	s   *zap.SugaredLogger
+	db  *sqlx.DB
 }
 
 type Version struct {
@@ -43,8 +43,8 @@ type Version struct {
 // TODO add cache for versions already searched for?
 
 // NewVersionModel creates a new instance of the Version Model.
-func NewVersionModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *VersionModel {
-	return &VersionModel{ctx: ctx, s: s, conn: conn}
+func NewVersionModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB) *VersionModel {
+	return &VersionModel{ctx: ctx, s: s, db: db}
 }
 
 // GetVersionByName gets the given version from the versions table.
@@ -54,7 +54,7 @@ func (m *VersionModel) GetVersionByName(name string, create bool) (Version, erro
 		return Version{}, errors.New("please specify a valid Version Name to query")
 	}
 	var version Version
-	err := m.conn.QueryRowxContext(m.ctx,
+	err := m.db.QueryRowxContext(m.ctx,
 		"SELECT id, version_name, semver FROM versions"+
 			" WHERE version_name = $1",
 		name).StructScan(&version)
@@ -77,7 +77,7 @@ func (m *VersionModel) saveVersion(name string) (Version, error) {
 	}
 	m.s.Debugf("Attempting to save '%v' to the versions table...", name)
 	var version Version
-	err := m.conn.QueryRowxContext(m.ctx,
+	err := m.db.QueryRowxContext(m.ctx,
 		"INSERT INTO versions (version_name, semver) VALUES($1, $2)"+
 			" RETURNING id, version_name, semver",
 		name, "", false, false,

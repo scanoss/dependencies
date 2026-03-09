@@ -31,9 +31,9 @@ import (
 )
 
 type LicenseModel struct {
-	ctx  context.Context
-	s    *zap.SugaredLogger
-	conn *sqlx.Conn
+	ctx context.Context
+	s   *zap.SugaredLogger
+	db  *sqlx.DB
 }
 
 type License struct {
@@ -50,8 +50,8 @@ var whiteSpaceRegex = regexp.MustCompile(`\s+`)                                 
 // TODO add cache for licenses already searched for?
 
 // NewLicenseModel create a new instance of the License Model.
-func NewLicenseModel(ctx context.Context, s *zap.SugaredLogger, conn *sqlx.Conn) *LicenseModel {
-	return &LicenseModel{ctx: ctx, s: s, conn: conn}
+func NewLicenseModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB) *LicenseModel {
+	return &LicenseModel{ctx: ctx, s: s, db: db}
 }
 
 // GetLicenseByID retrieves license data by the given row ID.
@@ -61,7 +61,7 @@ func (m *LicenseModel) GetLicenseByID(id int32) (License, error) {
 		return License{}, errors.New("please specify a valid License Name to query")
 	}
 	var license License
-	err := m.conn.QueryRowxContext(m.ctx,
+	err := m.db.QueryRowxContext(m.ctx,
 		"SELECT id, license_name, spdx_id, is_spdx FROM licenses"+
 			" WHERE id = $1",
 		id).StructScan(&license)
@@ -79,7 +79,7 @@ func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, erro
 		return License{}, nil
 	}
 	var license License
-	err := m.conn.QueryRowxContext(m.ctx,
+	err := m.db.QueryRowxContext(m.ctx,
 		"SELECT id, license_name, spdx_id, is_spdx FROM licenses"+
 			" WHERE license_name = $1",
 		name,
@@ -103,7 +103,7 @@ func (m *LicenseModel) saveLicense(name string) (License, error) {
 	m.s.Debugf("Attempting to save '%v' to the licenses table...", name)
 	// TODO should we populate the spdx_id before inserting the license?
 	var license License
-	err := m.conn.QueryRowxContext(m.ctx,
+	err := m.db.QueryRowxContext(m.ctx,
 		"INSERT INTO licenses (license_name, spdx_id, is_spdx, is_sanitized) VALUES($1, $2, $3, $4)"+
 			" RETURNING id, license_name, spdx_id, is_spdx",
 		name, "", false, false,

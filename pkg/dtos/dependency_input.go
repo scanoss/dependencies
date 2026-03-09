@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/scanoss/go-component-helper/componenthelper"
 
 	"go.uber.org/zap"
 )
@@ -32,20 +33,15 @@ type DependencyInput struct {
 
 // DependencyFileInput deprecated.
 type DependencyFileInput struct {
-	File  string         `json:"file,omitempty"`
-	Purls []ComponentDTO `json:"purls"`
-}
-
-type ComponentDTO struct {
-	Purl        string `json:"purl"`
-	Requirement string `json:"requirement,omitempty"`
+	File  string                         `json:"file,omitempty"`
+	Purls []componenthelper.ComponentDTO `json:"purls"`
 }
 
 type TransitiveDependencyDTO struct {
-	Depth      *int           `json:"depth,omitempty"`
-	Ecosystem  string         `json:"ecosystem,omitempty"`
-	Components []ComponentDTO `json:"components"`
-	Limit      *int           `json:"limit,omitempty"`
+	Depth      *int                           `json:"depth,omitempty"`
+	Ecosystem  string                         `json:"ecosystem,omitempty"`
+	Components []componenthelper.ComponentDTO `json:"components"`
+	Limit      *int                           `json:"limit,omitempty"`
 }
 
 type DependencyJobDTO struct {

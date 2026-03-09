@@ -20,13 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
-	"strings"
+	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
 
-	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
-
-	"github.com/Masterminds/semver/v3"
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	purlutils "github.com/scanoss/go-purl-helper/pkg"
 	"go.uber.org/zap"
 )
@@ -34,7 +31,7 @@ import (
 type AllUrlsModel struct {
 	ctx        context.Context
 	s          *zap.SugaredLogger
-	conn       *sqlx.Conn
+	db         *sqlx.DB
 	project    *ProjectModel
 	golangProj *GolangProjects
 	mineModel  *MineModel
@@ -65,7 +62,7 @@ const (
 // NewAllURLModel creates a new instance of the 'All URL' Model.
 func NewAllURLModel(ctx context.Context,
 	s *zap.SugaredLogger,
-	conn *sqlx.Conn,
+	db *sqlx.DB,
 	project *ProjectModel,
 	golangProj *GolangProjects,
 	mineModel *MineModel,
@@ -74,7 +71,7 @@ func NewAllURLModel(ctx context.Context,
 	return &AllUrlsModel{
 		ctx:        ctx,
 		s:          s,
-		conn:       conn,
+		db:         db,
 		project:    project,
 		golangProj: golangProj,
 		mineModel:  mineModel,
@@ -83,11 +80,38 @@ func NewAllURLModel(ctx context.Context,
 }
 
 // GetURLsByPurlString searches for component details of the specified Purl string (and optional requirement).
-func (m *AllUrlsModel) GetURLsByPurlString(purlString, purlReq string) (AllURL, error) {
-	if len(purlString) == 0 {
-		m.s.Error("Please specify a valid Purl String to query")
-		return AllURL{}, errors.New("please specify a valid Purl String to query")
+func (m *AllUrlsModel) GetURLsByPurlString(component componentHelper.Component) (AllURL, error) {
+	if len(component.Version) > 0 {
+		result, err := m.GetURLsByPurlNameTypeVersion(component.Name, component.PurlType, component.Version)
+		if err != nil {
+			return AllURL{}, err
+		}
+		if result.PurlName == "" && component.PurlType == "golang" {
+			return m.getURLsByGolangPurl(component)
+		}
+		return result, nil
 	}
+	result, err := m.GetURLsByPurlNameType(component.Name, component.PurlType, component.Version)
+	if err != nil {
+		return AllURL{}, err
+	}
+	if result.PurlName == "" && component.PurlType == "golang" {
+		return m.getURLsByGolangPurl(component)
+	}
+	return result, nil
+}
+
+// getURLsByGolangPurl searches golang_projects table first, then converts a golang purl to a GitHub purl and searches all_urls.
+func (m *AllUrlsModel) getURLsByGolangPurl(component componentHelper.Component) (AllURL, error) {
+	// First try the golang_projects table
+	if m.golangProj != nil {
+		result, err := m.golangProj.GetGoLangURLByPurlString(component.Purl, component.Requirement)
+		if err == nil && len(result.PurlName) > 0 {
+			return result, nil
+		}
+	}
+	// Fall back to converting to GitHub purl and searching all_urls
+	purlString := purlutils.ConvertGoPurlStringToGithub(component.Purl) // Convert to GitHub purl
 	purl, err := purlutils.PurlFromString(purlString)
 	if err != nil {
 		return AllURL{}, err
@@ -96,45 +120,10 @@ func (m *AllUrlsModel) GetURLsByPurlString(purlString, purlReq string) (AllURL, 
 	if err != nil {
 		return AllURL{}, err
 	}
-	// TODO check what to do if we get a "file" requirement
-	if len(purlReq) > 0 && strings.HasPrefix(purlReq, "file:") { // internal dependency requirement. Assume latest
-		m.s.Debugf("Removing 'local' requirement for purl: %v (req: %v)", purlString, purlReq)
-		purlReq = ""
+	if len(component.Version) > 0 {
+		return m.GetURLsByPurlNameTypeVersion(purlName, purl.Type, component.Version)
 	}
-	if len(purl.Version) == 0 && len(purlReq) > 0 { // No version specified, but we might have a specific version in the Requirement
-		ver := purlutils.GetVersionFromReq(purlReq)
-		if len(ver) > 0 {
-			purl.Version = ver // Switch to exact version search (faster)
-			purlReq = ""
-		}
-	}
-	if purl.Type == "golang" {
-		allURL, err := m.golangProj.GetGoLangURLByPurl(purl, purlName, purlReq) // Search a separate table for golang dependencies
-		// If no golang package/license is found, but it's a GitHub component, search GitHub for it
-		if err == nil && (len(allURL.Component) == 0 || len(allURL.License) == 0) && strings.HasPrefix(purlString, "pkg:golang/github.com/") {
-			if len(allURL.Component) == 0 {
-				m.s.Debugf("Didn't find component in golang projects table for %v. Checking all urls...", purlString)
-			} else if len(allURL.License) == 0 {
-				m.s.Debugf("Didn't find license in golang projects table for %v. Checking all urls...", purlString)
-			}
-			purlString = purlutils.ConvertGoPurlStringToGithub(purlString) // Convert to GitHub purl
-			purl, err = purlutils.PurlFromString(purlString)
-			if err != nil {
-				return AllURL{}, err
-			}
-			purlName, err = purlutils.PurlNameFromString(purlString) // Make sure we just have the bare minimum for a Purl Name
-			if err != nil {
-				return AllURL{}, err
-			}
-			m.s.Debugf("Now searching All Urls for Purl: %#v, PurlName: %v", purl, purlName)
-		} else {
-			return allURL, err
-		}
-	}
-	if len(purl.Version) > 0 {
-		return m.GetURLsByPurlNameTypeVersion(purlName, purl.Type, purl.Version)
-	}
-	return m.GetURLsByPurlNameType(purlName, purl.Type, purlReq)
+	return m.GetURLsByPurlNameType(purlName, purl.Type, component.Version)
 }
 
 // GetURLsByPurlNameType searches for component details of the specified Purl Name/Type (and optional requirement).
@@ -195,64 +184,8 @@ func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineMo
 		s.Infof("No component match (in urls) found for %v, %v,", purlName, purlType)
 		return buildFallbackURL(s, projModel, mineModel, purlName, purlType), nil
 	}
-
-	// s.Debugf("Potential Matches: %v", allUrls)
-	var c *semver.Constraints
-	var urlMap = make(map[*semver.Version]AllURL)
-	if len(purlReq) > 0 {
-		s.Debugf("Building version constraint for %v: %v", purlName, purlReq)
-		var err error
-		c, err = semver.NewConstraint(purlReq)
-		if err != nil {
-			s.Warnf("Encountered an issue parsing version constraint string '%v' (%v,%v): %v", purlReq, purlName, purlType, err)
-		}
-	}
-	s.Debugf("Checking versions...")
-	for _, url := range allUrls {
-		if len(url.SemVer) > 0 || len(url.Version) > 0 {
-			v, err := semver.NewVersion(url.Version)
-			if err != nil && len(url.SemVer) > 0 {
-				s.Debugf("Failed to parse SemVer: '%v'. Trying Version instead: %v (%v)", url.Version, url.SemVer, err)
-				v, err = semver.NewVersion(url.SemVer) // Semver failed, try the normal version
-			}
-			if err != nil {
-				s.Warnf("Encountered an issue parsing version string '%v' (%v) for %v: %v. Using v0.0.0", url.Version, url.SemVer, url, err)
-				v, err = semver.NewVersion("v0.0.0") // Semver failed, just use a standard version zero (for now)
-			}
-			if err == nil {
-				if c == nil || c.Check(v) {
-					_, ok := urlMap[v]
-					if !ok {
-						urlMap[v] = url // fits inside the constraint and hasn't already been stored
-					}
-				}
-			}
-		} else {
-			s.Infof("Skipping match as it doesn't have a version: %#v", url)
-		}
-	}
-	if len(urlMap) == 0 { // TODO should we return the latest version anyway?
-		s.Warnf("No component match found for %v, %v after filter %v", purlName, purlType, purlReq)
-		return buildFallbackURL(s, projModel, mineModel, purlName, purlType), nil
-	}
-	var versions = make([]*semver.Version, len(urlMap))
-	var vi = 0
-	for version := range urlMap { // Save the list of versions so they can be sorted
-		versions[vi] = version
-		vi++
-	}
-	sort.Sort(semver.Collection(versions))
-	version := versions[len(versions)-1] // Get the latest (acceptable) URL version
-	s.Debugf("Sorted versions: %v. Highest: %v", versions, version)
-
-	url, ok := urlMap[version] // Retrieve the latest accepted URL version
-	if !ok {
-		s.Errorf("Problem retrieving URL data for %v (%v, %v)", version, purlName, purlType)
-		return AllURL{}, fmt.Errorf("failed to retrieve specific URL version: %v", version)
-	}
+	url := allUrls[0]
 	url.URL, _ = purlutils.ProjectUrl(purlName, purlType)
-
-	s.Debugf("Selected version: %#v", url)
 	if len(url.License) == 0 && projModel != nil { // Check for a project license if we don't have a component one
 		GetURLFromProject(s, projModel, &url, purlName, purlType)
 	}

@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
+	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	myconfig "scanoss.com/dependencies/pkg/config"
 )
@@ -50,8 +51,8 @@ func TestAllUrlsSearch(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
-	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
-		NewGolangProjectModel(ctx, s, db, conn, myConfig), NewMineModel(ctx, s, conn), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
+	allUrlsModel := NewAllURLModel(ctx, s, db, NewProjectModel(ctx, s, db),
+		NewGolangProjectModel(ctx, s, db, myConfig), NewMineModel(ctx, s, db), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
 
 	allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem", "")
 	if err != nil {
@@ -83,19 +84,19 @@ func TestAllUrlsSearch(t *testing.T) {
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetURLsByPurlString("", "")
+	_, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{})
 	if err == nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetURLsByPurlString("rubbish-purl", "")
+	_, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "rubbish-purl"})
 	if err == nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem"})
 	if err != nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
@@ -104,7 +105,7 @@ func TestAllUrlsSearch(t *testing.T) {
 	}
 	fmt.Printf("All Urls: %v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:golang/google.golang.org/grpc", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:golang/google.golang.org/grpc", Name: "google.golang.org/grpc", PurlType: "golang"})
 	if err != nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
@@ -114,7 +115,7 @@ func TestAllUrlsSearch(t *testing.T) {
 	fmt.Printf("Golang URL: %v\n", allUrls)
 
 	fmt.Printf("Searching for pkg:golang/github.com/scanoss/dependencies")
-	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:golang/github.com/scanoss/dependencies", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:golang/github.com/scanoss/dependencies", Name: "github.com/scanoss/dependencies", PurlType: "golang"})
 	if err != nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
@@ -146,8 +147,8 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
-	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
-		NewGolangProjectModel(ctx, s, db, conn, myConfig), NewMineModel(ctx, s, conn), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
+	allUrlsModel := NewAllURLModel(ctx, s, db, NewProjectModel(ctx, s, db),
+		NewGolangProjectModel(ctx, s, db, myConfig), NewMineModel(ctx, s, db), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
 
 	allUrls, err := allUrlsModel.GetURLsByPurlNameTypeVersion("tablestyle", "gem", "0.0.12")
 	if err != nil {
@@ -158,7 +159,7 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 	}
 	fmt.Printf("All Urls Version: %#v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle@0.0.7", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem", Version: "0.0.7"})
 	if err != nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = failed to find purl by version string")
 	}
@@ -183,7 +184,7 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
 
-	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", "22.22.22") // Shouldn't exist
+	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem", Version: "22.22.22"}) // Shouldn't exist
 	if err != nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = failed to find purl by version string")
 	}
@@ -214,10 +215,10 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
-	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
-		NewGolangProjectModel(ctx, s, db, conn, myConfig), NewMineModel(ctx, s, conn), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
+	allUrlsModel := NewAllURLModel(ctx, s, db, NewProjectModel(ctx, s, db),
+		NewGolangProjectModel(ctx, s, db, myConfig), NewMineModel(ctx, s, db), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
 
-	allUrls, err := allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", ">0.0.4")
+	allUrls, err := allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem", Requirement: ">0.0.4"})
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
@@ -226,7 +227,7 @@ func TestAllUrlsSearchVersionRequirement(t *testing.T) {
 	}
 	fmt.Printf("All Urls Version: %#v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", "<0.0.4>")
+	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem", Requirement: "<0.0.4>"})
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
@@ -257,7 +258,7 @@ func TestAllUrlsSearchNoProject(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.App.Trace = true
-	allUrlsModel := NewAllURLModel(ctx, s, conn, nil, NewGolangProjectModel(ctx, s, db, conn, myConfig), NewMineModel(ctx, s, conn), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
+	allUrlsModel := NewAllURLModel(ctx, s, db, nil, NewGolangProjectModel(ctx, s, db, myConfig), NewMineModel(ctx, s, db), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace)) //nolint:lll // test setup
 
 	allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem", "0.0.8")
 	if err != nil {
@@ -291,10 +292,10 @@ func TestAllUrlsSearchNoLicense(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.App.Trace = true
-	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
-		NewGolangProjectModel(ctx, s, db, conn, myConfig), NewMineModel(ctx, s, conn), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
+	allUrlsModel := NewAllURLModel(ctx, s, db, NewProjectModel(ctx, s, db),
+		NewGolangProjectModel(ctx, s, db, myConfig), NewMineModel(ctx, s, db), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
 
-	allUrls, err := allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle@0.0.8", "")
+	allUrls, err := allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem", Version: "0.0.8"})
 	if err != nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
@@ -322,15 +323,15 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.App.Trace = true
-	allUrlsModel := NewAllURLModel(ctx, s, conn, NewProjectModel(ctx, s, conn),
-		NewGolangProjectModel(ctx, s, db, conn, myConfig), NewMineModel(ctx, s, conn), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
-	_, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle", "")
+	allUrlsModel := NewAllURLModel(ctx, s, db, NewProjectModel(ctx, s, db),
+		NewGolangProjectModel(ctx, s, db, myConfig), NewMineModel(ctx, s, db), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
+	_, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem"})
 	if err == nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle@0.0.8", "")
+	_, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem", Version: "0.0.8"})
 	if err == nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error: %v", err)
 	} else {
@@ -342,7 +343,7 @@ func TestAllUrlsSearchBadSql(t *testing.T) {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
 	// allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem", "")
-	allUrls, err := allUrlsModel.GetURLsByPurlString("pkg:gem/tablestyle@0.0.8", "")
+	allUrls, err := allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem", Version: "0.0.8"})
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}

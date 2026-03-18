@@ -18,33 +18,6 @@ package utils
 
 import "testing"
 
-func TestHasSemverOperator(t *testing.T) {
-	tests := []struct {
-		name        string
-		requirement string
-		want        bool
-	}{
-		{name: "greater than or equal", requirement: ">=1.0.0", want: true},
-		{name: "less than or equal", requirement: "<=2.0.0", want: true},
-		{name: "not equal", requirement: "!=1.5.0", want: true},
-		{name: "caret", requirement: "^1.0.0", want: true},
-		{name: "tilde", requirement: "~1.0.0", want: true},
-		{name: "greater than", requirement: ">1.0.0", want: true},
-		{name: "less than", requirement: "<2.0.0", want: true},
-		{name: "exact version", requirement: "1.0.0", want: false},
-		{name: "empty string", requirement: "", want: false},
-		{name: "version with v prefix", requirement: "v1.0.0", want: false},
-		{name: "wildcard", requirement: "*", want: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := HasSemverOperator(tt.requirement); got != tt.want {
-				t.Errorf("HasSemverOperator(%q) = %v, want %v", tt.requirement, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestVersionMatchesRequirement(t *testing.T) {
 	tests := []struct {
 		name        string

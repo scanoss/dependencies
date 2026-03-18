@@ -81,6 +81,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				Version:     processedComponent.Version,
 				URL:         processedComponent.URL,
 				Component:   processedComponent.Name,
+				Status:      processedComponent.Status,
 			}
 			// avoid processing invalid components not found components
 			if processedComponent.Status.StatusCode == domain.ComponentNotFound ||
@@ -114,24 +115,27 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				continue
 			}
 
-			// When a version was found but the component has no pinned version,
-			// check if the found version satisfies the semver requirement.
-			if len(url.Version) > 0 && len(processedComponent.Version) == 0 {
-				if processedComponent.Requirement != "" &&
-					utils.HasSemverOperator(processedComponent.Requirement) &&
-					utils.VersionMatchesRequirement(url.Version, processedComponent.Requirement) {
-					depOutput.Version = url.Version
-				} else {
-					depOutput.Status = processedComponent.Status
-					depOutput.Component = processedComponent.Name
-					depOutputs = append(depOutputs, depOutput)
-					continue
-				}
+			if len(url.Version) == 0 {
+				depOutput.Status = processedComponent.Status
+				depOutputs = append(depOutputs, depOutput)
+				continue
 			}
 
-			// Fall back to the component name from the URL lookup if the output has no URL set
+			// Validate the resolved version against the component's semver requirement.
+			// If the version does not satisfy the requirement, mark the status accordingly.
+			if processedComponent.Requirement != "" {
+				if !utils.VersionMatchesRequirement(url.Version, processedComponent.Requirement) {
+					depOutput.Status = domain.ComponentStatus{
+						StatusCode: domain.VersionNotFound,
+						Message:    "Version " + url.Version + " does not satisfy requirement " + processedComponent.Requirement,
+					}
+				}
+			}
+			depOutput.Version = url.Version
+
+			// Fall back to the component URL from the URL lookup if the output has no URL set
 			if len(depOutput.URL) == 0 && len(url.URL) > 0 {
-				depOutput.Component = url.Component
+				depOutput.Component = url.URL
 			}
 
 			depOutput.Licenses = d.resolveLicenses(url)

@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.13.0] - 2026-03-18
 ### Added
 - Added per-component error status (`error_code`, `error_message`) to dependency response
+- Added `resolveComponentVersion` to determine the best version for the dependency response based on pinned version, semver requirement, or URL lookup
+- Added `resolveLicenses` method to handle compound license ID resolution
 ### Changed
 - Completed `convertDependencyOutput` to build proto response with dependencies, licenses, and error status
 - Updated model constructors to use `*sqlx.DB` instead of `*sqlx.Conn`

@@ -18,21 +18,8 @@
 package utils
 
 import (
-	"strings"
-
 	"github.com/Masterminds/semver/v3"
 )
-
-// HasSemverOperator checks if a version requirement string starts with a semver operator.
-func HasSemverOperator(requirement string) bool {
-	operators := []string{">=", "<=", "!=", "^", "~", ">", "<"}
-	for _, op := range operators {
-		if strings.HasPrefix(requirement, op) {
-			return true
-		}
-	}
-	return false
-}
 
 // VersionMatchesRequirement checks if a version satisfies a semver constraint/range.
 func VersionMatchesRequirement(version, requirement string) bool {

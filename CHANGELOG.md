@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
-## [0.13.0] - 2026-03-09
+## [0.13.0] - 2026-03-18
 ### Added
 - Added per-component error status (`error_code`, `error_message`) to dependency response
 ### Changed

@@ -1,3 +1,4 @@
+// Package shared provides common types and constants used across the application.
 package shared
 
 type EcosystemStorageLocation struct {

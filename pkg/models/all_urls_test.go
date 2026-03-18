@@ -21,9 +21,8 @@ import (
 	"fmt"
 	"testing"
 
-	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
-
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
 	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	myconfig "scanoss.com/dependencies/pkg/config"
@@ -54,7 +53,7 @@ func TestAllUrlsSearch(t *testing.T) {
 	allUrlsModel := NewAllURLModel(ctx, s, db, NewProjectModel(ctx, s, db),
 		NewGolangProjectModel(ctx, s, db, myConfig), NewMineModel(ctx, s, db), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace))
 
-	allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem", "")
+	allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
@@ -63,7 +62,7 @@ func TestAllUrlsSearch(t *testing.T) {
 	}
 	fmt.Printf("All Urls: %#v\n", allUrls)
 
-	allUrls, err = allUrlsModel.GetURLsByPurlNameType("NONEXISTENT", "none", "")
+	allUrls, err = allUrlsModel.GetURLsByPurlNameType("NONEXISTENT", "none")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}
@@ -72,13 +71,13 @@ func TestAllUrlsSearch(t *testing.T) {
 	}
 	fmt.Printf("No Urls: %v\n", allUrls)
 
-	_, err = allUrlsModel.GetURLsByPurlNameType("NONEXISTENT", "", "")
+	_, err = allUrlsModel.GetURLsByPurlNameType("NONEXISTENT", "")
 	if err == nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = allUrlsModel.GetURLsByPurlNameType("", "", "")
+	_, err = allUrlsModel.GetURLsByPurlNameType("", "")
 	if err == nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = did not get an error")
 	} else {
@@ -115,7 +114,10 @@ func TestAllUrlsSearch(t *testing.T) {
 	fmt.Printf("Golang URL: %v\n", allUrls)
 
 	fmt.Printf("Searching for pkg:golang/github.com/scanoss/dependencies")
-	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:golang/github.com/scanoss/dependencies", Name: "github.com/scanoss/dependencies", PurlType: "golang"})
+	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{
+		Purl:     "pkg:golang/github.com/scanoss/dependencies",
+		Name:     "github.com/scanoss/dependencies",
+		PurlType: "golang"})
 	if err != nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = %v", err)
 	}
@@ -260,7 +262,7 @@ func TestAllUrlsSearchNoProject(t *testing.T) {
 	myConfig.App.Trace = true
 	allUrlsModel := NewAllURLModel(ctx, s, db, nil, NewGolangProjectModel(ctx, s, db, myConfig), NewMineModel(ctx, s, db), database.NewDBSelectContext(s, db, conn, myConfig.Database.Trace)) //nolint:lll // test setup
 
-	allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem", "0.0.8")
+	allUrls, err := allUrlsModel.GetURLsByPurlNameType("tablestyle", "gem")
 	if err != nil {
 		t.Errorf("all_urls.GetUrlsByPurlName() error = %v", err)
 	}

@@ -7,6 +7,8 @@ import (
 )
 
 // Tests were generated from Claude based on NPMJS versions BNF Grammar.
+//
+//nolint:funlen // table-driven test with many cases
 func TestPickFirstVersionFromRange(t *testing.T) {
 	tests := []struct {
 		name        string

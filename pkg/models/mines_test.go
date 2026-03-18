@@ -26,6 +26,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const testPurlTypeNonexistent = "NONEXISTENT"
+
 func TestMines(t *testing.T) {
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
@@ -65,7 +67,7 @@ func TestMines(t *testing.T) {
 		t.Errorf("mines.GetMineIdByPurlType() found for %v = %v", purlType, mineIds)
 	}
 
-	purlType = "NONEXISTENT"
+	purlType = testPurlTypeNonexistent
 	mineIds, err = mine.GetMineIdsByPurlType(purlType)
 	if err != nil {
 		fmt.Printf("Mine ID not found: %v\n", err)
@@ -94,7 +96,7 @@ func TestMinesBadSql(t *testing.T) {
 	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
 	mine := NewMineModel(ctx, s, db)
-	purlType := "NONEXISTENT"
+	purlType := testPurlTypeNonexistent
 	mineIds, err := mine.GetMineIdsByPurlType(purlType)
 	if err != nil {
 		fmt.Printf("Mine ID not found: %v\n", err)

@@ -14,12 +14,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// Package utils provides shared utility functions for the dependencies service.
 package utils
 
 import (
 	"strings"
 
-	semver "github.com/Masterminds/semver/v3"
+	"github.com/Masterminds/semver/v3"
 )
 
 // HasSemverOperator checks if a version requirement string starts with a semver operator.

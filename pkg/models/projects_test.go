@@ -73,9 +73,9 @@ func TestProjectsSearch(t *testing.T) {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
 	purlName = "tablestyle"
-	var mineId int32 = 1
-	fmt.Printf("Searching for project: %v - %v\n", purlName, mineId)
-	project, err := projectsModel.GetProjectByPurlName("tablestyle", mineId)
+	var mineID int32 = 1
+	fmt.Printf("Searching for project: %v - %v\n", purlName, mineID)
+	project, err := projectsModel.GetProjectByPurlName("tablestyle", mineID)
 	if err != nil {
 		t.Errorf("projects.GetProjectByPurlName() error = %+v", err)
 	}
@@ -85,18 +85,18 @@ func TestProjectsSearch(t *testing.T) {
 		fmt.Printf("Project: %v\n", project)
 	}
 	purlName = ""
-	mineId = -1
+	mineID = -1
 	fmt.Printf("Searching for project list: %v - %v\n", purlName, purlType)
-	_, err = projectsModel.GetProjectByPurlName(purlName, mineId)
+	_, err = projectsModel.GetProjectByPurlName(purlName, mineID)
 	if err == nil {
 		t.Errorf("projects.GetProjectByPurlName() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
 	purlName = "NONEXISTENT"
-	mineId = -1
+	mineID = -1
 	fmt.Printf("Searching for project list: %v - %v\n", purlName, purlType)
-	_, err = projectsModel.GetProjectByPurlName(purlName, mineId)
+	_, err = projectsModel.GetProjectByPurlName(purlName, mineID)
 	if err == nil {
 		t.Errorf("projects.GetProjectByPurlName() error = did not get an error")
 	} else {

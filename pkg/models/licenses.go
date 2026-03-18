@@ -133,8 +133,7 @@ func CleanseLicenseName(name string) (string, error) {
 		clean := whiteSpaceRegex.ReplaceAllString(name, " ")    // gets rid of new lines, tabs, etc.
 		cleaner := whiteSpaceRegex.ReplaceAllString(clean, " ") // reduces it down to a single space
 		cleanest := strings.ReplaceAll(cleaner, ",", ";")       // swap commas with semicolons
-		// zlog.S.Debugf("in: %v clean: %v cleaner: %v cleanest: %v", name, clean, cleaner, cleanest)
-		return strings.TrimSpace(cleanest), nil // return the cleansed license name
+		return strings.TrimSpace(cleanest), nil                 // return the cleansed license name
 	}
 	return "", nil // empty string, so just return it.
 }

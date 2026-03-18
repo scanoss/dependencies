@@ -30,7 +30,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	_ "google.golang.org/protobuf/runtime/protoimpl"
-
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/errors"
 	"scanoss.com/dependencies/pkg/usecase"
@@ -86,7 +85,7 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		statusResp = common.StatusResponse{Status: common.StatusCode_SUCCEEDED_WITH_WARNINGS, Message: "Problems decorating some purls"}
 	}
 	depResponse := convertDependencyOutput(dtoDependencies) // Convert the internal data into a response object
-	telemetryRequestTime(ctx, d.config, requestStartTime)   // Record the request processing time
+	telemetryRequestTime(ctx, d.config, requestStartTime)   // Record the request processing time.
 	// Set the status and respond with the data
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }

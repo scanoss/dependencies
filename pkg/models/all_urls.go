@@ -20,9 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
 
 	"github.com/jmoiron/sqlx"
+	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
 	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	purlutils "github.com/scanoss/go-purl-helper/pkg"
 	"go.uber.org/zap"
@@ -91,7 +91,7 @@ func (m *AllUrlsModel) GetURLsByPurlString(component componentHelper.Component) 
 		}
 		return result, nil
 	}
-	result, err := m.GetURLsByPurlNameType(component.Name, component.PurlType, component.Version)
+	result, err := m.GetURLsByPurlNameType(component.Name, component.PurlType)
 	if err != nil {
 		return AllURL{}, err
 	}
@@ -123,11 +123,11 @@ func (m *AllUrlsModel) getURLsByGolangPurl(component componentHelper.Component) 
 	if len(component.Version) > 0 {
 		return m.GetURLsByPurlNameTypeVersion(purlName, purl.Type, component.Version)
 	}
-	return m.GetURLsByPurlNameType(purlName, purl.Type, component.Version)
+	return m.GetURLsByPurlNameType(purlName, purl.Type)
 }
 
 // GetURLsByPurlNameType searches for component details of the specified Purl Name/Type (and optional requirement).
-func (m *AllUrlsModel) GetURLsByPurlNameType(purlName, purlType, purlReq string) (AllURL, error) {
+func (m *AllUrlsModel) GetURLsByPurlNameType(purlName, purlType string) (AllURL, error) {
 	if len(purlName) == 0 {
 		m.s.Error("Please specify a valid Purl Name to query")
 		return AllURL{}, errors.New("please specify a valid Purl Name to query")
@@ -147,7 +147,7 @@ func (m *AllUrlsModel) GetURLsByPurlNameType(purlName, purlType, purlReq string)
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Pick one URL to return (checking for license details also)
-	return pickOneURL(m.s, m.project, m.mineModel, allUrls, purlName, purlType, purlReq)
+	return pickOneURL(m.s, m.project, m.mineModel, allUrls, purlName, purlType)
 }
 
 // GetURLsByPurlNameTypeVersion searches for component details of the specified Purl Name/Type and version.
@@ -175,11 +175,11 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 	}
 	m.s.Debugf("Found %v results for %v, %v.", len(allUrls), purlType, purlName)
 	// Pick one URL to return (checking for license details also)
-	return pickOneURL(m.s, m.project, m.mineModel, allUrls, purlName, purlType, "")
+	return pickOneURL(m.s, m.project, m.mineModel, allUrls, purlName, purlType)
 }
 
 // pickOneURL takes the potential matching component/versions and selects the most appropriate one.
-func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, allUrls []AllURL, purlName, purlType, purlReq string) (AllURL, error) {
+func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, allUrls []AllURL, purlName string, purlType string) (AllURL, error) {
 	if len(allUrls) == 0 {
 		s.Infof("No component match (in urls) found for %v, %v,", purlName, purlType)
 		return buildFallbackURL(s, projModel, mineModel, purlName, purlType), nil

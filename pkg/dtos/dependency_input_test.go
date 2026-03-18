@@ -24,7 +24,7 @@ import (
 )
 
 func TestDependencyInput(t *testing.T) {
-	var inputJson2 = `{
+	var inputJSON2 = `{
   "files": [
     {
       "file": "vue-dev/packages/weex-template-compiler/package.json",
@@ -53,7 +53,7 @@ func TestDependencyInput(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	data, err := ParseDependencyInput(zlog.S, []byte(inputJson2))
+	data, err := ParseDependencyInput(zlog.S, []byte(inputJSON2))
 	if err != nil {
 		t.Errorf("dtos.ParseDependencyInput() error = %v", err)
 	}
@@ -65,7 +65,7 @@ func TestDependencyInput(t *testing.T) {
 	}
 	fmt.Println("get expected error: ", err)
 
-	var brokenJson = `{
+	var brokenJSON = `{
   "files": [
     {
       "file": "vue-dev/packages/weex-template-compiler/package.json"
@@ -77,7 +77,7 @@ func TestDependencyInput(t *testing.T) {
 }
 `
 
-	_, err = ParseDependencyInput(zlog.S, []byte(brokenJson))
+	_, err = ParseDependencyInput(zlog.S, []byte(brokenJSON))
 	if err == nil {
 		t.Errorf("dtos.ParseDependencyInput() did not fail")
 	}

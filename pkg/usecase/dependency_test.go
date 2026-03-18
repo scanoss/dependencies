@@ -19,11 +19,11 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"github.com/scanoss/go-component-helper/componenthelper"
 	"testing"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
+	"github.com/scanoss/go-component-helper/componenthelper"
 	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	_ "modernc.org/sqlite"
@@ -200,9 +200,9 @@ func TestDependencyUseCaseOutput(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dependencies, _, err := depUc.GetDependencies(tt.req)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			dependencies, _, depErr := depUc.GetDependencies(tt.req)
+			if depErr != nil {
+				t.Fatalf("unexpected error: %v", depErr)
 			}
 			if len(dependencies.Files) == 0 || len(dependencies.Files[0].Dependencies) == 0 {
 				t.Fatal("expected at least one dependency in response")

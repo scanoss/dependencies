@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 	"go.uber.org/zap"
 )
 

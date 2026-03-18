@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
-	myconfig "scanoss.com/dependencies/pkg/config"
-
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
+	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/models"
 )
 

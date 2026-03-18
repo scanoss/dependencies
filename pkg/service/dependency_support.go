@@ -19,10 +19,10 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/scanoss/go-component-helper/componenthelper"
-	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 
 	"github.com/package-url/packageurl-go"
+	"github.com/scanoss/go-component-helper/componenthelper"
+	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -31,7 +31,7 @@ import (
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/errors"
 	"scanoss.com/dependencies/pkg/shared"
-	trasitive_dependencies "scanoss.com/dependencies/pkg/transdep"
+	trasitiveDependencies "scanoss.com/dependencies/pkg/transdep"
 )
 
 // Structure for storing OTEL metrics.
@@ -68,7 +68,6 @@ func convertDependencyInput(s *zap.SugaredLogger, request *pb.DependencyRequest)
 
 // convertDependencyOutput converts an internal Dependency Output structure into a Dependency Response struct.
 func convertDependencyOutput(output dtos.DependencyOutput) *pb.DependencyResponse {
-
 	response := pb.DependencyResponse{
 		Files: make([]*pb.DependencyResponse_Files, 0, len(output.Files)),
 	}
@@ -211,7 +210,7 @@ func convertToTransitiveDependencyDTO(
 	var invalidPurls []string
 	var validComponents []componenthelper.ComponentDTO
 	for _, component := range transitiveDepDTO.Components {
-		_, err := trasitive_dependencies.ExtractPackageIdentifierFromPurl(component.Purl)
+		_, err := trasitiveDependencies.ExtractPackageIdentifierFromPurl(component.Purl)
 		if err != nil {
 			invalidPurls = append(invalidPurls, component.Purl)
 			continue
@@ -228,10 +227,10 @@ func convertToTransitiveDependencyDTO(
 	transitiveDepDTO.Components = validComponents
 
 	// Get max depth limit
-	depthLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxDepth,
+	depthLimit := trasitiveDependencies.GetMaxLimit(config.TransitiveResources.MaxDepth,
 		config.TransitiveResources.DefaultDepth, transitiveDepDTO.Depth)
 	// Get max response limit
-	responseLimit := trasitive_dependencies.GetMaxLimit(config.TransitiveResources.MaxResponseSize,
+	responseLimit := trasitiveDependencies.GetMaxLimit(config.TransitiveResources.MaxResponseSize,
 		config.TransitiveResources.DefaultResponseSize, transitiveDepDTO.Limit)
 
 	ecosystem, err := determineEcosystem(transitiveDepDTO)
@@ -245,7 +244,7 @@ func convertToTransitiveDependencyDTO(
 	return transitiveDepDTO, nil
 }
 
-func convertToTransitiveDependencyOutput(dependencies []trasitive_dependencies.Dependency) *pb.TransitiveDependencyResponse {
+func convertToTransitiveDependencyOutput(dependencies []trasitiveDependencies.Dependency) *pb.TransitiveDependencyResponse {
 	var tdr pb.TransitiveDependencyResponse
 	for _, d := range dependencies {
 		tdr.Dependencies = append(tdr.Dependencies, &pb.TransitiveDependencyResponse_Component{

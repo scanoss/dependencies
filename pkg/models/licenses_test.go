@@ -255,12 +255,12 @@ func TestCleanseLicenseName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CleanseLicenseName(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("licenses.CleanseLicenseName() error = %v, wantErr %v", err, tt.wantErr)
+			got, cErr := CleanseLicenseName(tt.input)
+			if (cErr != nil) != tt.wantErr {
+				t.Errorf("licenses.CleanseLicenseName() error = %v, wantErr %v", cErr, tt.wantErr)
 				return
 			}
-			if err == nil && !reflect.DeepEqual(got, tt.want) {
+			if cErr == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("licenses.CleanseLicenseName() = %v, want %v", got, tt.want)
 			}
 		})

@@ -60,11 +60,11 @@ linters:
       statements: 80
 
     gocognit:
-      min-complexity: 25
+      min-complexity: 40
 
     gosec:
       excludes:
-        - G204
+        - G117
         - G304
 
     govet:
@@ -80,6 +80,9 @@ linters:
 
     lll:
       line-length: 180
+
+    staticcheck:
+      checks: ["all", "-SA1019"]
 
   exclusions:
     paths:

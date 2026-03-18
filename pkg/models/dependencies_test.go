@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	myconfig "scanoss.com/dependencies/pkg/config"
 )
@@ -18,14 +19,16 @@ func TestGolangDependencies(t *testing.T) {
 	defer zlog.SyncZap()
 	ctx := ctxzap.ToContext(context.Background(), zlog.L)
 	s := ctxzap.Extract(ctx).Sugar()
-	db := sqliteSetup(t)           // Setup SQL Lite DB
-	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
-	err = LoadTestSQLData(db, ctx, conn)
+	db := sqliteSetup(t) // Setup SQL Lite DB
+	err = LoadTestSQLData(db, ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to load test SQL data: %v", err)
 	}
-	defer db.Close()
-	defer CloseConn(conn)
+	defer func(db *sqlx.DB) {
+		if errDB := db.Close(); errDB != nil {
+			t.Fatalf("failed to close db: %v", errDB)
+		}
+	}(db)
 	myConfig, err := myconfig.NewServerConfig(nil)
 	if err != nil {
 		t.Fatalf("failed to load Config: %v", err)

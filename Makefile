@@ -23,7 +23,7 @@ clean:  ## Clean all dev data
 	@echo "Removing dev data..."
 	@rm -f pkg/cmd/version.txt version.txt target/* scripts/scanoss-dependencies-api
 
-clean_testcache:  ## Expire all Go test caches
+clean_test_cache:  ## Expire all Go test caches
 	@echo "Cleaning test caches..."
 	go clean -testcache ./...
 

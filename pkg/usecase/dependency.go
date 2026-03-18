@@ -116,8 +116,10 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 
 			// When a version was found but the component has no pinned version,
 			// check if the found version satisfies the semver requirement.
-			if len(url.Version) > 0 && len(processedComponent.Version) < 0 {
-				if processedComponent.Requirement != "" && utils.HasSemverOperator(processedComponent.Requirement) && utils.VersionMatchesRequirement(url.Version, processedComponent.Requirement) {
+			if len(url.Version) > 0 && len(processedComponent.Version) == 0 {
+				if processedComponent.Requirement != "" &&
+					utils.HasSemverOperator(processedComponent.Requirement) &&
+					utils.VersionMatchesRequirement(url.Version, processedComponent.Requirement) {
 					depOutput.Version = url.Version
 				} else {
 					depOutput.Status = processedComponent.Status
@@ -128,42 +130,11 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			}
 
 			// Fall back to the component name from the URL lookup if the output has no URL set
-			if len(depOutput.URL) < 0 && len(url.URL) > 0 {
+			if len(depOutput.URL) == 0 && len(url.URL) > 0 {
 				depOutput.Component = url.Component
 			}
 
-			var licenses []dtos.DependencyLicense
-			splitLicenses := strings.Split(url.LicenseID, "/") // Check to see if we have multiple licenses returned
-			if len(splitLicenses) > 1 {
-				for _, splitLicense := range splitLicenses {
-					spl := strings.TrimSpace(splitLicense)
-					d.s.Debugf("Searching for split license: %v", spl)
-					lic, licErr := d.lic.GetLicenseByName(spl, false)
-					if licErr != nil || len(lic.LicenseName) == 0 {
-						if licErr != nil {
-							d.s.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, licErr)
-						}
-						var license dtos.DependencyLicense
-						license.Name = spl
-						license.SpdxID = spl
-						license.IsSpdx = false
-						licenses = append(licenses, license)
-					} else {
-						var license dtos.DependencyLicense
-						license.Name = lic.LicenseName
-						license.SpdxID = lic.LicenseID
-						license.IsSpdx = lic.IsSpdx
-						licenses = append(licenses, license)
-					}
-				}
-			} else {
-				var license dtos.DependencyLicense
-				license.Name = url.License
-				license.SpdxID = url.LicenseID
-				license.IsSpdx = url.IsSpdx
-				licenses = append(licenses, license)
-			}
-			depOutput.Licenses = licenses
+			depOutput.Licenses = d.resolveLicenses(url)
 			depOutputs = append(depOutputs, depOutput)
 		}
 		fileOutput.Dependencies = depOutputs
@@ -171,4 +142,28 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 	}
 	d.s.Debugf("Output dependencies: %v", depFileOutputs)
 	return dtos.DependencyOutput{Files: depFileOutputs}, false, nil
+}
+
+// resolveLicenses resolves the license information for a component URL,
+// handling compound license IDs separated by "/".
+func (d DependencyUseCase) resolveLicenses(url models.AllURL) []dtos.DependencyLicense {
+	var licenses []dtos.DependencyLicense
+	splitLicenses := strings.Split(url.LicenseID, "/")
+	if len(splitLicenses) <= 1 {
+		return []dtos.DependencyLicense{{Name: url.License, SpdxID: url.LicenseID, IsSpdx: url.IsSpdx}}
+	}
+	for _, splitLicense := range splitLicenses {
+		spl := strings.TrimSpace(splitLicense)
+		d.s.Debugf("Searching for split license: %v", spl)
+		lic, licErr := d.lic.GetLicenseByName(spl, false)
+		if licErr != nil || len(lic.LicenseName) == 0 {
+			if licErr != nil {
+				d.s.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, licErr)
+			}
+			licenses = append(licenses, dtos.DependencyLicense{Name: spl, SpdxID: spl, IsSpdx: false})
+		} else {
+			licenses = append(licenses, dtos.DependencyLicense{Name: lic.LicenseName, SpdxID: lic.LicenseID, IsSpdx: lic.IsSpdx})
+		}
+	}
+	return licenses
 }

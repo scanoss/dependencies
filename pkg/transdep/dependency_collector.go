@@ -1,3 +1,4 @@
+// Package transdep provides transitive dependency resolution and graph traversal.
 package transdep
 
 import (

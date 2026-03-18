@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Completed `convertDependencyOutput` to build proto response with dependencies, licenses, and error status
 - Updated model constructors to use `*sqlx.DB` instead of `*sqlx.Conn`
+- Upgraded `package-url/packageurl-go` to v.1.5
+- Upgraded `google.golang.org/grpc` to v1.79.2
+- Upgraded `github.com/scanoss/papi` to v0.32.0
+- Updated CI workflows (`go-ci`, `release`) to `actions/checkout@v4`, `actions/setup-go@v5`, and `go-version-file`
+- Updated `golangci-lint-action` to v9 and linter config to v2 format
+- Updated `golangci-lint` Docker version to v2.10.1 in Makefile
 
 ## [0.12.2] - 2026-01-12
 ### Fixed

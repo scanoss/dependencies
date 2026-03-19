@@ -89,7 +89,7 @@ func (m *ProjectModel) GetProjectByPurlName(purlName string, mineID int32) (Proj
 	}
 	rows, err := m.db.QueryxContext(m.ctx,
 		"SELECT purl_name, component,"+
-			" l.license_name AS   license, l.spdx_id AS   license_id, l.is_spdx AS   is_spdx,"+
+			" l.license_name AS   license, l.spdx_id AS   license_id, l.is_spdx AS is_spdx,"+
 			" g.license_name AS g_license, g.spdx_id AS g_license_id, g.is_spdx AS g_is_spdx"+
 			" FROM projects p"+
 			" LEFT JOIN licenses l ON p.license_id = l.id"+

@@ -12,7 +12,7 @@ require (
 	github.com/package-url/packageurl-go v0.1.5
 	github.com/scanoss/go-component-helper v0.4.0
 	github.com/scanoss/go-grpc-helper v0.13.0
-	github.com/scanoss/go-purl-helper v0.2.1
+	github.com/scanoss/go-purl-helper v0.3.0
 	github.com/scanoss/papi v0.32.0
 	github.com/scanoss/zap-logging-helper v0.4.0
 	go.opentelemetry.io/otel v1.40.0

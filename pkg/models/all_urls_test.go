@@ -186,12 +186,15 @@ func TestAllUrlsSearchVersion(t *testing.T) {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
 
-	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{Purl: "pkg:gem/tablestyle", Name: "tablestyle", PurlType: "gem", Version: "22.22.22"}) // Shouldn't exist
+	allUrls, err = allUrlsModel.GetURLsByPurlString(componentHelper.Component{
+		Purl: "pkg:gem/tablestyle",
+		Name: "tablestyle", PurlType: "gem",
+		Version: "22.22.22"}) // Version doesn't exist, but fallback URL is built
 	if err != nil {
 		t.Errorf("all_urls.GetURLsByPurlString() error = failed to find purl by version string")
 	}
-	if len(allUrls.PurlName) > 0 {
-		t.Errorf("all_urls.GetURLsByPurlString() error = Found match, when we shouldn't: %v", allUrls)
+	if len(allUrls.PurlName) == 0 && len(allUrls.License) == 0 {
+		t.Errorf("all_urls.GetURLsByPurlString() No fallback URL returned from query")
 	}
 }
 

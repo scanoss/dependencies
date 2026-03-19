@@ -19,17 +19,18 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
 	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
 	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
+	purlutils "github.com/scanoss/go-purl-helper/pkg"
 	"go.uber.org/zap"
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/models"
-	"scanoss.com/dependencies/pkg/utils"
 )
 
 type DependencyUseCase struct {
@@ -84,8 +85,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				Status:      processedComponent.Status,
 			}
 			// avoid processing invalid components not found components
-			if processedComponent.Status.StatusCode == domain.ComponentNotFound ||
-				processedComponent.Status.StatusCode == domain.InvalidPurl {
+			if processedComponent.Status.StatusCode == domain.InvalidPurl {
 				depOutput.Status = processedComponent.Status
 				depOutput.Component = processedComponent.Name
 				depOutputs = append(depOutputs, depOutput)
@@ -121,21 +121,23 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				continue
 			}
 
-			// Validate the resolved version against the component's semver requirement.
-			// If the version does not satisfy the requirement, mark the status accordingly.
+			depOutput.Version = url.Version
 			if processedComponent.Requirement != "" {
-				if !utils.VersionMatchesRequirement(url.Version, processedComponent.Requirement) {
+				v := purlutils.GetVersionFromReqOperator(processedComponent.Requirement)
+				// Compare versions ignoring the "v" prefix (e.g., "v1.2.3" == "1.2.3")
+				// If the version does not satisfy the requirement, mark the status accordingly.
+				if strings.TrimPrefix(url.Version, "v") != strings.TrimPrefix(v, "v") {
 					depOutput.Status = domain.ComponentStatus{
 						StatusCode: domain.VersionNotFound,
-						Message:    "Version " + url.Version + " does not satisfy requirement " + processedComponent.Requirement,
+						Message:    fmt.Sprintf("Requirement not met, showing information for version '%s'", url.Version),
 					}
+					depOutput.Version = v
 				}
 			}
-			depOutput.Version = url.Version
 
 			// Fall back to the component URL from the URL lookup if the output has no URL set
 			if len(depOutput.URL) == 0 && len(url.URL) > 0 {
-				depOutput.Component = url.URL
+				depOutput.URL = url.URL
 			}
 
 			depOutput.Licenses = d.resolveLicenses(url)

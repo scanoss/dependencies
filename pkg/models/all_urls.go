@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
@@ -106,10 +107,12 @@ func (m *AllUrlsModel) getURLsByGolangPurl(component componentHelper.Component) 
 	// First try the golang_projects table
 	if m.golangProj != nil {
 		result, err := m.golangProj.GetGoLangURLByPurlString(component.Purl, component.Requirement)
-		if err == nil && len(result.PurlName) > 0 {
+		if err == nil && (len(result.PurlName) > 0 || len(result.License) > 0) &&
+			!strings.HasPrefix(component.Purl, "pkg:golang/github.com/") {
 			return result, nil
 		}
 	}
+	m.s.Debugf("Falling back to Github URL %v, %v", component.Purl, component.Requirement)
 	// Fall back to converting to GitHub purl and searching all_urls
 	purlString := purlutils.ConvertGoPurlStringToGithub(component.Purl) // Convert to GitHub purl
 	purl, err := purlutils.PurlFromString(purlString)
@@ -180,10 +183,11 @@ func (m *AllUrlsModel) GetURLsByPurlNameTypeVersion(purlName, purlType, purlVers
 
 // pickOneURL takes the potential matching component/versions and selects the most appropriate one.
 func pickOneURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *MineModel, allUrls []AllURL, purlName string, purlType string) (AllURL, error) {
-	if len(allUrls) == 0 {
-		s.Infof("No component match (in urls) found for %v, %v,", purlName, purlType)
+	if len(allUrls) == 0 || len(allUrls[0].License) == 0 {
+		s.Infof("No component match (in urls) found for %v, %v, build fallback URL from projects", purlName, purlType)
 		return buildFallbackURL(s, projModel, mineModel, purlName, purlType), nil
 	}
+	// No need to apply a URL selection algorithm here; go-component-helper already resolved the best match
 	url := allUrls[0]
 	url.URL, _ = purlutils.ProjectUrl(purlName, purlType)
 	if len(url.License) == 0 && projModel != nil { // Check for a project license if we don't have a component one
@@ -209,6 +213,7 @@ func buildFallbackURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *
 		s.Errorf("No component match (in urls) found for %v, %v: %v", purlName, purlType, err)
 		return url
 	}
+	url.PurlName = purlName
 	url.MineID = mineIds[0]
 	for _, m := range mineIds {
 		url.MineID = m
@@ -222,6 +227,7 @@ func buildFallbackURL(s *zap.SugaredLogger, projModel *ProjectModel, mineModel *
 
 func GetURLFromProject(s *zap.SugaredLogger, projModel *ProjectModel, url *AllURL, purlName, purlType string) {
 	project, err := projModel.GetProjectByPurlName(purlName, url.MineID)
+	s.Debugf("Getting URL from projects: %v", project)
 	switch {
 	case err != nil:
 		s.Warnf("Problem searching projects table for %v, %v", purlName, purlType)

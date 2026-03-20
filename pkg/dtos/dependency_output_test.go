@@ -24,7 +24,7 @@ import (
 )
 
 func TestDependencyOutput(t *testing.T) {
-	var outputJson = `{
+	var outputJSON = `{
   "files": [
     {
       "file": "audit-workbench-master/package.json",
@@ -65,7 +65,7 @@ func TestDependencyOutput(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	output, err := ParseDependencyOutput(zlog.S, []byte(outputJson))
+	output, err := ParseDependencyOutput(zlog.S, []byte(outputJSON))
 	if err != nil {
 		t.Errorf("dtos.ParseDependencyInput() error = %v", err)
 	}
@@ -75,7 +75,7 @@ func TestDependencyOutput(t *testing.T) {
 	if err != nil {
 		t.Errorf("dtos.ParseDependencyInput() error = %v", err)
 	}
-	fmt.Println("Exported output data: ", data)
+	fmt.Println("Exported output data: ", string(data))
 
 	_, err = ParseDependencyOutput(zlog.S, nil)
 	if err == nil {
@@ -83,8 +83,8 @@ func TestDependencyOutput(t *testing.T) {
 	}
 	fmt.Println("get expected error: ", err)
 
-	var badJson = `{ "files": [ `
-	_, err = ParseDependencyOutput(zlog.S, []byte(badJson))
+	var badJSON = `{ "files": [ `
+	_, err = ParseDependencyOutput(zlog.S, []byte(badJSON))
 	if err == nil {
 		t.Errorf("dtos.ParseDependencyOutput() did not fail")
 	}

@@ -27,6 +27,13 @@ import (
 	myconfig "scanoss.com/dependencies/pkg/config"
 )
 
+const (
+	testGolangPurlName = "github.com/scanoss/papi"
+	testGolangV001     = "v0.0.1"
+	testGolangV002     = "v0.0.2"
+	testGolangLicMIT   = "MIT"
+)
+
 func TestGolangProjectUrlsSearch(t *testing.T) {
 	err := zlog.NewSugaredDevLogger()
 	if err != nil {
@@ -49,9 +56,9 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
-	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, myConfig)
 
-	url, err := golangProjModel.GetGolangUrlsByPurlNameType("google.golang.org/grpc", "golang", "")
+	url, err := golangProjModel.GetGolangUrlsByPurlNameType("google.golang.org/grpc", "golang")
 	if err != nil {
 		t.Errorf("FAILED: golang_projects.GetUrlsByPurlName() error = %v", err)
 	}
@@ -60,7 +67,7 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 	}
 	fmt.Printf("Golang URL: %#v\n", url)
 
-	url, err = golangProjModel.GetGolangUrlsByPurlNameType("NONEXISTENT", "none", "")
+	url, err = golangProjModel.GetGolangUrlsByPurlNameType("NONEXISTENT", "none")
 	if err != nil {
 		t.Errorf("FAILED: golang_projects.GetGolangUrlsByPurlNameType() error = %v", err)
 	}
@@ -69,13 +76,13 @@ func TestGolangProjectUrlsSearch(t *testing.T) {
 	}
 	fmt.Printf("No Urls: %v\n", url)
 
-	_, err = golangProjModel.GetGolangUrlsByPurlNameType("NONEXISTENT", "", "")
+	_, err = golangProjModel.GetGolangUrlsByPurlNameType("NONEXISTENT", "")
 	if err == nil {
 		t.Errorf("FAILED: golang_projects.GetGolangUrlsByPurlNameType() error = did not get an error")
 	} else {
 		fmt.Printf("Got expected error = %v\n", err)
 	}
-	_, err = golangProjModel.GetGolangUrlsByPurlNameType("", "", "")
+	_, err = golangProjModel.GetGolangUrlsByPurlNameType("", "")
 	if err == nil {
 		t.Errorf("FAILED: golang_projects.GetURLsByPurlString() error = did not get an error")
 	} else {
@@ -125,7 +132,7 @@ func TestGolangProjectsSearchVersion(t *testing.T) {
 	}
 	myConfig.Components.CommitMissing = true
 	myConfig.Database.Trace = true
-	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, myConfig)
 
 	url, err := golangProjModel.GetGolangUrlsByPurlNameTypeVersion("google.golang.org/grpc", "golang", "1.19.0")
 	if err != nil {
@@ -213,7 +220,7 @@ func TestGolangProjectsSearchVersionRequirement(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, myConfig)
 
 	url, err := golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", ">0.0.4")
 	if err != nil {
@@ -255,7 +262,7 @@ func TestGolangPkgGoDev(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, myConfig)
 
 	_, _, _, err = golangProjModel.queryPkgGoDev("", "")
 	if err == nil {
@@ -280,56 +287,56 @@ func TestGolangPkgGoDev(t *testing.T) {
 	}
 	fmt.Printf("Golang URL Version: %#v\n", url)
 
-	var allUrl AllURL
+	var allURL AllURL
 	var license License
 	var version Version
-	fmt.Printf("SavePkg: %#v - %#v - %#v", allUrl, license, version)
-	err = golangProjModel.savePkg(allUrl, version, license, nil)
+	fmt.Printf("SavePkg: %#v - %#v - %#v", allURL, license, version)
+	err = golangProjModel.savePkg(allURL, version, license, nil)
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
 	}
-	allUrl.PurlName = "github.com/scanoss/papi"
-	err = golangProjModel.savePkg(allUrl, version, license, nil)
+	allURL.PurlName = testGolangPurlName
+	err = golangProjModel.savePkg(allURL, version, license, nil)
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
 	}
-	allUrl.MineID = 45
-	err = golangProjModel.savePkg(allUrl, version, license, nil)
+	allURL.MineID = 45
+	err = golangProjModel.savePkg(allURL, version, license, nil)
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
 	}
-	allUrl.Version = "v0.0.1"
-	version.VersionName = "v0.0.1"
+	allURL.Version = testGolangV001
+	version.VersionName = testGolangV001
 	version.ID = 5958021
-	err = golangProjModel.savePkg(allUrl, version, license, nil)
+	err = golangProjModel.savePkg(allURL, version, license, nil)
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
 	}
-	license.LicenseName = "MIT"
+	license.LicenseName = testGolangLicMIT
 	license.ID = 5614
-	err = golangProjModel.savePkg(allUrl, version, license, nil)
+	err = golangProjModel.savePkg(allURL, version, license, nil)
 	if err == nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = did not get an error")
 	}
 	var comp pkggodevclient.Package
-	comp.Package = "github.com/scanoss/papi"
+	comp.Package = testGolangPurlName
 	comp.IsPackage = true
 	comp.IsModule = true
-	comp.Version = "v0.0.1"
-	comp.License = "MIT"
+	comp.Version = testGolangV001
+	comp.License = testGolangLicMIT
 	comp.HasRedistributableLicense = true
 	comp.HasStableVersion = true
 	comp.HasTaggedVersion = true
 	comp.HasValidGoModFile = true
-	comp.Repository = "github.com/scanoss/papi"
-	err = golangProjModel.savePkg(allUrl, version, license, &comp)
+	comp.Repository = testGolangPurlName
+	err = golangProjModel.savePkg(allURL, version, license, &comp)
 	if err != nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = %v", err)
 	}
-	allUrl.Version = "v0.0.2"
-	version.VersionName = "v0.0.2"
-	comp.Version = "v0.0.2"
-	err = golangProjModel.savePkg(allUrl, version, license, &comp)
+	allURL.Version = testGolangV002
+	version.VersionName = testGolangV002
+	comp.Version = testGolangV002
+	err = golangProjModel.savePkg(allURL, version, license, &comp)
 	if err != nil {
 		t.Errorf("FAILED: golangProjModel.savePkg() error = %v", err)
 	}
@@ -352,7 +359,7 @@ func TestGolangProjectsSearchBadSql(t *testing.T) {
 		t.Fatalf("failed to load Config: %v", err)
 	}
 	myConfig.Components.CommitMissing = true
-	golangProjModel := NewGolangProjectModel(ctx, s, db, conn, myConfig)
+	golangProjModel := NewGolangProjectModel(ctx, s, db, myConfig)
 
 	_, err = golangProjModel.GetGoLangURLByPurlString("pkg:golang/google.golang.org/grpc", "")
 	if err == nil {

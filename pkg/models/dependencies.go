@@ -53,15 +53,6 @@ func (m *DependencyModel) GetDependencies(purl string, version string, ecosystem
 		return nil, errors.New("ecosystem not supported")
 	}
 
-	// Get a connection from the pool for this operation
-	conn, err := m.db.Connx(m.ctx)
-	if err != nil {
-		m.s.Errorf("Failed to get database connection: %v", err)
-
-		return nil, fmt.Errorf("database connection error: %v", err)
-	}
-	defer conn.Close() // Return the connection to the pool when done
-
 	var dependencies []UnresolvedDependency
 
 	// Build query with table name based on ecosystem
@@ -69,7 +60,7 @@ func (m *DependencyModel) GetDependencies(purl string, version string, ecosystem
 
 	// Execute query and scan result into byte slice
 	var jsonData []byte
-	err = conn.QueryRowxContext(m.ctx, query, purl, version).Scan(&jsonData)
+	err := m.db.QueryRowxContext(m.ctx, query, purl, version).Scan(&jsonData)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []UnresolvedDependency{}, nil

@@ -1,25 +1,25 @@
 module scanoss.com/dependencies
 
-go 1.24.0
+go 1.25.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/golobby/config/v3 v3.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/guseggert/pkggodev-client v0.0.0-20240318140526-cdb0034504cf
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/lib/pq v1.10.9
-	github.com/package-url/packageurl-go v0.1.3
-	github.com/scanoss/go-grpc-helper v0.9.0
-	github.com/scanoss/go-purl-helper v0.2.1
-	github.com/scanoss/papi v0.26.0
+	github.com/lib/pq v1.12.0
+	github.com/package-url/packageurl-go v0.1.5
+	github.com/scanoss/go-component-helper v0.5.0
+	github.com/scanoss/go-grpc-helper v0.13.0
+	github.com/scanoss/go-purl-helper v0.3.0
+	github.com/scanoss/papi v0.32.1
 	github.com/scanoss/zap-logging-helper v0.4.0
-	go.opentelemetry.io/otel v1.39.0
-	go.opentelemetry.io/otel/metric v1.39.0
+	go.opentelemetry.io/otel v1.42.0
+	go.opentelemetry.io/otel/metric v1.42.0
 	go.uber.org/zap v1.27.1
-	google.golang.org/grpc v1.77.0
-	google.golang.org/protobuf v1.36.10
-	modernc.org/sqlite v1.40.1
+	google.golang.org/grpc v1.79.3
+	google.golang.org/protobuf v1.36.11
+	modernc.org/sqlite v1.47.0
 )
 
 //replace github.com/scanoss/papi => ../papi
@@ -28,12 +28,13 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/PuerkitoBio/goquery v1.10.3 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/antchfx/htmlquery v1.2.4 // indirect
 	github.com/antchfx/xmlquery v1.3.7 // indirect
 	github.com/antchfx/xpath v1.2.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -46,35 +47,35 @@ require (
 	github.com/golobby/dotenv v1.3.2 // indirect
 	github.com/golobby/env/v2 v2.2.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/phuslu/iploc v1.0.20230201 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
+	github.com/scanoss/go-models v0.7.0 // indirect
 	github.com/scanoss/ipfilter/v2 v2.0.2 // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	github.com/tomasen/realip v0.0.0-20180522021738-f0c99a92ddce // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.35.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.35.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.35.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.38.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.38.0 // indirect
-	go.opentelemetry.io/otel/trace v1.39.0 // indirect
-	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.65.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.40.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.40.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.40.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.40.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
+	go.opentelemetry.io/otel/trace v1.42.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
-	golang.org/x/net v0.46.1-0.20251013234738-63d1a5100f82 // indirect
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20251022142026-3a174f9686a8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	modernc.org/libc v1.66.10 // indirect
+	modernc.org/libc v1.70.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )

@@ -78,12 +78,12 @@ func (dg *DependencyGraph) String() string {
 		children := value
 
 		if len(children) == 0 {
-			result.WriteString(fmt.Sprintf("%s --> null\n", key.Purl))
+			_, _ = fmt.Fprintf(&result, "%s --> null\n", key.Purl)
 			continue
 		}
 
 		for _, child := range children {
-			result.WriteString(fmt.Sprintf("%s --> %s\n", key.Purl, child.Purl))
+			_, _ = fmt.Fprintf(&result, "%s --> %s\n", key.Purl, child.Purl)
 		}
 	}
 

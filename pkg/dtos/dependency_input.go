@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// Package dtos provides data transfer objects for dependency requests and responses.
 package dtos
 
 import (
@@ -21,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/scanoss/go-component-helper/componenthelper"
 	"go.uber.org/zap"
 )
 
@@ -32,20 +34,15 @@ type DependencyInput struct {
 
 // DependencyFileInput deprecated.
 type DependencyFileInput struct {
-	File  string         `json:"file,omitempty"`
-	Purls []ComponentDTO `json:"purls"`
-}
-
-type ComponentDTO struct {
-	Purl        string `json:"purl"`
-	Requirement string `json:"requirement,omitempty"`
+	File  string                         `json:"file,omitempty"`
+	Purls []componenthelper.ComponentDTO `json:"purls"`
 }
 
 type TransitiveDependencyDTO struct {
-	Depth      *int           `json:"depth,omitempty"`
-	Ecosystem  string         `json:"ecosystem,omitempty"`
-	Components []ComponentDTO `json:"components"`
-	Limit      *int           `json:"limit,omitempty"`
+	Depth      *int                           `json:"depth,omitempty"`
+	Ecosystem  string                         `json:"ecosystem,omitempty"`
+	Components []componenthelper.ComponentDTO `json:"components"`
+	Limit      *int                           `json:"limit,omitempty"`
 }
 
 type DependencyJobDTO struct {
@@ -71,20 +68,6 @@ func ParseDependencyInput(s *zap.SugaredLogger, input []byte) (DependencyInput, 
 	if err != nil {
 		s.Errorf("Parse failure: %v", err)
 		return DependencyInput{}, fmt.Errorf("failed to parse dependency input data: %v", err)
-	}
-	return data, nil
-}
-
-// ParseTransitiveReqDTOS converts the input byte array to a TransitiveDependencyDTO structure.
-func ParseTransitiveReqDTOS(s *zap.SugaredLogger, input []byte) (TransitiveDependencyDTO, error) {
-	if len(input) == 0 {
-		return TransitiveDependencyDTO{}, errors.New("no input dependency data supplied to parse")
-	}
-	var data TransitiveDependencyDTO
-	err := json.Unmarshal(input, &data)
-	if err != nil {
-		s.Errorf("Parse failure: %v", err)
-		return TransitiveDependencyDTO{}, fmt.Errorf("failed to parse dependency input data: %v", err)
 	}
 	return data, nil
 }

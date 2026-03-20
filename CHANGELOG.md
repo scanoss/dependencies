@@ -6,8 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.13.0] - 2026-03-23
 ### Added
-- Upcoming changes...
+- Added per-component error status (`error_code`, `error_message`) to dependency response
+- Added `resolveComponentVersion` to determine the best version for the dependency response based on pinned version, semver requirement, or URL lookup
+- Added `resolveLicenses` method to handle compound license ID resolution
+- Added `github.com/scanoss/go-component-helper` to v0.5.0
+### Changed
+- Completed `convertDependencyOutput` to build proto response with dependencies, licenses, and error status
+- Updated model constructors to use `*sqlx.DB` instead of `*sqlx.Conn`
+- Upgraded `package-url/packageurl-go` to v.1.5
+- Upgraded `google.golang.org/grpc` to v1.79.2
+- Updated CI workflows (`go-ci`, `release`) to `actions/checkout@v4`, `actions/setup-go@v5`, and `go-version-file`
+- Updated `golangci-lint-action` to v9 and linter config to v2 format
+- Updated `golangci-lint` Docker version to v2.10.1 in Makefile
+- Updated `github.com/scanoss/go-purl-helper` to v0.3.0
+- Upgraded `github.com/lib/pq` from v1.11.2 to v1.12.0
+- Upgraded `github.com/scanoss/papi` from v0.32.0 to v0.32.1
+- Upgraded `go.opentelemetry.io/otel` from v1.40.0 to v1.42.0
+- Upgraded `go.opentelemetry.io/otel/metric` from v1.40.0 to v1.42.0
+- Upgraded `modernc.org/sqlite` from v1.46.1 to v1.47.0
+### Removed
+- Removed `github.com/Masterminds/semver/v3` direct dependency
 
 ## [0.12.2] - 2026-01-12
 ### Fixed
@@ -116,3 +137,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.12.0]: https://github.com/scanoss/dependencies/compare/v0.11.0...v0.12.0
 [0.12.1]: https://github.com/scanoss/dependencies/compare/v0.12.0...v0.12.1
 [0.12.2]: https://github.com/scanoss/dependencies/compare/v0.12.1...v0.12.2
+[0.13.0]: https://github.com/scanoss/dependencies/compare/v0.12.2...v0.13.0

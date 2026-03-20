@@ -74,12 +74,12 @@ func TestDependencyServer_Echo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.s.Echo(tt.args.ctx, tt.args.req)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("service.Echo() error = %v, wantErr %v", err, tt.wantErr)
+			got, echoErr := tt.s.Echo(tt.args.ctx, tt.args.req)
+			if (echoErr != nil) != tt.wantErr {
+				t.Errorf("service.Echo() error = %v, wantErr %v", echoErr, tt.wantErr)
 				return
 			}
-			if err == nil && !reflect.DeepEqual(got, tt.want) {
+			if echoErr == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("service.Echo() = %v, want %v", got, tt.want)
 			}
 		})
@@ -132,7 +132,7 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
   ]
 }
 `
-	var depReq = pb.DependencyRequest{} //nolint:staticcheck // SA1019: pb.DependencyRequest is deprecated but still needed for tests
+	var depReq = pb.DependencyRequest{}
 	err = json.Unmarshal([]byte(depRequestData), &depReq)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when unmarshalling requestd", err)
@@ -143,7 +143,7 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
   ]
 }
 `
-	var depReqBad = pb.DependencyRequest{} //nolint:staticcheck // SA1019: pb.DependencyRequest is deprecated but still needed for tests
+	var depReqBad = pb.DependencyRequest{}
 	err = json.Unmarshal([]byte(depRequestDataBad), &depReqBad)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when unmarshalling requestd", err)
@@ -151,13 +151,13 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 
 	type args struct {
 		ctx context.Context
-		req *pb.DependencyRequest //nolint:staticcheck // SA1019: pb.DependencyRequest is deprecated but still needed for tests
+		req *pb.DependencyRequest
 	}
 	tests := []struct {
 		name    string
 		s       pb.DependenciesServer
 		args    args
-		want    *pb.DependencyResponse //nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed for tests
+		want    *pb.DependencyResponse
 		wantErr bool
 	}{
 		{
@@ -167,7 +167,7 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 				ctx: ctx,
 				req: &depReq,
 			},
-			//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed for tests
+
 			want: &pb.DependencyResponse{Status: &common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"}},
 		},
 		{
@@ -177,19 +177,19 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 				ctx: ctx,
 				req: &depReqBad,
 			},
-			//nolint:staticcheck // SA1019: pb.DependencyResponse is deprecated but still needed for tests
+
 			want:    &pb.DependencyResponse{Status: &common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed"}},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.s.GetDependencies(tt.args.ctx, tt.args.req) //nolint:staticcheck // SA1019: GetDependencies is deprecated but still needed for tests
-			if (err != nil) != tt.wantErr {
-				t.Errorf("service.GetDependencies() error = %v, wantErr %v", err, tt.wantErr)
+			got, depErr := tt.s.GetDependencies(tt.args.ctx, tt.args.req)
+			if (depErr != nil) != tt.wantErr {
+				t.Errorf("service.GetDependencies() error = %v, wantErr %v", depErr, tt.wantErr)
 				return
 			}
-			if err == nil && !reflect.DeepEqual(got.Status, tt.want.Status) {
+			if depErr == nil && !reflect.DeepEqual(got.Status, tt.want.Status) {
 				t.Errorf("service.GetDependencies() = %v, want %v", got, tt.want)
 			}
 		})

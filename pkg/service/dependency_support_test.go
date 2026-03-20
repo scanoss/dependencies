@@ -34,11 +34,7 @@ func TestOutputConvert(t *testing.T) {
 
 	var outputDto = dtos.DependencyOutput{}
 
-	output, err := convertDependencyOutput(zlog.S, outputDto)
-	if err != nil {
-		t.Errorf("TestOutputConvert failed: %v", err)
-	}
-	// assert.NotNilf(t, output, "Output dependency empty")
+	output := convertDependencyOutput(outputDto)
 	fmt.Printf("Output: %v\n", output)
 }
 
@@ -49,7 +45,7 @@ func TestInputConvert(t *testing.T) {
 	}
 	defer zlog.SyncZap()
 
-	var depIn = &pb.DependencyRequest{} //nolint:staticcheck // SA1019: pb.DependencyRequest is deprecated but still needed for tests
+	var depIn = &pb.DependencyRequest{}
 	input, err := convertDependencyInput(zlog.S, depIn)
 	if err != nil {
 		t.Errorf("TestInputConvert failed: %v", err)

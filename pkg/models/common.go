@@ -22,7 +22,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"testing"
 
 	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
@@ -65,24 +64,6 @@ func loadTestSQLDataFiles(db *sqlx.DB, ctx context.Context, conn *sqlx.Conn, fil
 		}
 	}
 	return nil
-}
-
-// sqliteSetup sets up an in-memory SQL Lite DB for testing.
-func sqliteSetup(t *testing.T) *sqlx.DB {
-	db, err := sqlx.Connect("sqlite", "file::memory:?cache=shared")
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	return db
-}
-
-// sqliteConn sets up a connection to a test DB.
-func sqliteConn(t *testing.T, ctx context.Context, db *sqlx.DB) *sqlx.Conn {
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	return conn
 }
 
 // CloseDB closes the specified DB and logs any errors.

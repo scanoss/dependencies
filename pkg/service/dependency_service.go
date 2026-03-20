@@ -25,13 +25,11 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/jmoiron/sqlx"
-	gd "github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	common "github.com/scanoss/papi/api/commonv2"
 	pb "github.com/scanoss/papi/api/dependenciesv2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	_ "google.golang.org/protobuf/runtime/protoimpl"
-
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/errors"
 	"scanoss.com/dependencies/pkg/usecase"
@@ -74,15 +72,8 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		return &pb.DependencyResponse{Status: &statusResp}, errors.NewBadRequestError("problem parsing dependency input data", err)
 	}
 	telemetryReqCounters(ctx, d.config, depRequest) // Update request counters
-	conn, err := d.db.Connx(ctx)                    // Get a connection from the pool
-	if err != nil {
-		s.Errorf("Failed to get a database connection from the pool: %v", err)
-		statusResp := common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Failed to get database pool connection"}
-		return &pb.DependencyResponse{Status: &statusResp}, errors.NewServiceUnavailableError("problem getting database pool connection", err)
-	}
-	defer gd.CloseSQLConnection(conn)
 	// Search the KB for information about each dependency
-	depUc := usecase.NewDependencies(ctx, s, d.db, conn, d.config)
+	depUc := usecase.NewDependencies(ctx, s, d.db, d.config)
 	dtoDependencies, warn, err := depUc.GetDependencies(dtoRequest)
 	statusResp := common.StatusResponse{Status: common.StatusCode_SUCCESS, Message: "Success"} // Assume success :-)
 	if err != nil {
@@ -93,13 +84,8 @@ func (d dependencyServer) GetDependencies(ctx context.Context, request *pb.Depen
 		}
 		statusResp = common.StatusResponse{Status: common.StatusCode_SUCCEEDED_WITH_WARNINGS, Message: "Problems decorating some purls"}
 	}
-	depResponse, err := convertDependencyOutput(s, dtoDependencies) // Convert the internal data into a response object
-	if err != nil {
-		s.Errorf("Failed to covnert parsed dependencies: %v", err)
-		statusResp = common.StatusResponse{Status: common.StatusCode_FAILED, Message: "Problems encountered extracting dependency data"}
-		return &pb.DependencyResponse{Status: &statusResp}, errors.NewInternalError("problem converting dependency DTO", err)
-	}
-	telemetryRequestTime(ctx, d.config, requestStartTime) // Record the request processing time
+	depResponse := convertDependencyOutput(dtoDependencies) // Convert the internal data into a response object
+	telemetryRequestTime(ctx, d.config, requestStartTime)   // Record the request processing time.
 	// Set the status and respond with the data
 	return &pb.DependencyResponse{Files: depResponse.Files, Status: &statusResp}, nil
 }

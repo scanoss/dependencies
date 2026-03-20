@@ -42,7 +42,7 @@ func TestLicensesSearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	licenseModel := NewLicenseModel(ctx, s, conn)
+	licenseModel := NewLicenseModel(ctx, s, db)
 	var name = "MIT"
 	fmt.Printf("Searching for license: %v\n", name)
 	license, err := licenseModel.GetLicenseByName(name, false)
@@ -124,7 +124,7 @@ func TestLicensesSearchId(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load SQL test data: %v", err)
 	}
-	licenseModel := NewLicenseModel(ctx, s, conn)
+	licenseModel := NewLicenseModel(ctx, s, db)
 
 	name := "MIT"
 	fmt.Printf("Searching for license: %v\n", name)
@@ -181,7 +181,7 @@ func TestLicensesSearchBadSql(t *testing.T) {
 	defer CloseDB(db)
 	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
 	defer CloseConn(conn)
-	licenseModel := NewLicenseModel(ctx, s, conn)
+	licenseModel := NewLicenseModel(ctx, s, db)
 	_, err = licenseModel.GetLicenseByName("rubbish", false)
 	if err == nil {
 		t.Errorf("licenses.GetLicenseByName() error = did not get an error")
@@ -255,12 +255,12 @@ func TestCleanseLicenseName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CleanseLicenseName(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("licenses.CleanseLicenseName() error = %v, wantErr %v", err, tt.wantErr)
+			got, cErr := CleanseLicenseName(tt.input)
+			if (cErr != nil) != tt.wantErr {
+				t.Errorf("licenses.CleanseLicenseName() error = %v, wantErr %v", cErr, tt.wantErr)
 				return
 			}
-			if err == nil && !reflect.DeepEqual(got, tt.want) {
+			if cErr == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("licenses.CleanseLicenseName() = %v, want %v", got, tt.want)
 			}
 		})

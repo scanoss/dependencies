@@ -4,7 +4,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// ProcessCollectorResult process collector results and save result in a adjacencyList structure.
+// ProcessCollectorResult process collector results and save a result in an adjacencyList structure.
 func ProcessCollectorResult(s *zap.SugaredLogger, depGraph *DependencyGraph, maxDependencyResponseSize int) func(Result) bool {
 	return func(result Result) bool {
 		parentDep, err := ExtractDependencyFromJob(result.Parent)
@@ -13,16 +13,16 @@ func ProcessCollectorResult(s *zap.SugaredLogger, depGraph *DependencyGraph, max
 			return false
 		}
 		for _, td := range result.TransitiveDependencies {
-			tDep, err := ExtractDependencyFromJob(td)
-			if err == nil {
+			tDep, tdErr := ExtractDependencyFromJob(td)
+			if tdErr == nil {
 				// Connects a dependency within a child
 				depGraph.Connect(parentDep, tDep)
-				// Stop if max limit response is reached
+				// Stop if a max limit response is reached
 				if depGraph.GetDependenciesCount() == maxDependencyResponseSize {
 					return true
 				}
 			} else {
-				s.Errorf("failed to convert transitive dependency:%v, %v", td.PurlName, err)
+				s.Errorf("failed to convert transitive dependency:%v, %v", td.PurlName, tdErr)
 			}
 		}
 		return false

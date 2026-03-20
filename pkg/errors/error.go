@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// Package errors provides custom error types and handling for service operations.
 package errors
 
 import (
@@ -28,7 +29,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// ServiceError represents a service-level error with HTTP status mapping and additional context..
+// ServiceError represents a service-level error with HTTP status mapping and additional context.
 type ServiceError struct {
 	Message      string                 // Human-readable error message
 	HTTPCode     int                    // HTTP status code to return to client
@@ -53,7 +54,7 @@ func (e *ServiceError) GetHTTPCode() int {
 	return e.HTTPCode
 }
 
-// Use for: missing required fields, malformed input, invalid parameters.
+// NewBadRequestError Use for: missing required fields, malformed input, invalid parameters.
 func NewBadRequestError(message string, err error) *ServiceError {
 	return &ServiceError{
 		Message:      message,
@@ -63,7 +64,7 @@ func NewBadRequestError(message string, err error) *ServiceError {
 	}
 }
 
-// Use for: ecosystem not found, dependencies not found, resource missing.
+// NewNotFoundError Use for: ecosystem not found, dependencies not found, resource missing.
 func NewNotFoundError(resource string) *ServiceError {
 	return &ServiceError{
 		Message:      fmt.Sprintf("%s not found", resource),
@@ -73,7 +74,7 @@ func NewNotFoundError(resource string) *ServiceError {
 	}
 }
 
-// Use for: unexpected errors, programming errors, unhandled exceptions.
+// NewInternalError Use for: unexpected errors, programming errors, unhandled exceptions.
 func NewInternalError(message string, err error) *ServiceError {
 	return &ServiceError{
 		Message:      message,
@@ -83,7 +84,7 @@ func NewInternalError(message string, err error) *ServiceError {
 	}
 }
 
-// Use for: database down, external service timeout, rate limits exceeded.
+// NewServiceUnavailableError Use for: database down, external service timeout, rate limits exceeded.
 func NewServiceUnavailableError(message string, err error) *ServiceError {
 	return &ServiceError{
 		Message:      message,

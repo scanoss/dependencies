@@ -88,9 +88,10 @@ func convertDependencyOutput(output dtos.DependencyOutput) *pb.DependencyRespons
 				Requirement: dep.Requirement,
 			}
 			if dep.Status.StatusCode != domain.Success {
-				errorCode := domain.StatusCodeToErrorCode(dep.Status.StatusCode)
-				d.ErrorCode = errorCode
-				d.ErrorMessage = &dep.Status.Message
+				code := dep.Status.StatusCode.String()
+				msg := dep.Status.Message
+				d.InfoCode = &code
+				d.InfoMessage = &msg
 			}
 			licenses := make([]*pb.DependencyResponse_Licenses, 0, len(dep.Licenses))
 			for _, lic := range dep.Licenses {

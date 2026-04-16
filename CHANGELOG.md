@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-04-16
+### Changed
+- Replaced `error_code`/`error_message` with `info_code`/`info_message` in dependency response
+- Use `domain.StatusCode.String()` directly for component status codes (deprecated `StatusCodeToErrorCode` mapping)
+- Renamed status codes: `ComponentWithoutInfo` → `NoInfo`, `VersionNotFound` → `RequirementNotMet`
+- Updated dependencies to the latest versions
+
 ## [0.13.0] - 2026-03-23
 ### Added
 - Added per-component error status (`error_code`, `error_message`) to dependency response
@@ -138,3 +145,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.12.1]: https://github.com/scanoss/dependencies/compare/v0.12.0...v0.12.1
 [0.12.2]: https://github.com/scanoss/dependencies/compare/v0.12.1...v0.12.2
 [0.13.0]: https://github.com/scanoss/dependencies/compare/v0.12.2...v0.13.0
+[0.14.0]: https://github.com/scanoss/dependencies/compare/v0.13.0...v0.14.0

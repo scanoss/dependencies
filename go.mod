@@ -7,19 +7,19 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/guseggert/pkggodev-client v0.0.0-20240318140526-cdb0034504cf
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/lib/pq v1.12.0
+	github.com/lib/pq v1.12.3
 	github.com/package-url/packageurl-go v0.1.5
-	github.com/scanoss/go-component-helper v0.5.0
-	github.com/scanoss/go-grpc-helper v0.13.0
+	github.com/scanoss/go-component-helper v0.6.0
+	github.com/scanoss/go-grpc-helper v0.15.1
 	github.com/scanoss/go-purl-helper v0.3.0
-	github.com/scanoss/papi v0.32.1
+	github.com/scanoss/papi v0.39.0
 	github.com/scanoss/zap-logging-helper v0.4.0
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/metric v1.42.0
 	go.uber.org/zap v1.27.1
-	google.golang.org/grpc v1.79.3
+	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
-	modernc.org/sqlite v1.47.0
+	modernc.org/sqlite v1.48.2
 )
 
 //replace github.com/scanoss/papi => ../papi
@@ -54,7 +54,7 @@ require (
 	github.com/phuslu/iploc v1.0.20230201 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
-	github.com/scanoss/go-models v0.7.0 // indirect
+	github.com/scanoss/go-models v0.8.0 // indirect
 	github.com/scanoss/ipfilter/v2 v2.0.2 // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	github.com/tomasen/realip v0.0.0-20180522021738-f0c99a92ddce // indirect

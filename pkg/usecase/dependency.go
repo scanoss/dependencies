@@ -98,7 +98,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				d.s.Warnf("Problem encountered extracting URLs for: %v, %v - %v.", file.File, processedComponent.Purl, err)
 				depOutput.Status = domain.ComponentStatus{
 					Message:    "component not found",
-					StatusCode: domain.ComponentWithoutInfo,
+					StatusCode: domain.NoInfo,
 				}
 				depOutputs = append(depOutputs, depOutput)
 				continue
@@ -106,9 +106,14 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 
 			// Skip components with no license data available
 			if url.License == "" {
+				// Preserve the upstream status from go-component-helper
+				if processedComponent.Status.StatusCode != domain.Success {
+					depOutputs = append(depOutputs, depOutput)
+					continue
+				}
 				depOutput.Licenses = []dtos.DependencyLicense{}
 				depOutput.Status = domain.ComponentStatus{
-					StatusCode: domain.ComponentWithoutInfo,
+					StatusCode: domain.NoInfo,
 					Message:    "No license information found",
 				}
 				depOutputs = append(depOutputs, depOutput)
@@ -128,7 +133,7 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				// If the version does not satisfy the requirement, mark the status accordingly.
 				if strings.TrimPrefix(url.Version, "v") != strings.TrimPrefix(v, "v") {
 					depOutput.Status = domain.ComponentStatus{
-						StatusCode: domain.VersionNotFound,
+						StatusCode: domain.RequirementNotMet,
 						Message:    fmt.Sprintf("Requirement not met, showing information for version '%s'", url.Version),
 					}
 					depOutput.Version = v

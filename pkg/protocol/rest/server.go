@@ -38,6 +38,10 @@ func RunServer(config *myconfig.ServerConfig, ctx context.Context, grpcPort, htt
 	if err != nil {
 		return nil, err
 	}
+	// register the liveness /health endpoint on the gateway mux
+	if err = gw.RegisterHealthEndpoint(mux); err != nil {
+		return nil, err
+	}
 	// Open TCP port (in the background) and listen for requests
 	go func() {
 		ctx2, cancel := context.WithCancel(ctx)

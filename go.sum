@@ -658,8 +658,8 @@ github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca h1:NugYot0LIVPxT
 github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca/go.mod h1:uugorj2VCxiV1x+LzaIdVa9b4S4qGAcH6cbhh4qVxOU=
 github.com/scanoss/go-component-helper v0.6.0 h1:tizjG6Fue2mWZLFtnHP8I6OaPze03Im5AfqBcNfW4bo=
 github.com/scanoss/go-component-helper v0.6.0/go.mod h1:UwsyuM5uvCrGeBIkvewgMAKV92Sjjvo7zelq4c2m91Y=
-github.com/scanoss/go-grpc-helper v0.15.1 h1:tiI7JXVj2LYpktkYVqCcUd6XyMi6aVcAKRecNR5QGCA=
-github.com/scanoss/go-grpc-helper v0.15.1/go.mod h1:UjrF9hewgZxstUC3+F0PJnuOXH0bChmsbcJp7e7OsH4=
+github.com/scanoss/go-grpc-helper v0.16.0 h1:RwFY2iZQ9JQWR0kewBviF1MevfpCBdkijoh+KaYRuEI=
+github.com/scanoss/go-grpc-helper v0.16.0/go.mod h1:UjrF9hewgZxstUC3+F0PJnuOXH0bChmsbcJp7e7OsH4=
 github.com/scanoss/go-models v0.8.0 h1:ANprMXby+J9vxj205EfH7roVzAsUJdcTenytPea4N/k=
 github.com/scanoss/go-models v0.8.0/go.mod h1:gkXP2/3ZUn8IyH/z/528aTcWZ2mzlzsXiY4bzBbrM+o=
 github.com/scanoss/go-purl-helper v0.3.0 h1:zH5rcYbmYTvKms2oWrYV+8rWZ2ElLgDIOy2jZ9XhAg0=

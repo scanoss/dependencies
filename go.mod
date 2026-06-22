@@ -10,7 +10,7 @@ require (
 	github.com/lib/pq v1.12.3
 	github.com/package-url/packageurl-go v0.1.5
 	github.com/scanoss/go-component-helper v0.6.0
-	github.com/scanoss/go-grpc-helper v0.15.1
+	github.com/scanoss/go-grpc-helper v0.16.0
 	github.com/scanoss/go-purl-helper v0.3.0
 	github.com/scanoss/papi v0.39.0
 	github.com/scanoss/zap-logging-helper v0.4.0

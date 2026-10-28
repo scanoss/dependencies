@@ -37,6 +37,8 @@ func setupTestDependencyCollector(t *testing.T) (*DependencyCollector, *Dependen
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
+	// An in-memory SQLite database is per connection: a second one would be empty.
+	db.SetMaxOpenConns(1)
 	// Load test data
 	err = models.LoadTestSQLData(db, nil, nil)
 	if err != nil {
@@ -133,57 +135,24 @@ func TestDependencyCollector_GetTransitiveDependencies(t *testing.T) {
 			name: "Transitive dependencies depth 1",
 			jobs: []DependencyJob{
 				{
-					PurlName:  "scanoss",
-					Version:   "0.15.7",
+					PurlName:  "vue-phone",
+					Version:   "1.0.9",
 					Depth:     1,
 					Ecosystem: "npm",
 				},
 			},
+			// Every scope is followed (@types/node is a dev dependency), a requirement
+			// resolves to the first version it names, and a scoped name keeps its scope.
+			// isbinaryfile declares no requirement, so it cannot be followed.
 			expectedOutput: []Dependency{
-				{Purl: "pkg:npm/tar-stream", Version: "2.2.0"},
-				{Purl: "pkg:npm/form-data", Version: "4.0.0"},
-				{Purl: "pkg:npm/gunzip-maybe", Version: "1.4.2"},
-				{Purl: "pkg:npm/%2540ava%2Ftypescript", Version: "1.1.1"},
-				{Purl: "pkg:npm/%2540istanbuljs%2Fnyc-config-typescript", Version: "1.0.1"},
-				{Purl: "pkg:npm/%2540types%2Fmocha", Version: "9.1.1"},
-				{Purl: "pkg:npm/deep-equal-in-any-order", Version: "2.0.1"},
-				{Purl: "pkg:npm/nyc", Version: "15.1.0"},
-				{Purl: "pkg:npm/abort-controller", Version: "3.0.0"},
-				{Purl: "pkg:npm/%2540types%2Ftar", Version: "6.1.3"},
-				{Purl: "pkg:npm/prettier", Version: "2.8.8"},
-				{Purl: "pkg:npm/typescript", Version: "5.5.4"},
-				{Purl: "pkg:npm/%2540grpc%2Fgrpc-js", Version: "1.5.5"},
-				{Purl: "pkg:npm/adm-zip", Version: "0.5.9"},
-				{Purl: "pkg:npm/google-protobuf", Version: "3.19.4"},
-				{Purl: "pkg:npm/cli-progress", Version: "3.9.1"},
-				{Purl: "pkg:npm/p-queue", Version: "6.6.2"},
-				{Purl: "pkg:npm/mocha", Version: "10.2.0"},
-				{Purl: "pkg:npm/npm-run-all", Version: "4.1.5"},
-				{Purl: "pkg:npm/uuid", Version: "9.0.0"},
-				{Purl: "pkg:npm/scanoss", Version: "0.15.7"},
-				{Purl: "pkg:npm/%2540types%2Fnode-fetch", Version: "2.6.2"},
-				{Purl: "pkg:npm/commander", Version: "11.1.0"},
-				{Purl: "pkg:npm/packageurl-js", Version: "1.2.1"},
-				{Purl: "pkg:npm/proxy-agent", Version: "6.4.0"},
-				{Purl: "pkg:npm/xml-js", Version: "1.6.11"},
-				{Purl: "pkg:npm/chai", Version: "4.3.6"},
-				{Purl: "pkg:npm/%2540types%2Fnode-gzip", Version: "1.1.0"},
-				{Purl: "pkg:npm/sort-paths", Version: "1.1.1"},
-				{Purl: "pkg:npm/tar", Version: "6.1.11"},
-				{Purl: "pkg:npm/%2540types%2Fchai", Version: "4.3.1"},
-				{Purl: "pkg:npm/%2540types%2Fnode", Version: "17.0.2"},
-				{Purl: "pkg:npm/codecov", Version: "3.5.0"},
-				{Purl: "pkg:npm/ts-node", Version: "10.9.1"},
-				{Purl: "pkg:npm/isbinaryfile", Version: "4.0.8"},
-				{Purl: "pkg:npm/%2540types%2Fuuid", Version: "9.0.0"},
-				{Purl: "pkg:npm/eventemitter3", Version: "4.0.7"},
-				{Purl: "pkg:npm/node-fetch", Version: "2.6.1"},
-				{Purl: "pkg:npm/syswide-cas", Version: "5.3.0"},
+				{Purl: "pkg:npm/vue-phone", Version: "1.0.9"},
+				{Purl: "pkg:npm/lodash", Version: "4.17.0"},
+				{Purl: "pkg:npm/%40types%2Fnode", Version: "18.0.0"},
 			},
 			wantErr: false,
 		},
 		{
-			name: "Transitive dependencies depth 1",
+			name: "Unknown component",
 			jobs: []DependencyJob{
 				{
 					PurlName:  "kcodecdaajvcmsp",

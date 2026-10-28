@@ -21,14 +21,25 @@ APP_PORT=50051
 APP_MODE=dev
 APP_DEBUG=false
 
-DB_DRIVER=postgres
-DB_HOST=localhost
-DB_USER=scanoss
-DB_PASSWD=
-DB_SCHEMA=scanoss
-DB_SSL_MODE=disable
-DB_DSN=
+# The serving knowledge base. DuckDB is the production backend.
+DB_DRIVER=duckdb                    # duckdb, sqlite or postgres
+DB_PATH=/var/lib/scanoss/serving.duckdb   # required by duckdb and sqlite; opened read-only
+
+# To serve the same schema from a PostgreSQL instance instead:
+# DB_DRIVER=postgres
+# DB_DSN=postgres://user:pass@host/db?sslmode=disable
+# The DB_* values below are only used to build a DSN when DB_DSN is empty,
+# and only for the postgres driver.
+# DB_HOST=localhost
+# DB_USER=scanoss
+# DB_PASSWD=
+# DB_SCHEMA=scanoss
+# DB_SSL_MODE=disable
 ```
+
+The service reads the serving knowledge base and never writes to it.
+`COMP_COMMIT_MISSING`, which stored live pkg.go.dev lookups back into the mining
+database, is gone; the live lookup itself remains.
 
 
 ## Docker Environment

@@ -74,23 +74,23 @@ ghcr_all: ghcr_build ghcr_tag ghcr_push  ## Execute all GitHub Package container
 build_amd: version  ## Build an AMD 64 binary
 	@echo "Building AMD binary $(VERSION)..."
 	go generate ./pkg/cmd/server.go
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o ./target/scanoss-dependencies-api-linux-amd64 ./cmd/server
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -ldflags="-w -s" -o ./target/scanoss-dependencies-api-linux-amd64 ./cmd/server
 
 build_arm: version  ## Build an ARM 64 binary
 	@echo "Building ARM binary $(VERSION)..."
 	go generate ./pkg/cmd/server.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o ./target/scanoss-dependencies-api-linux-arm64 ./cmd/server
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=1 go build -ldflags="-w -s" -o ./target/scanoss-dependencies-api-linux-arm64 ./cmd/server
 
 package: package_amd  ## Build & Package an AMD 64 binary
 
 package_amd: version  ## Build & Package an AMD 64 binary
 	@echo "Building AMD binary $(VERSION) and placing into scripts..."
 	go generate ./pkg/cmd/server.go
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o ./scripts/scanoss-dependencies-api ./cmd/server
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -ldflags="-w -s" -o ./scripts/scanoss-dependencies-api ./cmd/server
 	bash ./package-scripts.sh linux-amd64 $(VERSION)
 
 package_arm: version  ## Build & Package an ARM 64 binary
 	@echo "Building ARM binary $(VERSION) and placing into scripts..."
 	go generate ./pkg/cmd/server.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-w -s" -o ./scripts/scanoss-dependencies-api ./cmd/server
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=1 go build -ldflags="-w -s" -o ./scripts/scanoss-dependencies-api ./cmd/server
 	bash ./package-scripts.sh linux-arm64 $(VERSION)

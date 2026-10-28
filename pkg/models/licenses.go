@@ -14,14 +14,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// Handle all interaction with the licenses table
+// Handle all interaction with the license catalogue
 
 package models
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -36,8 +34,9 @@ type LicenseModel struct {
 	db  *sqlx.DB
 }
 
+// License is one licence as the response reports it: its name, SPDX identifier
+// and whether that identifier is in the SPDX registry.
 type License struct {
-	ID          int32  `db:"id"`
 	LicenseName string `db:"license_name"`
 	LicenseID   string `db:"spdx_id"`
 	IsSpdx      bool   `db:"is_spdx"`
@@ -47,72 +46,46 @@ var bannedLicPrefixes = []string{"see ", "\"", "'", "-", "*", ".", "/", "?", "@"
 var bannedLicSuffixes = []string{".md", ".txt", ".html"}                                                    // unwanted license suffixes
 var whiteSpaceRegex = regexp.MustCompile(`\s+`)                                                             // generic whitespace regex
 
-// TODO add cache for licenses already searched for?
-
 // NewLicenseModel create a new instance of the License Model.
 func NewLicenseModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB) *LicenseModel {
 	return &LicenseModel{ctx: ctx, s: s, db: db}
 }
 
-// GetLicenseByID retrieves license data by the given row ID.
-func (m *LicenseModel) GetLicenseByID(id int32) (License, error) {
-	if id < 0 {
-		m.s.Error("Please specify a valid License ID to query")
-		return License{}, errors.New("please specify a valid License Name to query")
-	}
-	var license License
-	err := m.db.QueryRowxContext(m.ctx,
-		"SELECT id, license_name, spdx_id, is_spdx FROM licenses"+
-			" WHERE id = $1",
-		id).StructScan(&license)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		m.s.Errorf("Error: Failed to query license table for %v: %#v", id, err)
-		return License{}, fmt.Errorf("failed to query the license table: %v", err)
-	}
-	return license, nil
-}
+// licenseByNameQuery reads a licence from the serving catalogue by its name.
+//
+// Mining's `licenses` table carried license_name, spdx_id and an is_spdx flag;
+// serving's `license` carries the name as long_name and the identifier as SPDX,
+// and whether it is SPDX is membership of the identifier in "SPDX_license_data".
+// Names are not unique in the catalogue, so the lowest id wins, for a stable answer.
+const licenseByNameQuery = `SELECT l.long_name AS license_name,
+	COALESCE(l."SPDX", '') AS spdx_id,
+	CASE WHEN sld."SPDX_id" IS NOT NULL THEN 1 ELSE 0 END AS is_spdx
+FROM license l
+LEFT JOIN "SPDX_license_data" sld ON sld."SPDX_id" = l."SPDX"
+WHERE l.long_name = ?
+ORDER BY l.id
+LIMIT 1`
 
-// GetLicenseByName retrieves the license details for the given license name.
-func (m *LicenseModel) GetLicenseByName(name string, create bool) (License, error) {
+// GetLicenseByName retrieves the license details for the given license name. An
+// unknown name is not an error: it returns an empty License.
+//
+// The mining version could also insert a missing name (COMP_COMMIT_MISSING). The
+// serving knowledge base is read-only, so it only ever reads.
+func (m *LicenseModel) GetLicenseByName(name string) (License, error) {
 	if len(name) == 0 {
 		m.s.Warn("No License Name specified to query")
 		return License{}, nil
 	}
-	var license License
-	err := m.db.QueryRowxContext(m.ctx,
-		"SELECT id, license_name, spdx_id, is_spdx FROM licenses"+
-			" WHERE license_name = $1",
-		name,
-	).StructScan(&license)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	var licenses []License
+	err := m.db.SelectContext(m.ctx, &licenses, m.db.Rebind(licenseByNameQuery), name)
+	if err != nil {
 		m.s.Errorf("Failed to query license table for %v: %v", name, err)
 		return License{}, fmt.Errorf("failed to query the license table: %v", err)
 	}
-	if create && len(license.LicenseName) == 0 { // No license found and requested to create an entry
-		return m.saveLicense(name)
+	if len(licenses) == 0 {
+		return License{}, nil
 	}
-	return license, nil
-}
-
-// saveLicense writes the given license name to the licenses table.
-func (m *LicenseModel) saveLicense(name string) (License, error) {
-	if len(name) == 0 {
-		m.s.Error("Please specify a valid License Name to save")
-		return License{}, errors.New("please specify a valid License Name to save")
-	}
-	m.s.Debugf("Attempting to save '%v' to the licenses table...", name)
-	// TODO should we populate the spdx_id before inserting the license?
-	var license License
-	err := m.db.QueryRowxContext(m.ctx,
-		"INSERT INTO licenses (license_name, spdx_id, is_spdx, is_sanitized) VALUES($1, $2, $3, $4)"+
-			" RETURNING id, license_name, spdx_id, is_spdx",
-		name, "", false, false,
-	).StructScan(&license)
-	if err != nil {
-		m.s.Warnf("Failed to insert new license name into licenses table for %v: %v", name, err)
-		return m.GetLicenseByName(name, false) // Search one more time for it, just in case someone else added it
-	}
-	return license, nil
+	return licenses[0], nil
 }
 
 // CleanseLicenseName cleans up a license name to make it searchable in the licenses table.

@@ -56,8 +56,9 @@ func ExtractPackageIdentifierFromPurl(purl string) (string, error) {
 		return "", fmt.Errorf("failed to parse package URL: %w", err)
 	}
 
-	// For Maven packages, combine namespace (groupId) and name (artifactId)
-	if p.Type == "maven" && p.Namespace != "" {
+	// Keep the namespace (maven groupId, npm scope, composer vendor): without it a
+	// scoped npm or a composer package is looked up by its bare name and not found.
+	if p.Namespace != "" {
 		return fmt.Sprintf("%s/%s", p.Namespace, p.Name), nil
 	}
 

@@ -9,22 +9,35 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # The DuckDB driver is a cgo binding, so the binaries link against glibc. Build on
+    # the runtime image's Debian release: an ubuntu-latest build needs glibc 2.38, bookworm has 2.36.
+    container: golang:1.25-bookworm
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Get tags to allow build script to get build version
+          ref: ${{ github.ref }}  # Checkout the specified tag
+          fetch-depth: 0  # Get tags to allow a build script to get a build version
+
+      - name: Trust the checkout
+        # The job runs as root in the container over a checkout the runner owns, and git
+        # refuses such a repository - which breaks the version lookup the build runs.
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
+      - name: Install the arm64 cgo toolchain
+        # The DuckDB driver is a cgo binding, so the arm64 build cross-compiles C and C++.
+        run: apt-get update && apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
       - name: Build
         run: |
           make build_amd
-          make build_arm
+          CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ make build_arm
 
       - name: Unit Test
         run: make unit_test
@@ -32,7 +45,7 @@ jobs:
       - name: Package
         run: |
           make package_amd
-          make package_arm
+          CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ make package_arm
 
       - name: Release
         uses: softprops/action-gh-release@v1

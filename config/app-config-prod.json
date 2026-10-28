@@ -2,13 +2,13 @@
   "App": {
     "Name": "Dependency Service",
     "Debug": false,
-    "Mode":  "prod",
+    "Mode": "prod",
     "GRPCPort": "50051",
     "RESTPort": "40051"
   },
   "Database": {
-    "Driver": "sqlite",
-    "Dsn": "/var/lib/scanoss/db/sqlite/dependencies/db.sqlite?cache=shared&mode=memory",
+    "Driver": "duckdb",
+    "Path": "/var/lib/scanoss/serving.duckdb",
     "Trace": false
   },
   "TLS": {

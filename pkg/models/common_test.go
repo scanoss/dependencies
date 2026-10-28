@@ -17,29 +17,31 @@
 package models
 
 import (
-	"context"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
+	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 	_ "modernc.org/sqlite"
 )
 
-// sqliteSetup sets up an in-memory SQL Lite DB for testing.
+// sqliteSetup opens an in-memory SQLite database with the serving schema and the
+// test fixtures loaded. An in-memory database is per connection, so the pool is
+// capped at one and the fixtures go through the pool rather than a held connection.
 func sqliteSetup(t *testing.T) *sqlx.DB {
-	db, err := sqlx.Connect("sqlite", "file::memory:?cache=shared")
+	t.Helper()
+	if err := zlog.NewSugaredDevLogger(); err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
+	}
+	db, err := sqlx.Connect("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
+	db.SetMaxOpenConns(1)
+	if err = LoadTestSQLData(db, nil, nil); err != nil {
+		t.Fatalf("failed to load SQL test data: %v", err)
+	}
+	t.Cleanup(func() { CloseDB(db) })
 	return db
-}
-
-// sqliteConn sets up a connection to a test DB.
-func sqliteConn(t *testing.T, ctx context.Context, db *sqlx.DB) *sqlx.Conn {
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	return conn
 }
 
 func TestDbLoad(t *testing.T) {
@@ -47,25 +49,26 @@ func TestDbLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
+	db.SetMaxOpenConns(1)
 	defer CloseDB(db)
-	err = loadSQLData(db, nil, nil, "./tests/mines.sql")
-	if err != nil {
+	// The fixtures carry data only, so loading one before the schema fails.
+	if err = loadSQLData(db, nil, nil, "./tests/component.sql"); err == nil {
+		t.Errorf("loading a fixture before the schema did not fail")
+	}
+	if err = LoadTestSQLData(db, nil, nil); err != nil {
 		t.Errorf("failed to load SQL test data: %v", err)
 	}
-	err = LoadTestSQLData(db, nil, nil)
-	if err != nil {
-		t.Errorf("failed to load SQL test data: %v", err)
+	// The schema is idempotent, so a second load of it is fine.
+	if err = LoadTestSchema(db, nil, nil); err != nil {
+		t.Errorf("failed to reload the test schema: %v", err)
 	}
-	err = loadSQLData(db, nil, nil, "./tests/does-not-exist.sql")
-	if err == nil {
+	if err = loadSQLData(db, nil, nil, "./tests/does-not-exist.sql"); err == nil {
 		t.Errorf("did not fail to load SQL test data")
 	}
-	err = loadTestSQLDataFiles(db, nil, nil, []string{"./tests/does-not-exist.sql"})
-	if err == nil {
+	if err = loadTestSQLDataFiles(db, nil, nil, []string{"./tests/does-not-exist.sql"}); err == nil {
 		t.Errorf("did not fail to load SQL test data")
 	}
-	err = loadSQLData(db, nil, nil, "./tests/bad_sql.sql")
-	if err == nil {
+	if err = loadSQLData(db, nil, nil, "./tests/bad_sql.sql"); err == nil {
 		t.Errorf("did not fail to load SQL test data")
 	}
 }

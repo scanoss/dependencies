@@ -2,6 +2,8 @@
 Description=SCANOSS Dependencies API Service
 After=network.target
 StartLimitIntervalSec=0
+# The daily serving rotation reloads scanoss-services-api; reload with it.
+ReloadPropagatedFrom=scanoss-services-api.service
 
 [Service]
 Type=simple
@@ -9,6 +11,8 @@ Restart=always
 RestartSec=5
 User=scanoss
 ExecStart=/usr/local/bin/scanoss-dependencies-api.sh
+# SIGHUP reopens the serving database the configured path points at now.
+ExecReload=/bin/kill -HUP $MAINPID
 
 [Install]
 WantedBy=multi-user.target

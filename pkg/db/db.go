@@ -65,40 +65,52 @@ type Config struct {
 // read-only handle lets several in-process readers share it without WAL or temp
 // writes.
 func Open(cfg Config) (*sqlx.DB, error) {
+	database, _, err := OpenReloadable(cfg)
+	return database, err
+}
+
+// OpenReloadable is Open, also returning what reloads the handle when the
+// configured path is repointed at another file. Only duckdb reloads; the other
+// drivers get a Reloader that does nothing.
+func OpenReloadable(cfg Config) (*sqlx.DB, Reloader, error) {
 	var (
 		database *sqlx.DB
+		reloader Reloader = noReload{}
 		err      error
 	)
 	switch cfg.Driver {
 	case DriverDuckDB:
 		if len(cfg.Path) == 0 {
-			return nil, fmt.Errorf("the %s driver requires a database path", DriverDuckDB)
+			return nil, nil, fmt.Errorf("the %s driver requires a database path", DriverDuckDB)
 		}
-		database, err = sqlx.Open(DriverDuckDB, cfg.Path+"?access_mode=read_only")
+		database, reloader, err = openDuckDB(cfg.Path)
 	case DriverSQLite:
 		if len(cfg.Path) == 0 {
-			return nil, fmt.Errorf("the %s driver requires a database path", DriverSQLite)
+			return nil, nil, fmt.Errorf("the %s driver requires a database path", DriverSQLite)
 		}
 		database, err = sqlx.Open(DriverSQLite, cfg.Path)
 	case DriverPostgres:
 		if len(cfg.DSN) == 0 {
-			return nil, fmt.Errorf("the %s driver requires a dsn", DriverPostgres)
+			return nil, nil, fmt.Errorf("the %s driver requires a dsn", DriverPostgres)
 		}
 		database, err = sqlx.Open(DriverPostgres, cfg.DSN)
 	default:
-		return nil, fmt.Errorf("unsupported database driver %q (expected one of: %s, %s, %s)",
+		return nil, nil, fmt.Errorf("unsupported database driver %q (expected one of: %s, %s, %s)",
 			cfg.Driver, DriverDuckDB, DriverSQLite, DriverPostgres)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to open the %s database: %w", cfg.Driver, err)
+		return nil, nil, fmt.Errorf("failed to open the %s database: %w", cfg.Driver, err)
 	}
 	setPoolOptions(database, cfg.Driver)
 	if err = database.Ping(); err != nil {
 		_ = database.Close()
-		return nil, fmt.Errorf("failed to ping the %s database: %w", cfg.Driver, err)
+		return nil, nil, fmt.Errorf("failed to ping the %s database: %w", cfg.Driver, err)
 	}
-	return database, nil
+	return database, reloader, nil
 }
+
+// embeddedMaxIdleConns is the idle pool of the embedded engines.
+const embeddedMaxIdleConns = 4
 
 // setPoolOptions bounds the handle. The embedded engines run in this process, so
 // a connection is a cursor over one open file rather than a socket to a server:
@@ -109,7 +121,7 @@ func setPoolOptions(database *sqlx.DB, driver string) {
 	database.SetConnMaxLifetime(time.Hour)
 	switch driver {
 	case DriverDuckDB, DriverSQLite:
-		database.SetMaxIdleConns(4)
+		database.SetMaxIdleConns(embeddedMaxIdleConns)
 		database.SetMaxOpenConns(16)
 	default:
 		database.SetMaxIdleConns(20)

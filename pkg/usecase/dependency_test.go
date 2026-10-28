@@ -288,3 +288,30 @@ func TestDependencyUseCaseServing(t *testing.T) {
 		})
 	}
 }
+
+// A borrowed licence turns a success into a WARNING naming its origin; a status
+// that already reports a problem keeps its code and gains the origin.
+func TestWithFallback(t *testing.T) {
+	const msg = "Showing results from version 2.1.0"
+	tests := []struct {
+		name string
+		in   domain.ComponentStatus
+		want domain.ComponentStatus
+	}{
+		{name: "success", in: domain.ComponentStatus{StatusCode: domain.Success},
+			want: domain.ComponentStatus{StatusCode: "WARNING", Message: msg}},
+		{name: "unset", in: domain.ComponentStatus{},
+			want: domain.ComponentStatus{StatusCode: "WARNING", Message: msg}},
+		{name: "requirement not met",
+			in: domain.ComponentStatus{StatusCode: domain.RequirementNotMet, Message: "Requirement not met, showing information for version '4.0.0'"},
+			want: domain.ComponentStatus{StatusCode: domain.RequirementNotMet,
+				Message: "Requirement not met, showing information for version '4.0.0'; showing results from version 2.1.0"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := withFallback(tt.in, msg); got != tt.want {
+				t.Errorf("withFallback() = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}

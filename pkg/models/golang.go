@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
 
 	pkggodevclient "github.com/guseggert/pkggodev-client"
 	purlutils "github.com/scanoss/go-purl-helper/pkg"
@@ -38,13 +40,54 @@ type GolangModel struct {
 	s        *zap.SugaredLogger
 	lic      *LicenseModel
 	describe func(pkggodevclient.DescribePackageRequest) (*pkggodevclient.Package, error)
+	timeout  time.Duration // zero means pkgGoDevTimeout
 }
+
+// pkgGoDevTimeout bounds the live lookup of one module, both of its attempts
+// (with the version, then without) together. The export has golang modules at
+// pseudo-versions only, so every tagged golang dependency goes live, and a slow
+// pkg.go.dev - one call was seen taking 19 s - would otherwise hold the whole
+// request. Past it, the lookup gives up and the GitHub repository and the
+// knowledge base answer instead.
+const pkgGoDevTimeout = 5 * time.Second
+
+// errPkgGoDevTimeout is the live lookup running out of pkgGoDevTimeout.
+var errPkgGoDevTimeout = errors.New("pkg.go.dev did not answer in time")
 
 // NewGolangModel creates the live golang lookup. lic resolves the licence name
 // pkg.go.dev reports against the serving licence catalogue.
 func NewGolangModel(ctx context.Context, s *zap.SugaredLogger, lic *LicenseModel) *GolangModel {
-	client := pkggodevclient.New()
-	return &GolangModel{ctx: ctx, s: s, lic: lic, describe: client.DescribePackage}
+	// The HTTP timeout ends a call the lookup has stopped waiting for, so an
+	// abandoned one does not linger.
+	client := pkggodevclient.New(pkggodevclient.WithHTTPClient(&http.Client{Timeout: pkgGoDevTimeout}))
+	return &GolangModel{ctx: ctx, s: s, lic: lic, describe: client.DescribePackage, timeout: pkgGoDevTimeout}
+}
+
+// describeBy asks pkg.go.dev about a package, giving up at deadline. The client
+// takes no context, so the call runs on its own and is abandoned past the
+// deadline; the HTTP client's timeout then ends it.
+func (m *GolangModel) describeBy(deadline time.Time, req pkggodevclient.DescribePackageRequest) (*pkggodevclient.Package, error) {
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		return nil, errPkgGoDevTimeout
+	}
+	type answer struct {
+		pkg *pkggodevclient.Package
+		err error
+	}
+	answered := make(chan answer, 1)
+	go func() {
+		pkg, err := m.describe(req)
+		answered <- answer{pkg, err}
+	}()
+	timer := time.NewTimer(remaining)
+	defer timer.Stop()
+	select {
+	case a := <-answered:
+		return a.pkg, a.err
+	case <-timer.C:
+		return nil, errPkgGoDevTimeout
+	}
 }
 
 // GetGoLangURLByPurlString looks the module of a golang purl up on pkg.go.dev, at
@@ -109,11 +152,17 @@ func (m *GolangModel) queryPkgGoDev(purlName, purlVersion string) (AllURL, strin
 		pkg = fmt.Sprintf("%s@%s", purlName, purlVersion)
 	}
 	m.s.Debugf("Checking pkg.go.dev for the latest info: %v", pkg)
-	comp, err := m.describe(pkggodevclient.DescribePackageRequest{Package: pkg})
-	if err != nil && len(purlVersion) > 0 {
-		// We have a version zero search, so look for the latest one
+	timeout := m.timeout
+	if timeout <= 0 {
+		timeout = pkgGoDevTimeout
+	}
+	deadline := time.Now().Add(timeout)
+	comp, err := m.describeBy(deadline, pkggodevclient.DescribePackageRequest{Package: pkg})
+	// We have a version zero search, so look for the latest one - unless pkg.go.dev
+	// has already used up the time: then the fallbacks answer.
+	if err != nil && len(purlVersion) > 0 && !errors.Is(err, errPkgGoDevTimeout) {
 		m.s.Debugf("Failed to query pkg.go.dev for %v: %v. Trying without version...", pkg, err)
-		comp, err = m.describe(pkggodevclient.DescribePackageRequest{Package: purlName})
+		comp, err = m.describeBy(deadline, pkggodevclient.DescribePackageRequest{Package: purlName})
 	}
 	if err != nil {
 		m.s.Warnf("Failed to query pkg.go.dev for %v: %v", pkg, err)

@@ -44,18 +44,25 @@ func ResolveComponents(ctx context.Context, s *zap.SugaredLogger, r *Resolver,
 	return components
 }
 
+// ComponentKey is what the resolution found out about a component beyond the
+// compHelper.Component fields: its purl_id, and the source component it links to.
+type ComponentKey struct {
+	PurlID     string      // empty when the component did not resolve
+	SourcePurl *SourcePurl // nil when it links to no other component
+}
+
 // ResolveComponentsWithIDs is ResolveComponents that also returns each
-// component's purl_id, index for index, so a caller reading per-release tables
-// does not resolve the purl a second time. The id is empty for a component that
-// did not resolve.
+// component's key, index for index, so a caller reading per-release tables or
+// following the source link does not resolve the purl a second time - the source
+// link in particular costs a read of `component` by purl_id.
 func ResolveComponentsWithIDs(ctx context.Context, s *zap.SugaredLogger, r *Resolver,
 	componentDTOs []compHelper.ComponentDTO, maxWorkers int,
-) ([]compHelper.Component, []string) {
+) ([]compHelper.Component, []ComponentKey) {
 	components := SanitiseComponents(s, componentDTOs)
 	if len(components) == 0 {
 		return nil, nil
 	}
-	purlIDs := make([]string, len(components))
+	keys := make([]ComponentKey, len(components))
 	if maxWorkers <= 0 {
 		maxWorkers = defaultMaxWorkers
 	}
@@ -67,7 +74,7 @@ func ResolveComponentsWithIDs(ctx context.Context, s *zap.SugaredLogger, r *Reso
 		go func() {
 			defer wg.Done()
 			for idx := range jobs {
-				purlIDs[idx] = resolveOne(ctx, s, r, &components[idx])
+				keys[idx] = resolveOne(ctx, s, r, &components[idx])
 			}
 		}()
 	}
@@ -76,15 +83,15 @@ func ResolveComponentsWithIDs(ctx context.Context, s *zap.SugaredLogger, r *Reso
 	}
 	close(jobs)
 	wg.Wait()
-	return components, purlIDs
+	return components, keys
 }
 
 // resolveOne fills in the version, the version set and the resolution status for
-// one already-sanitised component, and returns its purl_id (empty when it did not
+// one already-sanitised component, and returns its key (empty when it did not
 // resolve). Components that failed sanitisation keep the status they were given.
-func resolveOne(ctx context.Context, s *zap.SugaredLogger, r *Resolver, component *compHelper.Component) string {
+func resolveOne(ctx context.Context, s *zap.SugaredLogger, r *Resolver, component *compHelper.Component) ComponentKey {
 	if component.Status.StatusCode != domain.Success {
-		return ""
+		return ComponentKey{}
 	}
 	component.Versions = []string{}
 
@@ -93,11 +100,11 @@ func resolveOne(ctx context.Context, s *zap.SugaredLogger, r *Resolver, componen
 	case errors.Is(err, ErrComponentNotFound), errors.Is(err, ErrInvalidPurl), errors.Is(err, ErrEmptyPurl):
 		s.Warnf("Purl doesn't exist: %s, %v", component.Purl, err)
 		component.Status = domain.ComponentStatus{Message: "Component not found", StatusCode: domain.ComponentNotFound}
-		return ""
+		return ComponentKey{}
 	case err != nil:
 		s.Errorf("Failed to resolve component %s (%s): %v", component.Purl, component.Requirement, err)
 		component.Status = domain.ComponentStatus{Message: "Component not found", StatusCode: domain.ComponentNotFound}
-		return ""
+		return ComponentKey{}
 	}
 
 	// The component exists, so its version list is reported either way; only the
@@ -106,12 +113,12 @@ func resolveOne(ctx context.Context, s *zap.SugaredLogger, r *Resolver, componen
 	if resolved.StatusCode == StatusVersionNotFound {
 		s.Warnf("Failed to get component version: %s, %s", component.Purl, component.Requirement)
 		component.Status = domain.ComponentStatus{Message: "Component version not found", StatusCode: domain.VersionNotFound}
-		return resolved.PurlID
+		return ComponentKey{PurlID: resolved.PurlID, SourcePurl: resolved.SourcePurl}
 	}
 	if len(resolved.Version) > 0 {
 		component.Version = resolved.Version
 	}
-	return resolved.PurlID
+	return ComponentKey{PurlID: resolved.PurlID, SourcePurl: resolved.SourcePurl}
 }
 
 // SanitiseComponents validates and normalises the request DTOs.

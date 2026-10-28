@@ -20,7 +20,9 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	pkggodevclient "github.com/guseggert/pkggodev-client"
 	"github.com/jmoiron/sqlx"
@@ -46,7 +48,7 @@ func newLicensesModel(t *testing.T, db *sqlx.DB,
 }
 
 // resolve runs a purl through the resolver, as the use case does before the lookup.
-func resolve(t *testing.T, db *sqlx.DB, purl, requirement string) (componentHelper.Component, string) {
+func resolve(t *testing.T, db *sqlx.DB, purl, requirement string) (componentHelper.Component, resolver.ComponentKey) {
 	t.Helper()
 	components, ids := resolver.ResolveComponentsWithIDs(context.Background(), zlog.S, resolver.New(zlog.S, db),
 		[]componentHelper.ComponentDTO{{Purl: purl, Requirement: requirement}}, 1)
@@ -192,4 +194,43 @@ func TestGetURLsByComponentGolang(t *testing.T) {
 			t.Errorf("got %#v", got)
 		}
 	})
+}
+
+// A pkg.go.dev that does not answer in time is given up on - both attempts share
+// the one deadline, so the versionless retry is not made - and the lookup carries
+// on to the knowledge base instead of holding the request.
+func TestGetURLsByComponentGolangTimeout(t *testing.T) {
+	db := sqliteSetup(t)
+	defer zlog.SyncZap()
+	var mu sync.Mutex
+	var asked []string
+	release := make(chan struct{})
+	defer close(release)
+	slow := func(req pkggodevclient.DescribePackageRequest) (*pkggodevclient.Package, error) {
+		mu.Lock()
+		asked = append(asked, req.Package)
+		mu.Unlock()
+		<-release
+		return nil, errors.New("too late")
+	}
+	model := newLicensesModel(t, db, slow)
+	model.golang.timeout = 50 * time.Millisecond
+
+	component, key := resolve(t, db, "pkg:golang/golang.org/x/net", "v0.17.0")
+	start := time.Now()
+	got, err := model.GetURLsByComponent(component, key)
+	if err != nil {
+		t.Fatalf("GetURLsByComponent() error = %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("the lookup took %v; it should give up after 50ms", elapsed)
+	}
+	if len(got.Licenses) > 0 {
+		t.Errorf("licenses = %#v, want none: nothing else knows this module", got.Licenses)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(asked) != 1 {
+		t.Errorf("asked pkg.go.dev %v; after a timeout the versionless retry must not run", asked)
+	}
 }

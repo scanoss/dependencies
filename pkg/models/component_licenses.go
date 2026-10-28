@@ -55,6 +55,10 @@ type AllURL struct {
 	PurlName  string
 	URL       string
 	Licenses  []License
+	// FallbackMessage is set when the licences are not the release's own but were
+	// borrowed from its source component or from another version (see
+	// licenseFallback). The caller reports it with a WARNING info code.
+	FallbackMessage string
 }
 
 // releaseLicensesQuery reads a release's declared licences.
@@ -72,6 +76,62 @@ LEFT JOIN "SPDX_license_data" sld ON sld."SPDX_id" = l."SPDX"
 WHERE cvl.purl_id = ? AND cvl.version = ?
 ORDER BY l.id`
 
+// placeholderLicenseNames are the licence names that record the absence of a
+// licence rather than a licence, when they carry no SPDX identifier. They are the
+// four such rows of the serving `license` table: 523 (empty, which 43% of
+// component_version_license points at - mining's "no licence" row), "None
+// detected", "UNKNOWN" and "unknown". Keep this in step with componentLicensesQuery.
+var placeholderLicenseNames = map[string]bool{"": true, "none detected": true, "unknown": true}
+
+// isPlaceholder reports whether a licence row says only that there is no licence.
+func isPlaceholder(l License) bool {
+	return len(l.LicenseID) == 0 && placeholderLicenseNames[strings.ToLower(strings.TrimSpace(l.LicenseName))]
+}
+
+// hasLicence reports whether any of a release's licence rows is an actual licence.
+func hasLicence(licenses []License) bool {
+	for _, l := range licenses {
+		if !isPlaceholder(l) {
+			return true
+		}
+	}
+	return false
+}
+
+// componentLicensesQuery reads every licensed release of a component, for the
+// nearest-version fallback. It reads by purl_id, which the per-release table
+// prunes well (10-40 ms), and drops the placeholder rows (see isPlaceholder): a
+// borrowed "None detected" would say nothing the release did not.
+const componentLicensesQuery = `SELECT cvl.version AS version,
+	COALESCE(l.long_name, '') AS license_name,
+	COALESCE(l."SPDX", '') AS spdx_id,
+	CASE WHEN sld."SPDX_id" IS NOT NULL THEN 1 ELSE 0 END AS is_spdx
+FROM component_version_license cvl
+JOIN license l ON l.id = cvl.license_id
+LEFT JOIN "SPDX_license_data" sld ON sld."SPDX_id" = l."SPDX"
+WHERE cvl.purl_id = ? AND cvl.version <> ''
+	AND NOT (COALESCE(l."SPDX", '') = '' AND lower(trim(COALESCE(l.long_name, ''))) IN ('', 'none detected', 'unknown'))
+ORDER BY cvl.version, l.id`
+
+// versionLicense is one licence row of componentLicensesQuery.
+type versionLicense struct {
+	Version string `db:"version"`
+	License
+}
+
+// The info messages of the licence fallbacks, worded as scanoss.api words them.
+func sourceFallbackMessage(sourcePurl string) string {
+	return fmt.Sprintf("Showing results from the source code purl (%s)", sourcePurl)
+}
+
+func versionFallbackMessage(version string) string {
+	return fmt.Sprintf("Showing results from version %s", version)
+}
+
+func sourceVersionFallbackMessage(sourcePurl, version string) string {
+	return fmt.Sprintf("Showing results from the source code purl (%s) version %s", sourcePurl, version)
+}
+
 // NewComponentLicensesModel creates the licence lookup over the serving database.
 // golang may be nil, which disables the live pkg.go.dev lookup.
 func NewComponentLicensesModel(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB,
@@ -80,16 +140,19 @@ func NewComponentLicensesModel(ctx context.Context, s *zap.SugaredLogger, db *sq
 	return &ComponentLicensesModel{ctx: ctx, s: s, db: db, q: q, res: res, golang: golang}
 }
 
-// GetURLsByComponent returns the licences of a resolved component. purlID is the
-// component's purl_id as the resolver found it, empty when it did not resolve.
+// GetURLsByComponent returns the licences of a resolved component. key is what
+// the resolver found for it: its purl_id (empty when it did not resolve) and its
+// source component.
 //
 // The version is the one the resolver pinned. When it pinned none - the requested
 // version is not published - the highest published version answers instead, as
 // mining's "latest URL by date" did; the caller reports that as REQUIREMENT_NOT_MET.
 //
 // A golang module the knowledge base cannot answer for is looked up live on
-// pkg.go.dev, then as the GitHub repository its path names, as mining did.
-func (m *ComponentLicensesModel) GetURLsByComponent(component componentHelper.Component, purlID string) (AllURL, error) {
+// pkg.go.dev, then as the GitHub repository its path names, as mining did. A
+// release that still has no licence borrows one (see licenseFallback).
+func (m *ComponentLicensesModel) GetURLsByComponent(component componentHelper.Component, key resolver.ComponentKey) (AllURL, error) {
+	purlID := key.PurlID
 	purlName := component.Name
 	url := AllURL{Component: component.Name, PurlName: purlName}
 	url.URL, _ = purlutils.ProjectUrl(purlName, component.PurlType)
@@ -121,7 +184,97 @@ func (m *ComponentLicensesModel) GetURLsByComponent(component componentHelper.Co
 			return found, err
 		}
 	}
+	// A release whose only rows are placeholders ("None detected") also borrows; if
+	// nothing can be borrowed it keeps them, as mining reported them.
+	if !hasLicence(url.Licenses) && len(purlID) > 0 {
+		target := url.Version
+		if len(target) == 0 {
+			target = purlutils.GetVersionFromReq(component.Requirement)
+		}
+		licenses, message, err := m.licenseFallback(purlID, key.SourcePurl, target)
+		if err != nil {
+			return AllURL{}, err
+		}
+		if len(licenses) > 0 {
+			url.Licenses, url.FallbackMessage = licenses, message
+		}
+	}
 	return url, nil
+}
+
+// licenseFallback finds a licence for a release that has none of its own, in the
+// order scanoss.api's licence lookup uses:
+//
+//  1. the source component (component.source_purl_id) at the same version;
+//  2. the nearest version of the component itself that has a licence;
+//  3. the nearest version of the source component that has a licence.
+//
+// The licence is reported against the requested release, so the message names
+// where it came from. A licence can change between versions: that is why the
+// borrowed one is flagged rather than passed off as the release's own. Returns no
+// licences, and no message, when none of the three has one.
+func (m *ComponentLicensesModel) licenseFallback(purlID string, source *resolver.SourcePurl, version string) ([]License, string, error) {
+	if source != nil && len(version) > 0 && m.res != nil {
+		resolved, err := m.res.Resolve(m.ctx, source.Purl, version)
+		if err != nil && !errors.Is(err, resolver.ErrComponentNotFound) && !errors.Is(err, resolver.ErrInvalidPurl) {
+			return nil, "", err
+		}
+		if err == nil && resolved.StatusCode == resolver.StatusSuccess && len(resolved.Version) > 0 {
+			licenses, lerr := m.releaseLicenses(resolved.PurlID, resolved.Version)
+			if lerr != nil {
+				return nil, "", lerr
+			}
+			if hasLicence(licenses) {
+				return licenses, sourceFallbackMessage(source.Purl), nil
+			}
+		}
+	}
+	nearest, licenses, err := m.nearestLicensedVersion(purlID, version)
+	if err != nil || len(licenses) > 0 {
+		return licenses, versionFallbackMessage(nearest), err
+	}
+	if source != nil && len(source.PurlID) > 0 {
+		nearest, licenses, err = m.nearestLicensedVersion(source.PurlID, version)
+		if err != nil || len(licenses) > 0 {
+			return licenses, sourceVersionFallbackMessage(source.Purl, nearest), err
+		}
+	}
+	return nil, "", nil
+}
+
+// nearestLicensedVersion returns the licensed release of a component nearest to
+// version (resolver.NearestVersions' order: by semver distance, the higher side on
+// ties, unparseable versions last) and its licences. One query reads every
+// licensed release, rather than one per candidate version.
+func (m *ComponentLicensesModel) nearestLicensedVersion(purlID, version string) (string, []License, error) {
+	var rows []versionLicense
+	err := m.q.SelectContext(m.ctx, &rows, m.db.Rebind(componentLicensesQuery), purlID)
+	if err != nil {
+		m.s.Errorf("Failed to query the licensed versions of %v: %v", purlID, err)
+		return "", nil, fmt.Errorf("failed to query the component licences: %v", err)
+	}
+	byVersion := map[string][]License{}
+	versions := make([]string, 0, len(rows))
+	for _, r := range rows {
+		if _, seen := byVersion[r.Version]; !seen {
+			versions = append(versions, r.Version)
+		}
+		byVersion[r.Version] = append(byVersion[r.Version], r.License)
+	}
+	if len(versions) == 0 {
+		return "", nil, nil
+	}
+	// With no version to be near to, the latest licensed release answers, as a
+	// bare purl resolves to the latest release.
+	if len(version) == 0 {
+		latest, _ := resolver.SelectVersion(versions, "")
+		return latest, byVersion[latest], nil
+	}
+	candidates := resolver.NearestVersions(version, versions)
+	if len(candidates) == 0 {
+		return "", nil, nil
+	}
+	return candidates[0], byVersion[candidates[0]], nil
 }
 
 // releaseLicenses reads the declared licences of one release.

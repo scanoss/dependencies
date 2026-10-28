@@ -429,6 +429,19 @@ func TestExtractPackageIdentifierFromPurl(t *testing.T) {
 			input:    "pkg:maven/ai.databand%2Fdbnd-api-deequ",
 			expected: "ai.databand/dbnd-api-deequ",
 			wantErr:  false,
+		}, // The namespace is kept for every ecosystem, not only maven: without it the
+		// walk looked a scoped npm or a composer package up by its bare name.
+		{
+			name:     "scoped npm package",
+			input:    "pkg:npm/%40angular/core",
+			expected: "@angular/core",
+			wantErr:  false,
+		},
+		{
+			name:     "composer vendor",
+			input:    "pkg:composer/laravel/framework",
+			expected: "laravel/framework",
+			wantErr:  false,
 		},
 	}
 	for _, tt := range tests {

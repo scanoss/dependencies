@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/jmoiron/sqlx"
-	componentHelper "github.com/scanoss/go-component-helper/componenthelper"
 	"github.com/scanoss/go-grpc-helper/pkg/grpc/database"
 	"github.com/scanoss/go-grpc-helper/pkg/grpc/domain"
 	purlutils "github.com/scanoss/go-purl-helper/pkg"
@@ -31,26 +30,30 @@ import (
 	myconfig "scanoss.com/dependencies/pkg/config"
 	"scanoss.com/dependencies/pkg/dtos"
 	"scanoss.com/dependencies/pkg/models"
+	"scanoss.com/dependencies/pkg/resolver"
 )
 
 type DependencyUseCase struct {
-	ctx     context.Context
-	s       *zap.SugaredLogger
-	db      *sqlx.DB
-	allUrls *models.AllUrlsModel
-	lic     *models.LicenseModel
+	ctx  context.Context
+	s    *zap.SugaredLogger
+	db   *sqlx.DB
+	res  *resolver.Resolver
+	urls *models.ComponentLicensesModel
+	lic  *models.LicenseModel
 }
 
 // NewDependencies creates a new instance of the Dependency Use Case.
 func NewDependencies(ctx context.Context, s *zap.SugaredLogger, db *sqlx.DB, config *myconfig.ServerConfig) *DependencyUseCase {
+	res := resolver.New(s, db)
+	lic := models.NewLicenseModel(ctx, s, db)
 	return &DependencyUseCase{ctx: ctx, s: s,
-		db: db,
-		allUrls: models.NewAllURLModel(ctx, s, db, models.NewProjectModel(ctx, s, db),
-			models.NewGolangProjectModel(ctx, s, db, config),
-			models.NewMineModel(ctx, s, db),
+		db:  db,
+		res: res,
+		urls: models.NewComponentLicensesModel(ctx, s, db,
 			database.NewDBSelectContext(s, db, nil, config.Database.Trace),
+			res, models.NewGolangModel(ctx, s, lic),
 		),
-		lic: models.NewLicenseModel(ctx, s, db),
+		lic: lic,
 	}
 }
 
@@ -67,15 +70,9 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 		d.s.Infof("Processing %v purls for %v...", len(file.Purls), file.File)
 
 		var depOutput dtos.DependenciesOutput
-		processedComponents := componentHelper.GetComponentsVersion(componentHelper.ComponentVersionCfg{
-			MaxWorkers: 5,
-			DB:         d.db,
-			Ctx:        d.ctx,
-			S:          d.s,
-			Input:      file.Purls,
-		})
+		processedComponents, purlIDs := resolver.ResolveComponentsWithIDs(d.ctx, d.s, d.res, file.Purls, 5)
 
-		for _, processedComponent := range processedComponents {
+		for i, processedComponent := range processedComponents {
 			depOutput = dtos.DependenciesOutput{
 				Purl:        processedComponent.Purl,
 				Requirement: processedComponent.Requirement,
@@ -92,8 +89,8 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 				continue
 			}
 
-			// Look up component details (URL, license, version) from the all_urls table
-			url, err := d.allUrls.GetURLsByPurlString(processedComponent)
+			// Look up the component's licences for the version it resolved to
+			url, err := d.urls.GetURLsByComponent(processedComponent, purlIDs[i])
 			if err != nil {
 				d.s.Warnf("Problem encountered extracting URLs for: %v, %v - %v.", file.File, processedComponent.Purl, err)
 				depOutput.Status = domain.ComponentStatus{
@@ -105,8 +102,8 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 			}
 
 			// Skip components with no license data available
-			if url.License == "" {
-				// Preserve the upstream status from go-component-helper
+			if len(url.Licenses) == 0 {
+				// Preserve the upstream status from the resolver
 				if processedComponent.Status.StatusCode != domain.Success {
 					depOutputs = append(depOutputs, depOutput)
 					continue
@@ -137,6 +134,16 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 						Message:    fmt.Sprintf("Requirement not met, showing information for version '%s'", url.Version),
 					}
 					depOutput.Version = v
+				} else if exact := strings.TrimSpace(processedComponent.Requirement); strings.TrimPrefix(exact, "v") == strings.TrimPrefix(url.Version, "v") {
+					// The version the caller named exactly, spelled as they named it. The
+					// export drops the leading "v" mining stored (v5.4.5 is now 5.4.5),
+					// and a golang version without it is not the version asked for.
+					depOutput.Version = exact
+					// A version the knowledge base lacks but a fallback answered for (a
+					// golang tag, from pkg.go.dev or the GitHub repository) was found.
+					if depOutput.Status.StatusCode == domain.VersionNotFound {
+						depOutput.Status = domain.ComponentStatus{StatusCode: domain.Success}
+					}
 				}
 			}
 
@@ -155,25 +162,37 @@ func (d DependencyUseCase) GetDependencies(request dtos.DependencyInput) (dtos.D
 	return dtos.DependencyOutput{Files: depFileOutputs}, false, nil
 }
 
-// resolveLicenses resolves the license information for a component URL,
-// handling compound license IDs separated by "/".
+// resolveLicenses reports a component's licences: every licence of the release,
+// each compound identifier ("MIT/Apache-2.0") split into its parts and looked up by
+// name, duplicates dropped.
 func (d DependencyUseCase) resolveLicenses(url models.AllURL) []dtos.DependencyLicense {
 	var licenses []dtos.DependencyLicense
-	splitLicenses := strings.Split(url.LicenseID, "/")
-	if len(splitLicenses) <= 1 {
-		return []dtos.DependencyLicense{{Name: url.License, SpdxID: url.LicenseID, IsSpdx: url.IsSpdx}}
+	seen := map[string]bool{}
+	add := func(l dtos.DependencyLicense) {
+		key := l.SpdxID + "\x00" + l.Name
+		if !seen[key] {
+			seen[key] = true
+			licenses = append(licenses, l)
+		}
 	}
-	for _, splitLicense := range splitLicenses {
-		spl := strings.TrimSpace(splitLicense)
-		d.s.Debugf("Searching for split license: %v", spl)
-		lic, licErr := d.lic.GetLicenseByName(spl, false)
-		if licErr != nil || len(lic.LicenseName) == 0 {
-			if licErr != nil {
-				d.s.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, licErr)
+	for _, license := range url.Licenses {
+		splitLicenses := strings.Split(license.LicenseID, "/")
+		if len(splitLicenses) <= 1 {
+			add(dtos.DependencyLicense{Name: license.LicenseName, SpdxID: license.LicenseID, IsSpdx: license.IsSpdx})
+			continue
+		}
+		for _, splitLicense := range splitLicenses {
+			spl := strings.TrimSpace(splitLicense)
+			d.s.Debugf("Searching for split license: %v", spl)
+			lic, licErr := d.lic.GetLicenseByName(spl)
+			if licErr != nil || len(lic.LicenseName) == 0 {
+				if licErr != nil {
+					d.s.Warnf("Problem encountered searching for license %v (%v): %v", spl, splitLicense, licErr)
+				}
+				add(dtos.DependencyLicense{Name: spl, SpdxID: spl, IsSpdx: false})
+			} else {
+				add(dtos.DependencyLicense{Name: lic.LicenseName, SpdxID: lic.LicenseID, IsSpdx: lic.IsSpdx})
 			}
-			licenses = append(licenses, dtos.DependencyLicense{Name: spl, SpdxID: spl, IsSpdx: false})
-		} else {
-			licenses = append(licenses, dtos.DependencyLicense{Name: lic.LicenseName, SpdxID: lic.LicenseID, IsSpdx: lic.IsSpdx})
 		}
 	}
 	return licenses

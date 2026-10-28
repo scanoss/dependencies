@@ -98,6 +98,7 @@ func TestDependencyServer_GetDependencies_Success(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer models.CloseDB(db)
+	db.SetMaxOpenConns(1) // an in-memory SQLite database is per connection
 	err = models.LoadTestSQLData(db, nil, nil)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)

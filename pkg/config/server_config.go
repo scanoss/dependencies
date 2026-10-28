@@ -19,6 +19,7 @@ package config
 import (
 	"github.com/golobby/config/v3"
 	"github.com/golobby/config/v3/pkg/feeder"
+	scanossdb "scanoss.com/dependencies/pkg/db"
 )
 
 const (
@@ -47,7 +48,11 @@ type ServerConfig struct {
 		OltpExporter string `env:"OTEL_EXPORTER_OLTP"` // OTEL OLTP exporter (default 0.0.0.0:4317)
 	}
 	Database struct {
-		Driver  string `env:"DB_DRIVER"`
+		// Driver selects the serving backend: duckdb (production), sqlite or postgres.
+		Driver string `env:"DB_DRIVER"`
+		// Path is the serving database file, required by the file-based drivers
+		// (duckdb, sqlite) and ignored by postgres.
+		Path    string `env:"DB_PATH"`
 		Host    string `env:"DB_HOST"`
 		User    string `env:"DB_USER"`
 		Passwd  string `env:"DB_PASSWD"`
@@ -55,9 +60,6 @@ type ServerConfig struct {
 		SslMode string `env:"DB_SSL_MODE"` // enable/disable
 		Dsn     string `env:"DB_DSN"`
 		Trace   bool   `env:"DB_TRACE"` // true/false
-	}
-	Components struct {
-		CommitMissing bool `env:"COMP_COMMIT_MISSING"` // Write component details to the DB if they are looked up live
 	}
 	TLS struct {
 		CertFile string `env:"DEPS_TLS_CERT"` // TLS Certificate
@@ -119,13 +121,12 @@ func setServerConfigDefaults(cfg *ServerConfig) {
 	cfg.App.Mode = "dev"
 	cfg.App.Debug = false
 	cfg.App.GRPCReflection = false
-	cfg.Database.Driver = "postgres"
+	cfg.Database.Driver = scanossdb.DriverDuckDB
 	cfg.Database.Host = "localhost"
 	cfg.Database.User = "scanoss"
 	cfg.Database.Schema = "scanoss"
 	cfg.Database.SslMode = "disable"
 	cfg.Database.Trace = false
-	cfg.Components.CommitMissing = false
 	cfg.Logging.DynamicLogging = true
 	cfg.Logging.DynamicPort = "localhost:60051"
 	cfg.Telemetry.Enabled = false

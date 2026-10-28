@@ -2,7 +2,7 @@
   "App": {
     "Name": "Dependency Service",
     "Debug": true,
-    "Mode":  "dev",
+    "Mode": "dev",
     "GRPCPort": "50051",
     "RESTPort": "40051"
   },
@@ -11,15 +11,9 @@
     "OltpExporter": "0.0.0.0:4317"
   },
   "Database": {
-    "Driver": "postgres",
-    "Host":   "localhost",
-    "User":   "scanoss",
-    "Passwd": "secret123!",
-    "Schema": "scanoss",
+    "Driver": "duckdb",
+    "Path": "/var/lib/scanoss/serving.duckdb",
     "Trace": false
-  },
-  "Components": {
-    "CommitMissing": false
   },
   "TLS": {
     "CertFile": "",

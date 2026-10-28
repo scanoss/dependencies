@@ -19,6 +19,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -46,12 +47,10 @@ func TestDependencyUseCase(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer models.CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer models.CloseConn(conn)
-	err = models.LoadTestSQLData(db, ctx, conn)
+	// An in-memory SQLite database is per connection, so the pool is capped at one
+	// and the fixtures go through it: a held connection would starve the models.
+	db.SetMaxOpenConns(1)
+	err = models.LoadTestSQLData(db, ctx, nil)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)
 	}
@@ -157,12 +156,10 @@ func TestDependencyUseCaseOutput(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer models.CloseDB(db)
-	conn, err := db.Connx(ctx) // Get a connection from the pool
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer models.CloseConn(conn)
-	err = models.LoadTestSQLData(db, ctx, conn)
+	// An in-memory SQLite database is per connection, so the pool is capped at one
+	// and the fixtures go through it: a held connection would starve the models.
+	db.SetMaxOpenConns(1)
+	err = models.LoadTestSQLData(db, ctx, nil)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when loading test data", err)
 	}
@@ -213,6 +210,80 @@ func TestDependencyUseCaseOutput(t *testing.T) {
 			}
 			if got.Requirement != tt.expectedOutput.Requirement {
 				t.Errorf("expected requirement %v, got %v", tt.expectedOutput.Requirement, got.Requirement)
+			}
+		})
+	}
+}
+
+// TestDependencyUseCaseServing pins what the serving lookups answer, case by case.
+func TestDependencyUseCaseServing(t *testing.T) {
+	if err := zlog.NewSugaredDevLogger(); err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a sugared S", err)
+	}
+	defer zlog.SyncZap()
+	ctx := ctxzap.ToContext(context.Background(), zlog.L)
+	s := ctxzap.Extract(ctx).Sugar()
+	db, err := sqlx.Connect("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer models.CloseDB(db)
+	db.SetMaxOpenConns(1)
+	if err = models.LoadTestSQLData(db, ctx, nil); err != nil {
+		t.Fatalf("an error '%s' was not expected when loading test data", err)
+	}
+	myConfig, err := myconfig.NewServerConfig(nil)
+	if err != nil {
+		t.Fatalf("failed to load Config: %v", err)
+	}
+	depUc := NewDependencies(ctx, s, db, myConfig)
+	mit := dtos.DependencyLicense{Name: "MIT", SpdxID: "MIT", IsSpdx: true}
+
+	tests := []struct {
+		name, purl, requirement string
+		wantVersion             string
+		wantLicenses            []dtos.DependencyLicense
+		wantStatus              domain.StatusCode
+	}{
+		{name: "exact version", purl: "pkg:npm/lodash", requirement: "4.17.0", wantVersion: "4.17.0",
+			wantLicenses: []dtos.DependencyLicense{mit}, wantStatus: domain.Success},
+		// The range resolves to 4.17.21, which the requirement's own version does not
+		// match: reported as REQUIREMENT_NOT_MET with that version, as before.
+		{name: "range", purl: "pkg:npm/lodash", requirement: "^4.17.0", wantVersion: "4.17.0",
+			wantLicenses: []dtos.DependencyLicense{mit}, wantStatus: domain.RequirementNotMet},
+		// Same version, other spelling of the leading "v": the caller's spelling is kept.
+		{name: "v-prefixed request", purl: "pkg:npm/lodash", requirement: "v4.17.0", wantVersion: "v4.17.0",
+			wantLicenses: []dtos.DependencyLicense{mit}, wantStatus: domain.Success},
+		{name: "two licences", purl: "pkg:npm/dual", requirement: "1.0.0", wantVersion: "1.0.0",
+			wantLicenses: []dtos.DependencyLicense{mit, {Name: "Apache 2.0", SpdxID: "Apache-2.0", IsSpdx: true}},
+			wantStatus:   domain.Success},
+		{name: "compound identifier split", purl: "pkg:deb/debian/goffice", wantVersion: "0.10.52-4",
+			wantLicenses: []dtos.DependencyLicense{
+				{Name: "GPL-2.0-only", SpdxID: "GPL-2.0-only", IsSpdx: true},
+				{Name: "GPL-3.0-only", SpdxID: "GPL-3.0-only", IsSpdx: true},
+			}, wantStatus: domain.Success},
+		{name: "no licence", purl: "pkg:npm/sort-paths", requirement: "1.1.1", wantVersion: "1.1.1", wantLicenses: []dtos.DependencyLicense{},
+			wantStatus: domain.NoInfo},
+		{name: "unknown component", purl: "pkg:npm/does-not-exist", requirement: "1.0.0", wantStatus: domain.ComponentNotFound},
+		{name: "invalid purl", purl: "notapurl", wantStatus: domain.InvalidPurl},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, _, depErr := depUc.GetDependencies(dtos.DependencyInput{Files: []dtos.DependencyFileInput{{
+				File: "f", Purls: []componenthelper.ComponentDTO{{Purl: tt.purl, Requirement: tt.requirement}},
+			}}})
+			if depErr != nil {
+				t.Fatalf("unexpected error: %v", depErr)
+			}
+			got := out.Files[0].Dependencies[0]
+			if got.Version != tt.wantVersion {
+				t.Errorf("version = %q, want %q", got.Version, tt.wantVersion)
+			}
+			if got.Status.StatusCode != tt.wantStatus {
+				t.Errorf("status = %v (%v), want %v", got.Status.StatusCode, got.Status.Message, tt.wantStatus)
+			}
+			if !reflect.DeepEqual(got.Licenses, tt.wantLicenses) {
+				t.Errorf("licenses = %#v, want %#v", got.Licenses, tt.wantLicenses)
 			}
 		})
 	}

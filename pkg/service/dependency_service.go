@@ -36,7 +36,7 @@ import (
 )
 
 type dependencyServer struct {
-	pb.DependenciesServer
+	pb.UnimplementedDependenciesServer
 	db     *sqlx.DB
 	config *myconfig.ServerConfig
 }

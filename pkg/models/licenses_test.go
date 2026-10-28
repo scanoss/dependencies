@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2018-2023 SCANOSS.COM
+ * Copyright (C) 2018-2026 SCANOSS.COM
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,193 +18,56 @@ package models
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"github.com/jmoiron/sqlx"
 	zlog "github.com/scanoss/zap-logging-helper/pkg/logger"
 )
 
 func TestLicensesSearch(t *testing.T) {
-	err := zlog.NewSugaredDevLogger()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
-	}
+	db := sqliteSetup(t)
 	defer zlog.SyncZap()
-	ctx := ctxzap.ToContext(context.Background(), zlog.L)
-	s := ctxzap.Extract(ctx).Sugar()
-	db := sqliteSetup(t) // Setup SQL Lite DB
-	defer CloseDB(db)
-	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
-	defer CloseConn(conn)
-	err = loadTestSQLDataFiles(db, ctx, conn, []string{"../models/tests/licenses.sql"})
-	if err != nil {
-		t.Fatalf("failed to load SQL test data: %v", err)
-	}
-	licenseModel := NewLicenseModel(ctx, s, db)
-	var name = "MIT"
-	fmt.Printf("Searching for license: %v\n", name)
-	license, err := licenseModel.GetLicenseByName(name, false)
-	if err != nil {
-		t.Errorf("licenses.GetLicenseByName() error = %v", err)
-	}
-	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.GetLicenseByName() No license returned from query")
-	}
-	fmt.Printf("License: %#v\n", license)
+	licenseModel := NewLicenseModel(context.Background(), zlog.S, db)
 
-	name = ""
-	fmt.Printf("Searching for license: %v\n", name)
-	license, err = licenseModel.GetLicenseByName(name, false)
-	if err != nil {
-		t.Errorf("licenses.GetLicenseByName() error = %v", err)
+	tests := []struct {
+		name string
+		want License
+	}{
+		{name: "MIT", want: License{LicenseName: "MIT", LicenseID: "MIT", IsSpdx: true}},
+		// The name is the catalogue's long_name, not the SPDX identifier.
+		{name: "Apache 2.0", want: License{LicenseName: "Apache 2.0", LicenseID: "Apache-2.0", IsSpdx: true}},
+		// SPDX status is registry membership, not a stored flag.
+		{name: "Custom Licence", want: License{LicenseName: "Custom Licence", LicenseID: "LicenseRef-custom", IsSpdx: false}},
+		{name: "Unknown License", want: License{}},
+		{name: "", want: License{}},
 	}
-	if len(license.LicenseName) > 0 {
-		t.Errorf("licenses.GetLicenseByName() License returned when one shouldn't")
-	}
-	fmt.Printf("License: %#v\n", license)
-
-	name = ""
-	fmt.Printf("Searching for license: %v\n", name)
-	license, err = licenseModel.saveLicense(name)
-	if err == nil {
-		t.Errorf("licenses.saveLicense() error = did not get an error")
-	} else {
-		fmt.Printf("Got expected error = %v\n", err)
-	}
-
-	name = "Unknown License"
-	fmt.Printf("Searching for license: %v\n", name)
-	license, err = licenseModel.GetLicenseByName(name, true)
-	if err != nil {
-		t.Errorf("licenses.GetLicenseByName() error = %v", err)
-	}
-	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.GetLicenseByName() No license returned from query")
-	}
-	fmt.Printf("Created License: %#v\n", license)
-
-	name = "MIT"
-	fmt.Printf("Searching for license: %v\n", name)
-	license, err = licenseModel.saveLicense(name)
-	if err != nil {
-		t.Errorf("licenses.saveLicense() error = %v", err)
-	}
-	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.saveLicense() No license returned from query")
-	}
-	fmt.Printf("Found License: %#v\n", license)
-
-	name = "Apache 2.0; MIT; BSD"
-	fmt.Printf("Searching for license: %v\n", name)
-	license, err = licenseModel.GetLicenseByName(name, true)
-	if err != nil {
-		t.Errorf("licenses.GetLicenseByName() error = %v", err)
-	}
-	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.GetLicenseByName() No license returned from query")
-	}
-	fmt.Printf("Created License: %#v\n", license)
-}
-
-func TestLicensesSearchId(t *testing.T) {
-	err := zlog.NewSugaredDevLogger()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
-	}
-	defer zlog.SyncZap()
-	ctx := ctxzap.ToContext(context.Background(), zlog.L)
-	s := ctxzap.Extract(ctx).Sugar()
-	db := sqliteSetup(t) // Setup SQL Lite DB
-	defer CloseDB(db)
-	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
-	defer CloseConn(conn)
-	err = loadTestSQLDataFiles(db, ctx, conn, []string{"../models/tests/licenses.sql"})
-	if err != nil {
-		t.Fatalf("failed to load SQL test data: %v", err)
-	}
-	licenseModel := NewLicenseModel(ctx, s, db)
-
-	name := "MIT"
-	fmt.Printf("Searching for license: %v\n", name)
-	license, err := licenseModel.GetLicenseByName(name, false)
-	if err != nil {
-		t.Errorf("licenses.saveLicense() error = %v", err)
-	}
-	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.saveLicense() No license returned from query")
-	}
-	fmt.Printf("Found License: %#v\n", license)
-
-	id := license.ID
-	fmt.Printf("Searching for license by id: %v\n", id)
-	license, err = licenseModel.GetLicenseByID(id)
-	if err != nil {
-		t.Errorf("licenses.GetLicenseByID() error = %v", err)
-	}
-	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.GetLicenseByID() No license returned from query")
-	}
-	fmt.Printf("License: %#v\n", license)
-
-	id = 109
-	fmt.Printf("Searching for license by id: %v\n", id)
-	license, err = licenseModel.GetLicenseByID(id)
-	if err != nil {
-		t.Errorf("licenses.GetLicenseByID() error = %v", err)
-	}
-	if len(license.LicenseName) == 0 {
-		t.Errorf("licenses.GetLicenseByID() No license returned from query")
-	}
-	fmt.Printf("License: %#v\n", license)
-
-	id = -1
-	fmt.Printf("Searching for license by id: %v\n", id)
-	_, err = licenseModel.GetLicenseByID(id)
-	if err == nil {
-		t.Errorf("licenses.GetLicenseByID() error = did not get an error")
-	} else {
-		fmt.Printf("Got expected error = %v\n", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := licenseModel.GetLicenseByName(tt.name)
+			if err != nil {
+				t.Fatalf("GetLicenseByName(%q) error = %v", tt.name, err)
+			}
+			if got != tt.want {
+				t.Errorf("GetLicenseByName(%q) = %#v, want %#v", tt.name, got, tt.want)
+			}
+		})
 	}
 }
 
+// A missing table is a query failure, not "no licence".
 func TestLicensesSearchBadSql(t *testing.T) {
-	err := zlog.NewSugaredDevLogger()
-	if err != nil {
+	if err := zlog.NewSugaredDevLogger(); err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a sugared logger", err)
 	}
 	defer zlog.SyncZap()
-	ctx := ctxzap.ToContext(context.Background(), zlog.L)
-	s := ctxzap.Extract(ctx).Sugar()
-	db := sqliteSetup(t) // Setup SQL Lite DB
+	db, err := sqlx.Connect("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
 	defer CloseDB(db)
-	conn := sqliteConn(t, ctx, db) // Get a connection from the pool
-	defer CloseConn(conn)
-	licenseModel := NewLicenseModel(ctx, s, db)
-	_, err = licenseModel.GetLicenseByName("rubbish", false)
-	if err == nil {
-		t.Errorf("licenses.GetLicenseByName() error = did not get an error")
-	} else {
-		fmt.Printf("Got expected error = %v\n", err)
-	}
-	_, err = licenseModel.GetLicenseByName("rubbish", true)
-	if err == nil {
-		t.Errorf("licenses.GetLicenseByName() error = did not get an error")
-	} else {
-		fmt.Printf("Got expected error = %v\n", err)
-	}
-	_, err = licenseModel.saveLicense("rubbish")
-	if err == nil {
-		t.Errorf("licenses.saveLicense() error = did not get an error")
-	} else {
-		fmt.Printf("Got expected error = %v\n", err)
-	}
-	_, err = licenseModel.GetLicenseByID(100)
-	if err == nil {
-		t.Errorf("licenses.GetLicenseByID() error = did not get an error")
-	} else {
-		fmt.Printf("Got expected error = %v\n", err)
+	if _, err = NewLicenseModel(context.Background(), zlog.S, db).GetLicenseByName("MIT"); err == nil {
+		t.Error("GetLicenseByName() without a license table did not fail")
 	}
 }
 
